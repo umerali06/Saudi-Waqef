@@ -111,7 +111,13 @@ export async function PUT(request: Request, context: RouteContext) {
     }
   }
 
-  const updates = { ...parsed.data };
+  const updates = {
+    ...parsed.data,
+    onboarding: parsed.data.onboarding?.map((task) => ({
+      ...task,
+      completed: task.completed ?? false,
+    })),
+  };
   const transferReason = updates.transferReason ?? null;
   const transferEffectiveDate = updates.transferEffectiveDate ?? null;
   delete updates.transferReason;
