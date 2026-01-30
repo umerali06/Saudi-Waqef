@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f6f3ec;
+  --foreground: #101418;
+  --surface: #ffffff;
+  --surface-muted: #f0ece4;
+  --primary: #0c5f5a;
+  --primary-contrast: #ffffff;
+  --accent: #f4c95d;
+  --border: #e5dfd4;
+  --muted: #6d7480;
+  --shadow: 0 24px 60px -48px rgba(10, 24, 22, 0.6);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-primary: var(--primary);
+  --color-primary-contrast: var(--primary-contrast);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-cairo);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), sans-serif;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(12, 95, 90, 0.35) rgba(229, 223, 212, 0.5);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(229, 223, 212, 0.5);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(12, 95, 90, 0.75), rgba(12, 95, 90, 0.45));
+  border-radius: 999px;
+  border: 2px solid rgba(229, 223, 212, 0.6);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(12, 95, 90, 0.9), rgba(12, 95, 90, 0.6));
+}
+
+html[dir="rtl"] input,
+html[dir="rtl"] textarea,
+html[dir="rtl"] select {
+  text-align: right;
+}
+
+html[dir="rtl"] input::placeholder,
+html[dir="rtl"] textarea::placeholder {
+  text-align: right;
+}
+
+button,
+select,
+a {
+  cursor: pointer;
+}
+
+button:disabled,
+select:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(900px at 85% -10%, rgba(12, 95, 90, 0.2), transparent 60%),
+    radial-gradient(700px at -10% 20%, rgba(244, 201, 93, 0.25), transparent 60%);
+  pointer-events: none;
+}
+
+.app-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfaf6 100%);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+
+.app-panel {
+  background: linear-gradient(180deg, #f7f3ea 0%, #f1ede3 100%);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+.app-outline {
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+}

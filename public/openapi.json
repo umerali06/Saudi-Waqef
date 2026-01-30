@@ -1,0 +1,42 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Saudi Waqef API",
+    "version": "v1",
+    "description": "Developer API for Saudi Waqef integrations."
+  },
+  "servers": [
+    {
+      "url": "https://your-domain.com"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API Key"
+      }
+    }
+  },
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/api/developer/ping": {
+      "get": {
+        "summary": "Test API key",
+        "responses": {
+          "200": {
+            "description": "API key is valid"
+          },
+          "401": {
+            "description": "Invalid API key"
+          }
+        }
+      }
+    }
+  }
+}
