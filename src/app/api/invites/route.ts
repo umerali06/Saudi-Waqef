@@ -16,8 +16,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json().catch(() => null);
-  const parsed = inviteSchema.safeParse(body);
+  const payload = await request.json().catch(() => null);
+  const parsed = inviteSchema.safeParse(payload);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid invite payload" },
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     locale === "ar"
       ? `دعوة للانضمام إلى ${company?.name ?? "Saudi Waqef"}`
       : `You're invited to join ${company?.name ?? "Saudi Waqef"}`;
-  const body =
+  const emailBody =
     locale === "ar"
       ? `<p>تمت دعوتك للانضمام إلى ${company?.name ?? "Saudi Waqef"}.</p><p><a href="${inviteUrl}">قبول الدعوة</a></p>`
       : `<p>You have been invited to join ${company?.name ?? "Saudi Waqef"}.</p><p><a href="${inviteUrl}">Accept invite</a></p>`;
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     companyId: parsed.data.companyId,
     to: parsed.data.email,
     subject,
-    body,
+    body: emailBody,
     sourceType: "invite",
     sourceId: inviteId,
     meta: { role: parsed.data.role },
