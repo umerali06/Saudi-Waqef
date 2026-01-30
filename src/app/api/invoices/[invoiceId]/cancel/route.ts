@@ -55,7 +55,11 @@ export async function POST(_: Request, context: RouteContext) {
 
   const items = await listItems(invoice.companyId);
   const itemMap = new Map(items.map((item) => [item.id, item]));
-  const stockUpdates: Array<{ itemId: string; stockOnHandDelta: number }> = [];
+  const stockUpdates: Array<{
+    itemId: string;
+    stockReservedDelta?: number;
+    stockOnHandDelta?: number;
+  }> = [];
 
   invoice.lines.forEach((line) => {
     if (!line.itemId) {
