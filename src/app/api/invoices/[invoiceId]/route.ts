@@ -176,7 +176,11 @@ export async function PUT(request: Request, context: RouteContext) {
   const total = computedLines.reduce((sum, line) => sum + line.totalAmount, 0);
 
   const previousMap = buildQuantityMap(current.lines);
-  const updates = [];
+  const updates: Array<{
+    itemId: string;
+    stockReservedDelta?: number;
+    stockOnHandDelta?: number;
+  }> = [];
   let insufficientStock = false;
 
   itemReserveMap.forEach((nextQty, itemId) => {
