@@ -797,7 +797,7 @@ export default function AccountingDefaultsPage() {
       </div>
 
       <form onSubmit={handleCreateTerm} className="app-card p-5">
-        <h2 className="text-lg font-semibold">{t("terms.title")}</h2>
+        <h2 className="text-lg font-semibold">{t("paymentTerms.title")}</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("terms.name")}</span>

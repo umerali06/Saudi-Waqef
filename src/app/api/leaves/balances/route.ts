@@ -50,7 +50,16 @@ export async function GET(request: Request) {
     ? employees.filter((employee) => employee.id === employeeId)
     : employees;
 
-  const balances = [];
+  const balances: Array<{
+    employeeId: string;
+    employeeName: string;
+    leaveTypeId: string;
+    leaveTypeName: string;
+    allowance: number;
+    adjustments: number;
+    used: number;
+    balance: number;
+  }> = [];
 
   targetEmployees.forEach((employee) => {
     activeTypes.forEach((type) => {

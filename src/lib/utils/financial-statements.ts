@@ -111,9 +111,9 @@ const addToMap = (map: Map<string, number>, key: string, amount: number) => {
 const buildIncomeStatementSection = (
   accounts: Map<string, Account>,
   entries: JournalEntry[],
+  types: Array<Account["type"]>,
   startDate?: string | null,
-  endDate?: string | null,
-  types: Array<Account["type"]>
+  endDate?: string | null
 ) => {
   const totals = new Map<string, number>();
 
@@ -166,23 +166,23 @@ export const buildProfitLossReport = (params: {
   const revenue = buildIncomeStatementSection(
     accountMap,
     params.entries,
+    ["income"],
     params.startDate,
-    params.endDate,
-    ["income"]
+    params.endDate
   );
   const cogs = buildIncomeStatementSection(
     accountMap,
     params.entries,
+    ["cogs"],
     params.startDate,
-    params.endDate,
-    ["cogs"]
+    params.endDate
   );
   const expenses = buildIncomeStatementSection(
     accountMap,
     params.entries,
+    ["expense"],
     params.startDate,
-    params.endDate,
-    ["expense"]
+    params.endDate
   );
 
   const grossProfit = revenue.total - cogs.total;
@@ -193,23 +193,23 @@ export const buildProfitLossReport = (params: {
     const compareRevenue = buildIncomeStatementSection(
       accountMap,
       params.entries,
+      ["income"],
       params.compareStartDate,
-      params.compareEndDate,
-      ["income"]
+      params.compareEndDate
     );
     const compareCogs = buildIncomeStatementSection(
       accountMap,
       params.entries,
+      ["cogs"],
       params.compareStartDate,
-      params.compareEndDate,
-      ["cogs"]
+      params.compareEndDate
     );
     const compareExpenses = buildIncomeStatementSection(
       accountMap,
       params.entries,
+      ["expense"],
       params.compareStartDate,
-      params.compareEndDate,
-      ["expense"]
+      params.compareEndDate
     );
     const compareGross = compareRevenue.total - compareCogs.total;
     const compareNet = compareGross - compareExpenses.total;

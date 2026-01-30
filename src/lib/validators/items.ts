@@ -26,8 +26,12 @@ const itemBaseSchema = z.object({
   tags: z.array(z.string()).optional(),
 });
 
+const itemUpdateBaseSchema = itemBaseSchema.partial().extend({
+  companyId: z.string().min(1),
+});
+
 const refineItem = (
-  data: z.infer<typeof itemBaseSchema>,
+  data: z.infer<typeof itemUpdateBaseSchema>,
   ctx: z.RefinementCtx
 ) => {
   if (data.type === "service") {
@@ -64,12 +68,7 @@ const refineItem = (
 
 export const itemSchema = itemBaseSchema.superRefine(refineItem);
 
-export const itemUpdateSchema = itemBaseSchema
-  .partial()
-  .extend({
-    companyId: z.string().min(1),
-  })
-  .superRefine(refineItem);
+export const itemUpdateSchema = itemUpdateBaseSchema.superRefine(refineItem);
 
 export const itemBulkStatusSchema = z.object({
   companyId: z.string().min(1),

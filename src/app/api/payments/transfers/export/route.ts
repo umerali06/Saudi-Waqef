@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAccountingAccess } from "@/lib/access";
 import { listBankTransfers } from "@/lib/data/bank-transfers";
+import { listCashBankAccounts } from "@/lib/data/cash-bank-accounts";
 import { toCsv } from "@/lib/utils/csv";
 
 export const runtime = "nodejs";
@@ -23,7 +24,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const transfers = await listBankTransfers(companyId);
+  const [transfers, accounts] = await Promise.all([
+    listBankTransfers(companyId),
+    listCashBankAccounts(companyId),
+  ]);
+  const accountNameMap = new Map(
+    accounts.map((account) => [account.accountId, account.name])
+  );
   const headers = [
     "transferNumber",
     "transferDate",
@@ -36,10 +43,10 @@ export async function GET(request: Request) {
   const rows = transfers.map((transfer) => [
     transfer.transferNumber,
     transfer.transferDate,
-    transfer.fromAccountName,
-    transfer.toAccountName,
+    accountNameMap.get(transfer.fromAccountId) ?? "",
+    accountNameMap.get(transfer.toAccountId) ?? "",
     String(transfer.amount ?? 0),
-    transfer.currency ?? "SAR",
+    "SAR",
     transfer.reference ?? "",
   ]);
 

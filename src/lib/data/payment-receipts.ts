@@ -117,7 +117,7 @@ export async function createPaymentReceipt(params: {
 
   await db.runTransaction(async (tx) => {
     const configSnap = await tx.get(configRef);
-    const config = configSnap.exists ? configSnap.data() : {};
+    const config = configSnap.data() ?? {};
     const sequence = buildSequenceNumber({
       prefix:
         typeof config.receiptPrefix === "string"
@@ -143,7 +143,7 @@ export async function createPaymentReceipt(params: {
         typeof config.receiptLastResetYear === "number"
           ? config.receiptLastResetYear
           : DEFAULT_CONFIG.receiptLastResetYear,
-      date: params.paymentDate,
+      date: params.receiptDate,
     });
     receiptNumber = sequence.number;
 

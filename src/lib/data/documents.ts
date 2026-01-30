@@ -35,6 +35,9 @@ export type DocumentRecord = {
   updatedAt?: Date;
 };
 
+const toDate = (value?: { toDate?: () => Date } | Date | null) =>
+  value instanceof Date ? value : value?.toDate ? value.toDate() : new Date();
+
 const normalizeTags = (tags?: string[] | null) =>
   (tags ?? []).map((tag) => tag.trim()).filter(Boolean);
 
@@ -63,9 +66,7 @@ export async function listDocuments(companyId: string) {
       uploadedByEmail: data.uploadedByEmail ?? null,
       versions: (data.versions ?? []).map((version: DocumentVersion) => ({
         ...version,
-        replacedAt: version.replacedAt?.toDate
-          ? version.replacedAt.toDate()
-          : new Date(),
+        replacedAt: toDate(version.replacedAt),
       })),
       createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
       updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : undefined,
@@ -98,9 +99,7 @@ export async function getDocumentById(documentId: string) {
     uploadedByEmail: data.uploadedByEmail ?? null,
     versions: (data.versions ?? []).map((version: DocumentVersion) => ({
       ...version,
-      replacedAt: version.replacedAt?.toDate
-        ? version.replacedAt.toDate()
-        : new Date(),
+      replacedAt: toDate(version.replacedAt),
     })),
     createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
     updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : undefined,

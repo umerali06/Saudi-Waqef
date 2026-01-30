@@ -1,4 +1,4 @@
-import { Timestamp } from "firebase-admin/firestore";
+import { Timestamp, type Query } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase/admin";
 
@@ -22,7 +22,7 @@ export type BillingPlan = {
 
 export async function listBillingPlans(params?: { includeInactive?: boolean }) {
   const includeInactive = params?.includeInactive ?? false;
-  let query = db.collection("billing_plans");
+  let query: Query = db.collection("billing_plans");
   if (!includeInactive) {
     query = query.where("isActive", "==", true);
   }

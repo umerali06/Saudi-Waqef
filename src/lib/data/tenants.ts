@@ -4,6 +4,15 @@ import { listMembershipsByCompany } from "@/lib/data/memberships";
 import { getUserById } from "@/lib/data/users";
 import { getSubscriptionPlanMap } from "@/lib/data/system-metrics";
 
+type CompanySnapshot = {
+  id: string;
+  name?: string;
+  status?: "active" | "suspended";
+  currency?: string;
+  defaultLanguage?: "ar" | "en";
+  createdAt?: { toDate?: () => Date };
+};
+
 export type TenantSummary = {
   id: string;
   name: string;
@@ -24,9 +33,9 @@ export async function listTenantSummaries() {
     getSubscriptionPlanMap(),
   ]);
 
-  const companies = companiesSnap.docs.map((doc) => ({
+  const companies: CompanySnapshot[] = companiesSnap.docs.map((doc) => ({
     id: doc.id,
-    ...doc.data(),
+    ...(doc.data() as Omit<CompanySnapshot, "id">),
   }));
 
   const summaries = await Promise.all(

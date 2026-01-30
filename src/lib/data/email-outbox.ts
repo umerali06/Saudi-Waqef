@@ -100,8 +100,9 @@ export async function listOutboxEmails(params: {
     } as OutboxEmail;
   });
 
-  if (params.maxAttempts != null) {
-    return emails.filter((email) => email.attempts < params.maxAttempts);
+  const maxAttempts = params.maxAttempts;
+  if (typeof maxAttempts === "number") {
+    return emails.filter((email) => email.attempts < maxAttempts);
   }
   return emails;
 }

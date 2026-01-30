@@ -178,7 +178,7 @@ export async function createSalesInvoice(params: {
 
   await db.runTransaction(async (tx) => {
     const configSnap = await tx.get(configRef);
-    const config = configSnap.exists ? configSnap.data() : {};
+    const config = configSnap.data() ?? {};
     const sequence = buildSequenceNumber({
       prefix:
         typeof config.invoicePrefix === "string"

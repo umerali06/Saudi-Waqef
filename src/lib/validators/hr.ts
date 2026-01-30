@@ -66,8 +66,14 @@ const employeeBaseSchema = z.object({
   onboarding: z.array(onboardingTaskSchema).optional(),
 });
 
+const employeeUpdateBaseSchema = employeeBaseSchema.partial().extend({
+  companyId: z.string().min(1),
+  transferEffectiveDate: optionalString,
+  transferReason: optionalString,
+});
+
 const refineEmployee = (
-  data: z.infer<typeof employeeBaseSchema>,
+  data: z.infer<typeof employeeUpdateBaseSchema>,
   ctx: z.RefinementCtx
 ) => {
   if (data.status === "terminated" && !data.terminationDate) {
@@ -81,14 +87,8 @@ const refineEmployee = (
 
 export const employeeSchema = employeeBaseSchema.superRefine(refineEmployee);
 
-export const employeeUpdateSchema = employeeBaseSchema
-  .partial()
-  .extend({
-    companyId: z.string().min(1),
-    transferEffectiveDate: optionalString,
-    transferReason: optionalString,
-  })
-  .superRefine(refineEmployee);
+export const employeeUpdateSchema =
+  employeeUpdateBaseSchema.superRefine(refineEmployee);
 
 export const employeeSelfUpdateSchema = z.object({
   companyId: z.string().min(1),

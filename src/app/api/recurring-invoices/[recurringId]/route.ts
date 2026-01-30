@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { v4 as uuidv4 } from "uuid";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
 import {
   getRecurringInvoice,
   updateRecurringInvoice,
   deleteRecurringInvoice,
+  type RecurringInvoice,
 } from "@/lib/data/recurring-invoices";
 
 export const runtime = "nodejs";
@@ -92,7 +94,18 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  await updateRecurringInvoice(recurringId, parsed.data);
+  const { template: templatePayload, ...rest } = parsed.data;
+  const template: RecurringInvoice["template"] | undefined = templatePayload
+    ? {
+        ...templatePayload,
+        lines: templatePayload.lines.map((line) => ({
+          ...line,
+          id: line.id ?? uuidv4(),
+        })),
+      }
+    : undefined;
+  const updates = template ? { ...rest, template } : rest;
+  await updateRecurringInvoice(recurringId, updates);
   return NextResponse.json({ ok: true });
 }
 

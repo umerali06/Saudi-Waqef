@@ -51,7 +51,15 @@ export async function GET(request: Request) {
   }
 
   let openingBalance = 0;
-  const lines = [];
+  const lines: Array<{
+    entryId: string;
+    date: string;
+    memo: string;
+    sourceType: string;
+    sourceId: string | null;
+    debit: number;
+    credit: number;
+  }> = [];
 
   entries.forEach((entry) => {
     if (entry.status === "draft" || entry.status === "void") {

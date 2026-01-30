@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { v4 as uuidv4 } from "uuid";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
 import { listRecurringInvoices, createRecurringInvoice } from "@/lib/data/recurring-invoices";
@@ -84,6 +85,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid customer" }, { status: 400 });
   }
 
+  const template = {
+    ...parsed.data.template,
+    lines: parsed.data.template.lines.map((line) => ({
+      ...line,
+      id: line.id ?? uuidv4(),
+    })),
+  };
   const id = await createRecurringInvoice({
     companyId: parsed.data.companyId,
     customerId: customer.id,
@@ -91,7 +99,7 @@ export async function POST(request: Request) {
     currency: customer.currency ?? "SAR",
     frequency: parsed.data.frequency,
     nextRunDate: parsed.data.nextRunDate,
-    template: parsed.data.template,
+    template,
   });
 
   return NextResponse.json({ recurringId: id });
