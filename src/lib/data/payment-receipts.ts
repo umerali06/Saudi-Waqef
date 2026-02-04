@@ -117,30 +117,30 @@ export async function createPaymentReceipt(params: {
 
   await db.runTransaction(async (tx) => {
     const configSnap = await tx.get(configRef);
-    const config = configSnap.data() ?? {};
+    const config = configSnap.exists ? configSnap.data() : {};
     const sequence = buildSequenceNumber({
       prefix:
-        typeof config.receiptPrefix === "string"
+        config && typeof config.receiptPrefix === "string"
           ? config.receiptPrefix
           : DEFAULT_CONFIG.receiptPrefix,
       suffix:
-        typeof config.receiptSuffix === "string"
+        config && typeof config.receiptSuffix === "string"
           ? config.receiptSuffix
           : DEFAULT_CONFIG.receiptSuffix,
       nextNumber:
-        typeof config.receiptNextNumber === "number"
+        config && typeof config.receiptNextNumber === "number"
           ? config.receiptNextNumber
           : DEFAULT_CONFIG.receiptNextNumber,
       padding:
-        typeof config.receiptPadding === "number"
+        config && typeof config.receiptPadding === "number"
           ? config.receiptPadding
           : DEFAULT_CONFIG.receiptPadding,
       resetYearly:
-        typeof config.receiptResetYearly === "boolean"
+        config && typeof config.receiptResetYearly === "boolean"
           ? config.receiptResetYearly
           : DEFAULT_CONFIG.receiptResetYearly,
       lastResetYear:
-        typeof config.receiptLastResetYear === "number"
+        config && typeof config.receiptLastResetYear === "number"
           ? config.receiptLastResetYear
           : DEFAULT_CONFIG.receiptLastResetYear,
       date: params.receiptDate,

@@ -42,6 +42,7 @@ export const messages: Record<Locale, Messages> = {
     "common.shareInvite": "شارك رابط الدعوة هذا:",
     "common.unsavedChangesConfirm": "لديك تغييرات غير محفوظة. هل تريد المتابعة؟",
     "common.close": "إغلاق",
+    "common.generate": "توليد",
     "labels.rolePrefix": "الدور: {role}",
     "labels.activeCompany": "الشركة النشطة: {company}",
     "labels.tenantContext": "السياق الحالي: {company} ({role})",

@@ -1,17 +1,9 @@
+import { DocumentData } from "firebase-admin/firestore";
 import { db } from "@/lib/firebase/admin";
 import { getSubscription } from "@/lib/data/subscriptions";
 import { listMembershipsByCompany } from "@/lib/data/memberships";
 import { getUserById } from "@/lib/data/users";
 import { getSubscriptionPlanMap } from "@/lib/data/system-metrics";
-
-type CompanySnapshot = {
-  id: string;
-  name?: string;
-  status?: "active" | "suspended";
-  currency?: string;
-  defaultLanguage?: "ar" | "en";
-  createdAt?: { toDate?: () => Date };
-};
 
 export type TenantSummary = {
   id: string;
@@ -33,13 +25,13 @@ export async function listTenantSummaries() {
     getSubscriptionPlanMap(),
   ]);
 
-  const companies: CompanySnapshot[] = companiesSnap.docs.map((doc) => ({
+  const companies = companiesSnap.docs.map((doc) => ({
     id: doc.id,
-    ...(doc.data() as Omit<CompanySnapshot, "id">),
+    ...doc.data(),
   }));
 
   const summaries = await Promise.all(
-    companies.map(async (company) => {
+    companies.map(async (company: DocumentData & { id: string }) => {
       const memberships = await listMembershipsByCompany(company.id);
       const ownerMembership = memberships.find((m) => m.role === "owner") ?? null;
       const ownerUser = ownerMembership

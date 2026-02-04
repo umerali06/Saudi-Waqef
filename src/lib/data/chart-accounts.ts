@@ -171,15 +171,21 @@ export async function createChartAccountsFromTemplate(
   companyId: string,
   template: ChartAccountTemplateItem[]
 ) {
-  const exists = await hasChartAccounts(companyId);
-  if (exists) {
+  const existingAccounts = await listChartAccounts(companyId);
+  const idByCode = new Map<string, string>();
+  for (const acc of existingAccounts) {
+    idByCode.set(acc.code, acc.id);
+  }
+
+  const newAccounts = template.filter((acc) => !idByCode.has(acc.code));
+
+  if (newAccounts.length === 0) {
     return { seeded: false };
   }
 
   const batch = db.batch();
-  const idByCode = new Map<string, string>();
 
-  for (const account of template) {
+  for (const account of newAccounts) {
     const id = uuidv4();
     idByCode.set(account.code, id);
     const ref = db.collection("chart_accounts").doc(id);
@@ -200,7 +206,7 @@ export async function createChartAccountsFromTemplate(
 
   const parentBatch = db.batch();
   let hasParentUpdates = false;
-  for (const account of template) {
+  for (const account of newAccounts) {
     if (!account.parentCode) {
       continue;
     }

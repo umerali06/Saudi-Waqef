@@ -1,4 +1,4 @@
-import { Timestamp, type Query } from "firebase-admin/firestore";
+import { Timestamp, Query } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase/admin";
 
@@ -65,7 +65,7 @@ export async function countTelemetryEvents(params: {
   name: string;
   since?: Date;
 }) {
-  let query: Query = db.collection("telemetry_events").where("name", "==", params.name);
+  let query = db.collection("telemetry_events").where("name", "==", params.name);
   if (params.since) {
     query = query.where("createdAt", ">=", Timestamp.fromDate(params.since));
   }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useCompany } from "@/components/company-provider";
+import { SkeletonBlock } from "@/components/skeleton";
 import { useTranslations } from "@/i18n/provider";
 import { SAUDI_COA_TEMPLATE } from "@/lib/data/coa-saudi-template";
 
@@ -41,17 +42,20 @@ export default function ChartOfAccountsPage() {
   const [editAccountId, setEditAccountId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<AccountForm | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const loadAccounts = useCallback(() => {
     if (!activeCompanyId) {
       return;
     }
+    setIsLoading(true);
     setErrorKey(null);
     fetch(`/api/coa?companyId=${activeCompanyId}`)
       .then((res) => res.json())
       .then((data) => setAccounts(data.accounts ?? []))
-      .catch(() => setErrorKey("error.loadFailed"));
+      .catch(() => setErrorKey("error.loadFailed"))
+      .finally(() => setIsLoading(false));
   }, [activeCompanyId]);
 
   useEffect(() => {
@@ -483,7 +487,13 @@ export default function ChartOfAccountsPage() {
         <div className="border-b border-border px-4 py-2 text-sm font-semibold">
           {t("coa.list")}
         </div>
-        {accounts.length === 0 ? (
+        {isLoading ? (
+          <div className="space-y-4 p-4">
+            <SkeletonBlock className="h-10 w-full" />
+            <SkeletonBlock className="h-10 w-full" />
+            <SkeletonBlock className="h-10 w-full" />
+          </div>
+        ) : accounts.length === 0 ? (
           <div className="p-4 text-sm text-muted">{t("coa.empty")}</div>
         ) : (
           <div className="overflow-x-auto">

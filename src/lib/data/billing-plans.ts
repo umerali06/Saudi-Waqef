@@ -1,4 +1,4 @@
-import { Timestamp, type Query } from "firebase-admin/firestore";
+import { Timestamp, Query } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase/admin";
 

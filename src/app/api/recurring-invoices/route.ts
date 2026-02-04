@@ -85,13 +85,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid customer" }, { status: 400 });
   }
 
-  const template = {
-    ...parsed.data.template,
-    lines: parsed.data.template.lines.map((line) => ({
-      ...line,
-      id: line.id ?? uuidv4(),
-    })),
-  };
   const id = await createRecurringInvoice({
     companyId: parsed.data.companyId,
     customerId: customer.id,
@@ -99,7 +92,13 @@ export async function POST(request: Request) {
     currency: customer.currency ?? "SAR",
     frequency: parsed.data.frequency,
     nextRunDate: parsed.data.nextRunDate,
-    template,
+    template: {
+      ...parsed.data.template,
+      lines: parsed.data.template.lines.map((l) => ({
+        ...l,
+        id: l.id ?? uuidv4(),
+      })),
+    },
   });
 
   return NextResponse.json({ recurringId: id });

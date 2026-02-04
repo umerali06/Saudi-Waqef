@@ -15,7 +15,7 @@ import {
 import { verifyMfaToken } from "@/lib/security/mfa";
 
 function getRequestIp(
-  req?: Request | { headers?: Headers | Record<string, string | string[] | undefined> }
+  req?: { headers?: Headers | Record<string, string | string[] | undefined> } | Request
 ) {
   if (!req?.headers) {
     return null;

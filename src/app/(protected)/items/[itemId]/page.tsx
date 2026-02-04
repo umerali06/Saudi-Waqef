@@ -322,6 +322,11 @@ export default function ItemDetailPage() {
     }
   }, [form?.type]);
 
+  const generateBarcode = useCallback(() => {
+    const random = Math.floor(100000000000 + Math.random() * 900000000000).toString();
+    setForm((prev) => (prev ? { ...prev, barcode: random } : prev));
+  }, []);
+
   const handleUpdate = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!activeCompanyId || !form) {
@@ -636,7 +641,16 @@ export default function ItemDetailPage() {
               />
             </label>
             <label className={`text-sm ${alignClass}`}>
-              <span className="mb-1 block text-xs text-muted">{t("items.barcode")}</span>
+              <div className="mb-1 flex items-center justify-between">
+                <span className="block text-xs text-muted">{t("items.barcode")}</span>
+                <button
+                  type="button"
+                  onClick={generateBarcode}
+                  className="text-xs text-primary underline decoration-dotted hover:text-primary/80"
+                >
+                  {t("common.generate")}
+                </button>
+              </div>
               <input
                 className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.barcode}

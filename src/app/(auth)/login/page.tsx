@@ -33,13 +33,23 @@ export default function LoginPage() {
 
   useEffect(() => {
     const normalized = email.trim().toLowerCase();
-    if (!normalized) {
-      setMfaRequired(false);
-      return;
-    }
+    
     if (mfaLookupTimerRef.current) {
       clearTimeout(mfaLookupTimerRef.current);
     }
+
+    // Simple validation to avoid unnecessary requests while typing
+    const isValidEmailFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
+
+    if (!isValidEmailFormat) {
+      setMfaRequired(false);
+      if (mfaLookupAbortRef.current) {
+        mfaLookupAbortRef.current.abort();
+        mfaLookupAbortRef.current = null;
+      }
+      return;
+    }
+
     mfaLookupTimerRef.current = setTimeout(() => {
       if (mfaLookupAbortRef.current) {
         mfaLookupAbortRef.current.abort();
@@ -51,8 +61,13 @@ export default function LoginPage() {
       })
         .then((res) => (res.ok ? res.json() : Promise.reject()))
         .then((data) => setMfaRequired(Boolean(data?.mfaEnabled)))
-        .catch(() => null);
-    }, 350);
+        .catch((err) => {
+          if (err.name !== 'AbortError') {
+             // console.error(err); // Optional: log real errors
+          }
+        });
+    }, 500);
+
     return () => {
       if (mfaLookupTimerRef.current) {
         clearTimeout(mfaLookupTimerRef.current);
