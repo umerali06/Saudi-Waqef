@@ -113,11 +113,19 @@ export const notificationTemplates: Record<NotificationType, Template> = {
     ),
   },
   subscription_payment_failed: {
-    title: template("فشل الدفع", "Payment failed"),
-    subject: template("فشل سداد الاشتراك", "Subscription payment failed"),
+    title: template("فشل دفع الاشتراك", "Subscription payment failed"),
+    subject: template("فشل دفع الاشتراك", "Subscription payment failed"),
     body: template(
-      "فشل تحصيل دفعة الاشتراك للفاتورة {invoiceNumber}.", 
-      "Subscription payment failed for invoice {invoiceNumber}."
+      "فشلت عملية دفع اشتراكك. يرجى تحديث طريقة الدفع الخاصة بك.",
+      "Your subscription payment failed. Please update your payment method."
+    ),
+  },
+  registration_received: {
+    title: template("طلب تسجيل جديد", "New Registration Request"),
+    subject: template("طلب تسجيل جديد من {companyName}", "New Registration Request from {companyName}"),
+    body: template(
+      "تم استلام طلب تسجيل جديد من {companyName} ({name}).",
+      "New registration request received from {companyName} ({name})."
     ),
   },
 };
@@ -179,7 +187,12 @@ export const templateSamples: Record<NotificationType, Record<string, string>> =
     currency: "SAR",
   },
   subscription_payment_failed: {
-    invoiceNumber: "SUB-300",
+    invoiceNumber: "INV-SUBS-101",
+  },
+  registration_received: {
+    companyName: "شركة المثال",
+    name: "أحمد محمد",
+    requestId: "123",
   },
 };
 

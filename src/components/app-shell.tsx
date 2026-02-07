@@ -84,7 +84,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       return;
     }
     if (!canAccessPath(activeCompany?.role ?? "viewer", pathname)) {
-      router.replace("/");
+      router.replace("/dashboard");
     }
   }, [pathname, activeCompany?.role, router]);
 
@@ -129,7 +129,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {t("nav.section")}
               </p>
               <div className="space-y-1">
-                <NavLink href="/" label={t("nav.dashboard")} />
+                <NavLink href="/dashboard" label={t("nav.dashboard")} />
                 {allowedModules.includes("notifications") ? (
                   <NavLink href="/notifications" label={t("nav.notifications")} />
                 ) : null}
@@ -162,6 +162,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 ) : null}
                 {allowedModules.includes("developers") ? (
                   <NavLink href="/developers" label={t("nav.developers")} />
+                ) : null}
+                {["owner", "admin"].includes(activeRole) ? (
+                  <NavLink
+                    href="/admin/registrations"
+                    label={t("admin.registrations.title")}
+                  />
                 ) : null}
                 {allowedModules.includes("settings") ? (
                   <NavLink href="/settings" label={t("nav.settings")} />

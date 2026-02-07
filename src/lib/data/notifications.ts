@@ -7,7 +7,7 @@ export type NotificationStatus = "unread" | "read";
 
 export type InAppNotification = {
   id: string;
-  companyId: string;
+  companyId: string | null;
   userId: string;
   type: NotificationType;
   title: string;
@@ -19,7 +19,7 @@ export type InAppNotification = {
 };
 
 export async function createNotification(params: {
-  companyId: string;
+  companyId?: string | null;
   userId: string;
   type: NotificationType;
   title: string;
@@ -28,7 +28,7 @@ export async function createNotification(params: {
 }) {
   const id = uuidv4();
   await db.collection("notifications").doc(id).set({
-    companyId: params.companyId,
+    companyId: params.companyId ?? null,
     userId: params.userId,
     type: params.type,
     title: params.title,
@@ -71,7 +71,7 @@ export async function listNotifications(params: {
 
   if (params.companyId) {
     notifications = notifications.filter(
-      (entry) => entry.companyId === params.companyId
+      (entry) => entry.companyId === params.companyId || !entry.companyId
     );
   }
   if (params.status && params.status !== "all") {

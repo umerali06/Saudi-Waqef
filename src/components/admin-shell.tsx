@@ -25,6 +25,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               {t("nav.section")}
             </p>
             <NavLink href="/admin" label={t("admin.nav.overview")} />
+            <NavLink href="/admin/registrations" label={t("admin.nav.registrations")} />
             <NavLink href="/admin/health" label={t("admin.nav.health")} />
             <NavLink href="/admin/tenants" label={t("admin.nav.tenants")} />
             <NavLink href="/admin/alerts" label={t("admin.nav.alerts")} />
