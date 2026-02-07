@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
+import { SkeletonBlock } from "@/components/skeleton";
+import { useToast } from "@/components/toast";
 
 type AccountingPeriod = {
   id: string;
@@ -30,6 +32,7 @@ const EMPTY_PERIOD = {
 export default function AccountingPeriodsPage() {
   const { activeCompanyId } = useCompany();
   const { t, locale } = useTranslations();
+  const { toast } = useToast();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [periods, setPeriods] = useState<AccountingPeriod[]>([]);
   const [periodLockDate, setPeriodLockDate] = useState<string>("");
@@ -37,6 +40,7 @@ export default function AccountingPeriodsPage() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [frequency, setFrequency] = useState<"monthly" | "quarterly">("monthly");
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
 
   const formatDate = useCallback(
@@ -55,8 +59,10 @@ export default function AccountingPeriodsPage() {
 
   const loadPeriods = useCallback(() => {
     if (!activeCompanyId) {
+      setIsLoading(false);
       return;
     }
+    setIsLoading(true);
     setErrorKey(null);
     Promise.all([
       fetch(`/api/accounting-periods?companyId=${activeCompanyId}`).then((res) =>
@@ -68,7 +74,8 @@ export default function AccountingPeriodsPage() {
         setPeriods(periodData.periods ?? []);
         setPeriodLockDate(configData?.config?.periodLockDate ?? "");
       })
-      .catch(() => setErrorKey("error.loadFailed"));
+      .catch(() => setErrorKey("error.loadFailed"))
+      .finally(() => setIsLoading(false));
   }, [activeCompanyId]);
 
   useEffect(() => {
@@ -107,6 +114,7 @@ export default function AccountingPeriodsPage() {
         return;
       }
       loadPeriods();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -132,6 +140,7 @@ export default function AccountingPeriodsPage() {
       }
       setNewPeriod(EMPTY_PERIOD);
       loadPeriods();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -154,6 +163,7 @@ export default function AccountingPeriodsPage() {
         return;
       }
       loadPeriods();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -174,6 +184,7 @@ export default function AccountingPeriodsPage() {
         setErrorKey("error.saveFailed");
         return;
       }
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -191,18 +202,22 @@ export default function AccountingPeriodsPage() {
             <span className="mb-1 block text-xs text-muted">
               {t("periods.lockDate")}
             </span>
-            <input
-              type="date"
-              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
-              value={periodLockDate}
-              onChange={(event) => setPeriodLockDate(event.target.value)}
-            />
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-40" />
+            ) : (
+              <input
+                type="date"
+                className="rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                value={periodLockDate}
+                onChange={(event) => setPeriodLockDate(event.target.value)}
+              />
+            )}
           </label>
           <button
             type="button"
             onClick={handleLockDateSave}
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
-            disabled={isPending}
+            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:opacity-50"
+            disabled={isPending || isLoading}
           >
             {t("common.save")}
           </button>
@@ -326,7 +341,7 @@ export default function AccountingPeriodsPage() {
         <div className="border-b border-border px-4 py-2 text-sm font-semibold">
           {t("periods.listTitle")}
         </div>
-        {periods.length === 0 ? (
+        {periods.length === 0 && !isLoading ? (
           <div className="p-4 text-sm text-muted">{t("periods.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
@@ -347,34 +362,54 @@ export default function AccountingPeriodsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {periods.map((period) => (
-                  <tr key={period.id}>
-                    <td className="px-4 py-2">{period.name}</td>
-                    <td className="px-4 py-2">{formatDate(period.startDate)}</td>
-                    <td className="px-4 py-2">{formatDate(period.endDate)}</td>
-                    <td className="px-4 py-2">
-                      {period.status === "open"
-                        ? t("periods.open")
-                        : t("periods.closed")}
-                    </td>
-                    <td className="px-4 py-2">
-                      <button
-                        type="button"
-                        className="text-xs font-semibold text-primary"
-                        onClick={() =>
-                          handleToggleStatus(
-                            period.id,
-                            period.status === "open" ? "closed" : "open"
-                          )
-                        }
-                      >
-                        {period.status === "open"
-                          ? t("periods.close")
-                          : t("periods.reopen")}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {isLoading
+                  ? Array.from({ length: 5 }).map((_, idx) => (
+                      <tr key={idx}>
+                        <td className="px-4 py-2">
+                          <SkeletonBlock className="h-5 w-24" />
+                        </td>
+                        <td className="px-4 py-2">
+                          <SkeletonBlock className="h-5 w-24" />
+                        </td>
+                        <td className="px-4 py-2">
+                          <SkeletonBlock className="h-5 w-24" />
+                        </td>
+                        <td className="px-4 py-2">
+                          <SkeletonBlock className="h-5 w-16" />
+                        </td>
+                        <td className="px-4 py-2">
+                          <SkeletonBlock className="h-5 w-12" />
+                        </td>
+                      </tr>
+                    ))
+                  : periods.map((period) => (
+                      <tr key={period.id}>
+                        <td className="px-4 py-2">{period.name}</td>
+                        <td className="px-4 py-2">{formatDate(period.startDate)}</td>
+                        <td className="px-4 py-2">{formatDate(period.endDate)}</td>
+                        <td className="px-4 py-2">
+                          {period.status === "open"
+                            ? t("periods.open")
+                            : t("periods.closed")}
+                        </td>
+                        <td className="px-4 py-2">
+                          <button
+                            type="button"
+                            className="text-xs font-semibold text-primary"
+                            onClick={() =>
+                              handleToggleStatus(
+                                period.id,
+                                period.status === "open" ? "closed" : "open"
+                              )
+                            }
+                          >
+                            {period.status === "open"
+                              ? t("periods.close")
+                              : t("periods.reopen")}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
               </tbody>
             </table>
           </div>

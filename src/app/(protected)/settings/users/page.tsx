@@ -6,6 +6,8 @@ import { useCompany } from "@/components/company-provider";
 import { ROLE_OPTIONS } from "@/lib/constants";
 import type { Role } from "@/lib/types";
 import { useTranslations } from "@/i18n/provider";
+import { SkeletonBlock } from "@/components/skeleton";
+import { useToast } from "@/components/toast";
 
 type Member = {
   id: string;
@@ -19,6 +21,7 @@ export default function UsersSettingsPage() {
   const { data: session } = useSession();
   const { activeCompanyId, activeCompany } = useCompany();
   const { t, locale } = useTranslations();
+  const { toast } = useToast();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [members, setMembers] = useState<Member[]>([]);
   const [email, setEmail] = useState("");
@@ -27,6 +30,7 @@ export default function UsersSettingsPage() {
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [roleErrorKey, setRoleErrorKey] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
 
   const canManageRoles = ["owner", "admin"].includes(activeCompany?.role ?? "");
@@ -36,6 +40,7 @@ export default function UsersSettingsPage() {
     if (!activeCompanyId) {
       return;
     }
+    setIsLoading(true);
     fetch(`/api/users?companyId=${activeCompanyId}`)
       .then((res) => res.json())
       .then((data) => {
@@ -47,7 +52,8 @@ export default function UsersSettingsPage() {
         });
         setRoleEdits(nextEdits);
       })
-      .catch(() => setMembers([]));
+      .catch(() => setMembers([]))
+      .finally(() => setIsLoading(false));
   }, [activeCompanyId]);
 
   useEffect(() => {
@@ -87,6 +93,7 @@ export default function UsersSettingsPage() {
       const link = `${window.location.origin}/invite/${data.token}`;
       setInviteLink(link);
       setEmail("");
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -118,6 +125,7 @@ export default function UsersSettingsPage() {
           member.id === memberId ? { ...member, role: nextRole } : member
         )
       );
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -155,6 +163,7 @@ export default function UsersSettingsPage() {
         delete next[memberId];
         return next;
       });
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -238,56 +247,71 @@ export default function UsersSettingsPage() {
           {t("settings.users.teamTitle")}
         </div>
         <div className="divide-y divide-border">
-          {members.map((member) => (
-            <div key={member.id} className="px-4 py-3 text-sm">
-              <p className="font-medium">{member.name}</p>
-              <p className="text-xs text-muted">{member.email}</p>
-              {canManageRoles ? (
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                  <select
-                    className="rounded-lg border border-border bg-surface px-2 py-1 text-xs"
-                    value={roleEdits[member.id] ?? member.role}
-                    onChange={(event) =>
-                      setRoleEdits((prev) => ({
-                        ...prev,
-                        [member.id]: event.target.value as Role,
-                      }))
-                    }
-                  >
-                    {ROLE_OPTIONS.map((roleKey) => (
-                      <option key={roleKey} value={roleKey}>
-                        {t(`role.${roleKey}`)}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="cursor-pointer rounded-lg border border-border px-2 py-1 text-xs font-semibold text-foreground"
-                    onClick={() => handleRoleUpdate(member.id)}
-                    disabled={isPending}
-                  >
-                    {t("settings.users.updateRole")}
-                  </button>
-                  {member.id !== currentUserId ? (
+          {isLoading ? (
+            <div className="p-4 space-y-4">
+              <div className="flex justify-between items-center">
+                <SkeletonBlock className="h-4 w-32 mb-1" />
+                <SkeletonBlock className="h-8 w-24" />
+              </div>
+              <SkeletonBlock className="h-4 w-48" />
+              <div className="flex justify-between items-center">
+                <SkeletonBlock className="h-4 w-32 mb-1" />
+                <SkeletonBlock className="h-8 w-24" />
+              </div>
+              <SkeletonBlock className="h-4 w-48" />
+            </div>
+          ) : (
+            members.map((member) => (
+              <div key={member.id} className="px-4 py-3 text-sm">
+                <p className="font-medium">{member.name}</p>
+                <p className="text-xs text-muted">{member.email}</p>
+                {canManageRoles ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                    <select
+                      className="rounded-lg border border-border bg-surface px-2 py-1 text-xs"
+                      value={roleEdits[member.id] ?? member.role}
+                      onChange={(event) =>
+                        setRoleEdits((prev) => ({
+                          ...prev,
+                          [member.id]: event.target.value as Role,
+                        }))
+                      }
+                    >
+                      {ROLE_OPTIONS.map((roleKey) => (
+                        <option key={roleKey} value={roleKey}>
+                          {t(`role.${roleKey}`)}
+                        </option>
+                      ))}
+                    </select>
                     <button
                       type="button"
-                      className="cursor-pointer rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-600"
-                      onClick={() => handleRemove(member.id, member.name || member.email)}
+                      className="cursor-pointer rounded-lg border border-border px-2 py-1 text-xs font-semibold text-foreground"
+                      onClick={() => handleRoleUpdate(member.id)}
                       disabled={isPending}
                     >
-                      {t("settings.users.removeAccess")}
+                      {t("settings.users.updateRole")}
                     </button>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="text-xs text-muted">
-                  {t("labels.rolePrefix", {
-                    role: t(`role.${member.role}`),
-                  })}
-                </p>
-              )}
-            </div>
-          ))}
+                    {member.id !== currentUserId ? (
+                      <button
+                        type="button"
+                        className="cursor-pointer rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-600"
+                        onClick={() => handleRemove(member.id, member.name || member.email)}
+                        disabled={isPending}
+                      >
+                        {t("settings.users.removeAccess")}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted">
+                    {t("labels.rolePrefix", {
+                      role: t(`role.${member.role}`),
+                    })}
+                  </p>
+                )}
+              </div>
+            ))
+          )}
         </div>
         {roleErrorKey ? (
           <div className="mx-4 my-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">

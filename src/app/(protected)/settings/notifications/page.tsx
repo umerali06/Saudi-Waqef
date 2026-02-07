@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useSession } from "next-auth/react";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
+import { SkeletonBlock } from "@/components/skeleton";
+import { useToast } from "@/components/toast";
 
 const NOTIFICATION_TYPES = [
   "invoice_sent",
@@ -38,6 +40,7 @@ export default function NotificationSettingsPage() {
   const { data: session } = useSession();
   const { activeCompanyId } = useCompany();
   const { t, locale } = useTranslations();
+  const { toast } = useToast();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [templateType, setTemplateType] = useState<(typeof NOTIFICATION_TYPES)[number]>(
@@ -54,16 +57,19 @@ export default function NotificationSettingsPage() {
   const [verifying, setVerifying] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     if (!activeCompanyId) {
       return;
     }
+    setIsLoading(true);
     fetch(`/api/notification-preferences?companyId=${activeCompanyId}`)
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => setPrefs(data.preferences))
-      .catch(() => setError(t("notifications.errors.loadFailed")));
+      .catch(() => setError(t("notifications.errors.loadFailed")))
+      .finally(() => setIsLoading(false));
   }, [activeCompanyId, t]);
 
   useEffect(() => {
@@ -130,7 +136,7 @@ export default function NotificationSettingsPage() {
         setError(t("notifications.errors.updateFailed"));
         return;
       }
-      setMessage(t("notifications.saved"));
+      toast(t("notifications.saved"), "success");
     });
   };
 
@@ -153,7 +159,7 @@ export default function NotificationSettingsPage() {
         setError(t("notifications.errors.testFailed"));
         return;
       }
-      setMessage(t("notifications.testSent"));
+      toast(t("notifications.testSent"), "success");
     });
   };
 
@@ -172,7 +178,7 @@ export default function NotificationSettingsPage() {
       setError(t("notifications.emailDelivery.dispatchFailed"));
       return;
     }
-    setMessage(t("notifications.emailDelivery.dispatchSuccess"));
+    toast(t("notifications.emailDelivery.dispatchSuccess"), "success");
   };
 
   const handleVerify = async () => {
@@ -190,7 +196,7 @@ export default function NotificationSettingsPage() {
       setError(t("notifications.emailDelivery.verifyFailed"));
       return;
     }
-    setMessage(t("notifications.emailDelivery.verifySuccess"));
+    toast(t("notifications.emailDelivery.verifySuccess"), "success");
   };
 
   return (
@@ -213,32 +219,40 @@ export default function NotificationSettingsPage() {
 
       <div className={`app-card p-4 ${alignClass}`}>
         <h2 className="text-sm font-semibold">{t("notifications.settings.defaultChannels")}</h2>
-        <div className="mt-3 flex flex-wrap gap-4 text-sm">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={prefs?.channels.email ?? false}
-              onChange={() => toggleChannel("email")}
-            />
-            {t("notifications.channel.email")}
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={prefs?.channels.inApp ?? false}
-              onChange={() => toggleChannel("inApp")}
-            />
-            {t("notifications.channel.inApp")}
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={prefs?.channels.sms ?? false}
-              onChange={() => toggleChannel("sms")}
-            />
-            {t("notifications.channel.sms")}
-          </label>
-        </div>
+        {isLoading ? (
+          <div className="mt-3 flex gap-4">
+            <SkeletonBlock className="h-5 w-24" />
+            <SkeletonBlock className="h-5 w-24" />
+            <SkeletonBlock className="h-5 w-24" />
+          </div>
+        ) : (
+          <div className="mt-3 flex flex-wrap gap-4 text-sm">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={prefs?.channels.email ?? false}
+                onChange={() => toggleChannel("email")}
+              />
+              {t("notifications.channel.email")}
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={prefs?.channels.inApp ?? false}
+                onChange={() => toggleChannel("inApp")}
+              />
+              {t("notifications.channel.inApp")}
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={prefs?.channels.sms ?? false}
+                onChange={() => toggleChannel("sms")}
+              />
+              {t("notifications.channel.sms")}
+            </label>
+          </div>
+        )}
       </div>
 
       <div className={`app-card p-4 ${alignClass}`}>
@@ -339,39 +353,52 @@ export default function NotificationSettingsPage() {
           {t("notifications.settings.byType")}
         </div>
         <div className="divide-y divide-border">
-          {types.map((item) => (
-            <div key={item.key} className="px-4 py-3 text-sm">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <p className="font-semibold">{item.label}</p>
-                <div className="flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2 text-xs">
-                    <input
-                      type="checkbox"
-                      checked={prefs?.types[item.key]?.email ?? prefs?.channels.email ?? false}
-                      onChange={() => toggleTypeChannel(item.key, "email")}
-                    />
-                    {t("notifications.channel.email")}
-                  </label>
-                  <label className="flex items-center gap-2 text-xs">
-                    <input
-                      type="checkbox"
-                      checked={prefs?.types[item.key]?.inApp ?? prefs?.channels.inApp ?? false}
-                      onChange={() => toggleTypeChannel(item.key, "inApp")}
-                    />
-                    {t("notifications.channel.inApp")}
-                  </label>
-                  <label className="flex items-center gap-2 text-xs">
-                    <input
-                      type="checkbox"
-                      checked={prefs?.types[item.key]?.sms ?? prefs?.channels.sms ?? false}
-                      onChange={() => toggleTypeChannel(item.key, "sms")}
-                    />
-                    {t("notifications.channel.sms")}
-                  </label>
+          {isLoading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between px-4 py-3">
+                <SkeletonBlock className="h-5 w-48" />
+                <div className="flex gap-4">
+                  <SkeletonBlock className="h-4 w-16" />
+                  <SkeletonBlock className="h-4 w-16" />
+                  <SkeletonBlock className="h-4 w-16" />
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            types.map((item) => (
+              <div key={item.key} className="px-4 py-3 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <p className="font-semibold">{item.label}</p>
+                  <div className="flex flex-wrap gap-4">
+                    <label className="flex items-center gap-2 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={prefs?.types[item.key]?.email ?? prefs?.channels.email ?? false}
+                        onChange={() => toggleTypeChannel(item.key, "email")}
+                      />
+                      {t("notifications.channel.email")}
+                    </label>
+                    <label className="flex items-center gap-2 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={prefs?.types[item.key]?.inApp ?? prefs?.channels.inApp ?? false}
+                        onChange={() => toggleTypeChannel(item.key, "inApp")}
+                      />
+                      {t("notifications.channel.inApp")}
+                    </label>
+                    <label className="flex items-center gap-2 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={prefs?.types[item.key]?.sms ?? prefs?.channels.sms ?? false}
+                        onChange={() => toggleTypeChannel(item.key, "sms")}
+                      />
+                      {t("notifications.channel.sms")}
+                    </label>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
         <div className="border-t border-border px-4 py-3">
           <button

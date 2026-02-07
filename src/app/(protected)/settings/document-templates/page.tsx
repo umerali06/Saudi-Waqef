@@ -6,6 +6,8 @@ import { useCompany } from "@/components/company-provider";
 import { useUnsavedChanges } from "@/components/unsaved-changes";
 import { useTranslations } from "@/i18n/provider";
 import { uploadToCloudinary } from "@/lib/cloudinary-client";
+import { SkeletonBlock } from "@/components/skeleton";
+import { useToast } from "@/components/toast";
 
 type TemplateStyle = "classic" | "modern" | "minimal";
 
@@ -123,6 +125,7 @@ const templateClass = (template: TemplateStyle) => {
 export default function DocumentTemplatesPage() {
   const { activeCompanyId } = useCompany();
   const { t, locale } = useTranslations();
+  const { toast } = useToast();
   const { setDirty, markClean } = useUnsavedChanges();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [config, setConfig] = useState<TemplateConfig>(EMPTY_CONFIG);
@@ -137,6 +140,7 @@ export default function DocumentTemplatesPage() {
     locale === "en" ? "en" : "ar"
   );
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [initialSnapshot, setInitialSnapshot] = useState<string | null>(null);
@@ -145,8 +149,10 @@ export default function DocumentTemplatesPage() {
 
   const loadReference = useCallback(() => {
     if (!activeCompanyId) {
+      setIsLoading(false);
       return;
     }
+    setIsLoading(true);
     setErrorKey(null);
     markClean();
     Promise.all([
@@ -268,6 +274,7 @@ export default function DocumentTemplatesPage() {
       }
       setInitialSnapshot(JSON.stringify(config));
       markClean();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -336,39 +343,47 @@ export default function DocumentTemplatesPage() {
             <span className="mb-1 block text-xs text-muted">
               {t("templates.invoiceTemplate")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={config.invoiceTemplate}
-              onChange={(event) =>
-                setConfig((prev) => ({
-                  ...prev,
-                  invoiceTemplate: event.target.value as TemplateStyle,
-                }))
-              }
-            >
-              <option value="classic">{t("templates.style.classic")}</option>
-              <option value="modern">{t("templates.style.modern")}</option>
-              <option value="minimal">{t("templates.style.minimal")}</option>
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-10 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={config.invoiceTemplate}
+                onChange={(event) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    invoiceTemplate: event.target.value as TemplateStyle,
+                  }))
+                }
+              >
+                <option value="classic">{t("templates.style.classic")}</option>
+                <option value="modern">{t("templates.style.modern")}</option>
+                <option value="minimal">{t("templates.style.minimal")}</option>
+              </select>
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("templates.billTemplate")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={config.billTemplate}
-              onChange={(event) =>
-                setConfig((prev) => ({
-                  ...prev,
-                  billTemplate: event.target.value as TemplateStyle,
-                }))
-              }
-            >
-              <option value="classic">{t("templates.style.classic")}</option>
-              <option value="modern">{t("templates.style.modern")}</option>
-              <option value="minimal">{t("templates.style.minimal")}</option>
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-10 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={config.billTemplate}
+                onChange={(event) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    billTemplate: event.target.value as TemplateStyle,
+                  }))
+                }
+              >
+                <option value="classic">{t("templates.style.classic")}</option>
+                <option value="modern">{t("templates.style.modern")}</option>
+                <option value="minimal">{t("templates.style.minimal")}</option>
+              </select>
+            )}
           </label>
         </div>
         <p className="mt-3 text-xs text-muted">{t("templates.brandingHint")}</p>
@@ -378,16 +393,20 @@ export default function DocumentTemplatesPage() {
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t("templates.signatureTitle")}</h2>
           <label className="flex items-center gap-2 text-xs text-muted">
-            <input
-              type="checkbox"
-              checked={config.signatureEnabled}
-              onChange={(event) =>
-                setConfig((prev) => ({
-                  ...prev,
-                  signatureEnabled: event.target.checked,
-                }))
-              }
-            />
+            {isLoading ? (
+              <SkeletonBlock className="h-4 w-4" />
+            ) : (
+              <input
+                type="checkbox"
+                checked={config.signatureEnabled}
+                onChange={(event) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    signatureEnabled: event.target.checked,
+                  }))
+                }
+              />
+            )}
             {t("templates.signatureEnabled")}
           </label>
         </div>
@@ -396,42 +415,54 @@ export default function DocumentTemplatesPage() {
             <span className="mb-1 block text-xs text-muted">
               {t("templates.signatureName")}
             </span>
-            <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={config.signatureName}
-              onChange={(event) =>
-                setConfig((prev) => ({ ...prev, signatureName: event.target.value }))
-              }
-            />
+            {isLoading ? (
+              <SkeletonBlock className="h-10 w-full" />
+            ) : (
+              <input
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={config.signatureName}
+                onChange={(event) =>
+                  setConfig((prev) => ({ ...prev, signatureName: event.target.value }))
+                }
+              />
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("templates.signatureRole")}
             </span>
-            <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={config.signatureTitle}
-              onChange={(event) =>
-                setConfig((prev) => ({ ...prev, signatureTitle: event.target.value }))
-              }
-            />
+            {isLoading ? (
+              <SkeletonBlock className="h-10 w-full" />
+            ) : (
+              <input
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={config.signatureTitle}
+                onChange={(event) =>
+                  setConfig((prev) => ({ ...prev, signatureTitle: event.target.value }))
+                }
+              />
+            )}
           </label>
           <label className={`text-sm ${alignClass} md:col-span-2`}>
             <span className="mb-1 block text-xs text-muted">
               {t("templates.signatureImage")}
             </span>
             <div className="flex flex-wrap items-center gap-3">
-              <input
-                type="file"
-                accept="image/*"
-                className="block text-xs"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) {
-                    void handleSignatureUpload(file);
-                  }
-                }}
-              />
+              {isLoading ? (
+                <SkeletonBlock className="h-8 w-48" />
+              ) : (
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="block text-xs"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) {
+                      void handleSignatureUpload(file);
+                    }
+                  }}
+                />
+              )}
               {config.signatureImageUrl ? (
                 <>
                   <Image
@@ -470,50 +501,62 @@ export default function DocumentTemplatesPage() {
             <span className="mb-1 block text-xs text-muted">
               {t("templates.previewInvoice")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={selectedInvoiceId}
-              onChange={(event) => setSelectedInvoiceId(event.target.value)}
-            >
-              <option value="">{t("templates.previewInvoiceEmpty")}</option>
-              {invoiceOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-10 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={selectedInvoiceId}
+                onChange={(event) => setSelectedInvoiceId(event.target.value)}
+              >
+                <option value="">{t("templates.previewInvoiceEmpty")}</option>
+                {invoiceOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("templates.previewBill")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={selectedBillId}
-              onChange={(event) => setSelectedBillId(event.target.value)}
-            >
-              <option value="">{t("templates.previewBillEmpty")}</option>
-              {billOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-10 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={selectedBillId}
+                onChange={(event) => setSelectedBillId(event.target.value)}
+              >
+                <option value="">{t("templates.previewBillEmpty")}</option>
+                {billOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("templates.previewLanguage")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={previewLocale}
-              onChange={(event) =>
-                setPreviewLocale(event.target.value as "ar" | "en")
-              }
-            >
-              <option value="ar">{t("language.ar")}</option>
-              <option value="en">{t("language.en")}</option>
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-10 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={previewLocale}
+                onChange={(event) =>
+                  setPreviewLocale(event.target.value as "ar" | "en")
+                }
+              >
+                <option value="ar">{t("language.ar")}</option>
+                <option value="en">{t("language.en")}</option>
+              </select>
+            )}
           </label>
         </div>
         <div className="mt-4 flex flex-wrap gap-3">

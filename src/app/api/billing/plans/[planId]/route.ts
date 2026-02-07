@@ -18,8 +18,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const body = await request.json().catch(() => null);
   const parsed = billingPlanUpdateSchema.safeParse(body);
-  if (!parsed.success || typeof body?.companyId !== "string") {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  if (typeof body?.companyId !== "string") {
+    return NextResponse.json({ error: "Invalid payload: companyId is missing" }, { status: 400 });
   }
 
   const membership = await requireCompanyRole(user.id, body.companyId, [

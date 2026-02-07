@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { useCompany } from "@/components/company-provider";
 import { useUnsavedChanges } from "@/components/unsaved-changes";
 import { useTranslations } from "@/i18n/provider";
+import { useToast } from "@/components/toast";
+import { SkeletonBlock } from "@/components/skeleton";
 
 type Account = {
   id: string;
@@ -60,6 +62,7 @@ export default function AccountingDefaultsPage() {
   const { activeCompanyId } = useCompany();
   const { t, locale } = useTranslations();
   const { setDirty, markClean } = useUnsavedChanges();
+  const { toast } = useToast();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [defaults, setDefaults] = useState<CompanyDefaults>(EMPTY_DEFAULTS);
@@ -72,6 +75,7 @@ export default function AccountingDefaultsPage() {
   const [editTermId, setEditTermId] = useState<string | null>(null);
   const [editTerm, setEditTerm] = useState<PaymentTerm | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [initialSnapshot, setInitialSnapshot] = useState<string | null>(null);
 
@@ -91,8 +95,10 @@ export default function AccountingDefaultsPage() {
 
   const loadData = useCallback(() => {
     if (!activeCompanyId) {
+      setIsLoading(false);
       return;
     }
+    setIsLoading(true);
     setErrorKey(null);
     markClean();
     Promise.all([
@@ -134,7 +140,8 @@ export default function AccountingDefaultsPage() {
         );
         markClean();
       })
-      .catch(() => setErrorKey("error.loadFailed"));
+      .catch(() => setErrorKey("error.loadFailed"))
+      .finally(() => setIsLoading(false));
   }, [activeCompanyId, markClean]);
 
   useEffect(() => {
@@ -193,6 +200,8 @@ export default function AccountingDefaultsPage() {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         setErrorKey(mapDefaultsError(data?.error));
+      } else {
+        toast(t("common.saved"), "success");
       }
     });
   };
@@ -220,6 +229,7 @@ export default function AccountingDefaultsPage() {
       }
       setNewTax({ name: "", rate: 15, type: "standard" });
       loadData();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -248,6 +258,7 @@ export default function AccountingDefaultsPage() {
       setEditTaxId(null);
       setEditTax(null);
       loadData();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -290,6 +301,7 @@ export default function AccountingDefaultsPage() {
       }
       setNewTerm({ name: "", days: 30 });
       loadData();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -317,6 +329,7 @@ export default function AccountingDefaultsPage() {
       setEditTermId(null);
       setEditTerm(null);
       loadData();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -351,155 +364,183 @@ export default function AccountingDefaultsPage() {
             <span className="mb-1 block text-xs text-muted">
               {t("defaults.salesAccount")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={defaults.salesAccountId ?? ""}
-              onChange={(event) =>
-                setDefaults((prev) => ({
-                  ...prev,
-                  salesAccountId: event.target.value || null,
-                }))
-              }
-            >
-              <option value="">{t("defaults.none")}</option>
-              {postingAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.code} - {account.name}
-                </option>
-              ))}
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={defaults.salesAccountId ?? ""}
+                onChange={(event) =>
+                  setDefaults((prev) => ({
+                    ...prev,
+                    salesAccountId: event.target.value || null,
+                  }))
+                }
+              >
+                <option value="">{t("defaults.none")}</option>
+                {postingAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.code} - {account.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("defaults.purchasesAccount")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={defaults.purchasesAccountId ?? ""}
-              onChange={(event) =>
-                setDefaults((prev) => ({
-                  ...prev,
-                  purchasesAccountId: event.target.value || null,
-                }))
-              }
-            >
-              <option value="">{t("defaults.none")}</option>
-              {postingAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.code} - {account.name}
-                </option>
-              ))}
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={defaults.purchasesAccountId ?? ""}
+                onChange={(event) =>
+                  setDefaults((prev) => ({
+                    ...prev,
+                    purchasesAccountId: event.target.value || null,
+                  }))
+                }
+              >
+                <option value="">{t("defaults.none")}</option>
+                {postingAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.code} - {account.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("defaults.receivableAccount")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={defaults.receivableAccountId ?? ""}
-              onChange={(event) =>
-                setDefaults((prev) => ({
-                  ...prev,
-                  receivableAccountId: event.target.value || null,
-                }))
-              }
-            >
-              <option value="">{t("defaults.none")}</option>
-              {postingAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.code} - {account.name}
-                </option>
-              ))}
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={defaults.receivableAccountId ?? ""}
+                onChange={(event) =>
+                  setDefaults((prev) => ({
+                    ...prev,
+                    receivableAccountId: event.target.value || null,
+                  }))
+                }
+              >
+                <option value="">{t("defaults.none")}</option>
+                {postingAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.code} - {account.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("defaults.payableAccount")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={defaults.payableAccountId ?? ""}
-              onChange={(event) =>
-                setDefaults((prev) => ({
-                  ...prev,
-                  payableAccountId: event.target.value || null,
-                }))
-              }
-            >
-              <option value="">{t("defaults.none")}</option>
-              {postingAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.code} - {account.name}
-                </option>
-              ))}
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={defaults.payableAccountId ?? ""}
+                onChange={(event) =>
+                  setDefaults((prev) => ({
+                    ...prev,
+                    payableAccountId: event.target.value || null,
+                  }))
+                }
+              >
+                <option value="">{t("defaults.none")}</option>
+                {postingAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.code} - {account.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("defaults.vatOutputAccount")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={defaults.vatOutputAccountId ?? ""}
-              onChange={(event) =>
-                setDefaults((prev) => ({
-                  ...prev,
-                  vatOutputAccountId: event.target.value || null,
-                }))
-              }
-            >
-              <option value="">{t("defaults.none")}</option>
-              {postingAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.code} - {account.name}
-                </option>
-              ))}
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={defaults.vatOutputAccountId ?? ""}
+                onChange={(event) =>
+                  setDefaults((prev) => ({
+                    ...prev,
+                    vatOutputAccountId: event.target.value || null,
+                  }))
+                }
+              >
+                <option value="">{t("defaults.none")}</option>
+                {postingAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.code} - {account.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("defaults.vatInputAccount")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={defaults.vatInputAccountId ?? ""}
-              onChange={(event) =>
-                setDefaults((prev) => ({
-                  ...prev,
-                  vatInputAccountId: event.target.value || null,
-                }))
-              }
-            >
-              <option value="">{t("defaults.none")}</option>
-              {postingAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.code} - {account.name}
-                </option>
-              ))}
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={defaults.vatInputAccountId ?? ""}
+                onChange={(event) =>
+                  setDefaults((prev) => ({
+                    ...prev,
+                    vatInputAccountId: event.target.value || null,
+                  }))
+                }
+              >
+                <option value="">{t("defaults.none")}</option>
+                {postingAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.code} - {account.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("defaults.discountAccount")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={defaults.discountAccountId ?? ""}
-              onChange={(event) =>
-                setDefaults((prev) => ({
-                  ...prev,
-                  discountAccountId: event.target.value || null,
-                }))
-              }
-            >
-              <option value="">{t("defaults.none")}</option>
-              {postingAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.code} - {account.name}
-                </option>
-              ))}
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={defaults.discountAccountId ?? ""}
+                onChange={(event) =>
+                  setDefaults((prev) => ({
+                    ...prev,
+                    discountAccountId: event.target.value || null,
+                  }))
+                }
+              >
+                <option value="">{t("defaults.none")}</option>
+                {postingAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.code} - {account.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
         </div>
 
@@ -509,45 +550,53 @@ export default function AccountingDefaultsPage() {
             <span className="mb-1 block text-xs text-muted">
               {t("defaults.salesTax")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={defaults.defaultSalesTaxCategoryId ?? ""}
-              onChange={(event) =>
-                setDefaults((prev) => ({
-                  ...prev,
-                  defaultSalesTaxCategoryId: event.target.value || null,
-                }))
-              }
-            >
-              <option value="">{t("defaults.none")}</option>
-              {activeTaxCategories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name} ({category.rate}%)
-                </option>
-              ))}
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={defaults.defaultSalesTaxCategoryId ?? ""}
+                onChange={(event) =>
+                  setDefaults((prev) => ({
+                    ...prev,
+                    defaultSalesTaxCategoryId: event.target.value || null,
+                  }))
+                }
+              >
+                <option value="">{t("defaults.none")}</option>
+                {activeTaxCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name} ({category.rate}%)
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("defaults.purchaseTax")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={defaults.defaultPurchaseTaxCategoryId ?? ""}
-              onChange={(event) =>
-                setDefaults((prev) => ({
-                  ...prev,
-                  defaultPurchaseTaxCategoryId: event.target.value || null,
-                }))
-              }
-            >
-              <option value="">{t("defaults.none")}</option>
-              {activeTaxCategories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name} ({category.rate}%)
-                </option>
-              ))}
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={defaults.defaultPurchaseTaxCategoryId ?? ""}
+                onChange={(event) =>
+                  setDefaults((prev) => ({
+                    ...prev,
+                    defaultPurchaseTaxCategoryId: event.target.value || null,
+                  }))
+                }
+              >
+                <option value="">{t("defaults.none")}</option>
+                {activeTaxCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name} ({category.rate}%)
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
         </div>
 
@@ -557,45 +606,53 @@ export default function AccountingDefaultsPage() {
             <span className="mb-1 block text-xs text-muted">
               {t("defaults.salesPayment")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={defaults.defaultSalesPaymentTermId ?? ""}
-              onChange={(event) =>
-                setDefaults((prev) => ({
-                  ...prev,
-                  defaultSalesPaymentTermId: event.target.value || null,
-                }))
-              }
-            >
-              <option value="">{t("defaults.none")}</option>
-              {activePaymentTerms.map((term) => (
-                <option key={term.id} value={term.id}>
-                  {term.name} ({term.days} {t("defaults.days")})
-                </option>
-              ))}
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={defaults.defaultSalesPaymentTermId ?? ""}
+                onChange={(event) =>
+                  setDefaults((prev) => ({
+                    ...prev,
+                    defaultSalesPaymentTermId: event.target.value || null,
+                  }))
+                }
+              >
+                <option value="">{t("defaults.none")}</option>
+                {activePaymentTerms.map((term) => (
+                  <option key={term.id} value={term.id}>
+                    {term.name} ({term.days} {t("defaults.days")})
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("defaults.purchasePayment")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={defaults.defaultPurchasePaymentTermId ?? ""}
-              onChange={(event) =>
-                setDefaults((prev) => ({
-                  ...prev,
-                  defaultPurchasePaymentTermId: event.target.value || null,
-                }))
-              }
-            >
-              <option value="">{t("defaults.none")}</option>
-              {activePaymentTerms.map((term) => (
-                <option key={term.id} value={term.id}>
-                  {term.name} ({term.days} {t("defaults.days")})
-                </option>
-              ))}
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={defaults.defaultPurchasePaymentTermId ?? ""}
+                onChange={(event) =>
+                  setDefaults((prev) => ({
+                    ...prev,
+                    defaultPurchasePaymentTermId: event.target.value || null,
+                  }))
+                }
+              >
+                <option value="">{t("defaults.none")}</option>
+                {activePaymentTerms.map((term) => (
+                  <option key={term.id} value={term.id}>
+                    {term.name} ({term.days} {t("defaults.days")})
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
         </div>
         {errorKey ? (
@@ -607,7 +664,7 @@ export default function AccountingDefaultsPage() {
           type="button"
           className="mt-4 w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           onClick={handleDefaultsSave}
-          disabled={isPending}
+          disabled={isPending || isLoading}
         >
           {t("common.save")}
         </button>
@@ -661,7 +718,7 @@ export default function AccountingDefaultsPage() {
         <button
           type="submit"
           className="mt-4 w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
-          disabled={isPending}
+          disabled={isPending || isLoading}
         >
           {t("tax.add")}
         </button>
@@ -740,7 +797,13 @@ export default function AccountingDefaultsPage() {
         <div className="border-b border-border px-4 py-2 text-sm font-semibold">
           {t("tax.listTitle")}
         </div>
-        {taxCategories.length === 0 ? (
+        {isLoading ? (
+          <div className="p-4 space-y-2">
+            <SkeletonBlock className="h-10 w-full" />
+            <SkeletonBlock className="h-10 w-full" />
+            <SkeletonBlock className="h-10 w-full" />
+          </div>
+        ) : taxCategories.length === 0 ? (
           <div className="p-4 text-sm text-muted">{t("tax.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
@@ -830,7 +893,7 @@ export default function AccountingDefaultsPage() {
         <button
           type="submit"
           className="mt-4 w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
-          disabled={isPending}
+          disabled={isPending || isLoading}
         >
           {t("terms.add")}
         </button>
@@ -893,7 +956,13 @@ export default function AccountingDefaultsPage() {
         <div className="border-b border-border px-4 py-2 text-sm font-semibold">
           {t("terms.listTitle")}
         </div>
-        {paymentTerms.length === 0 ? (
+        {isLoading ? (
+          <div className="p-4 space-y-2">
+            <SkeletonBlock className="h-10 w-full" />
+            <SkeletonBlock className="h-10 w-full" />
+            <SkeletonBlock className="h-10 w-full" />
+          </div>
+        ) : paymentTerms.length === 0 ? (
           <div className="p-4 text-sm text-muted">{t("terms.empty")}</div>
         ) : (
           <div className="overflow-x-auto">

@@ -220,6 +220,7 @@ export default function BillingPlansPage() {
                 value={form.code}
                 onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
                 required
+                minLength={2}
                 disabled={Boolean(editingId)}
               />
             </label>
@@ -230,6 +231,7 @@ export default function BillingPlansPage() {
                 value={form.name}
                 onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
                 required
+                minLength={2}
               />
             </label>
             <label className={`text-sm ${alignClass}`}>
@@ -246,6 +248,7 @@ export default function BillingPlansPage() {
               <span className="mb-1 block text-xs text-muted">{t("billing.priceMonthly")}</span>
               <input
                 type="number"
+                min={0}
                 className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.priceMonthly}
                 onChange={(event) =>
@@ -257,6 +260,7 @@ export default function BillingPlansPage() {
               <span className="mb-1 block text-xs text-muted">{t("billing.priceYearly")}</span>
               <input
                 type="number"
+                min={0}
                 className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.priceYearly}
                 onChange={(event) =>
@@ -268,6 +272,7 @@ export default function BillingPlansPage() {
               <span className="mb-1 block text-xs text-muted">{t("billing.maxUsers")}</span>
               <input
                 type="number"
+                min={1}
                 className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.maxUsers}
                 onChange={(event) =>
@@ -279,6 +284,7 @@ export default function BillingPlansPage() {
               <span className="mb-1 block text-xs text-muted">{t("billing.maxCompanies")}</span>
               <input
                 type="number"
+                min={1}
                 className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.maxCompanies}
                 onChange={(event) =>
@@ -290,6 +296,8 @@ export default function BillingPlansPage() {
               <span className="mb-1 block text-xs text-muted">{t("billing.trialDays")}</span>
               <input
                 type="number"
+                min={0}
+                max={365}
                 className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.trialDays}
                 onChange={(event) =>
@@ -301,6 +309,8 @@ export default function BillingPlansPage() {
               <span className="mb-1 block text-xs text-muted">{t("billing.graceDays")}</span>
               <input
                 type="number"
+                min={0}
+                max={365}
                 className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.graceDays}
                 onChange={(event) =>

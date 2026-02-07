@@ -5,6 +5,7 @@ import { useCompany } from "@/components/company-provider";
 import { SkeletonBlock } from "@/components/skeleton";
 import { useTranslations } from "@/i18n/provider";
 import { SAUDI_COA_TEMPLATE } from "@/lib/data/coa-saudi-template";
+import { useToast } from "@/components/toast";
 
 type Account = {
   id: string;
@@ -31,6 +32,7 @@ const ACCOUNT_TYPES = ["asset", "liability", "equity", "income", "expense", "cog
 export default function ChartOfAccountsPage() {
   const { activeCompanyId } = useCompany();
   const { t, locale } = useTranslations();
+  const { toast } = useToast();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [code, setCode] = useState("");
@@ -120,6 +122,7 @@ export default function ChartOfAccountsPage() {
         return;
       }
       loadAccounts();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -143,6 +146,7 @@ export default function ChartOfAccountsPage() {
         return;
       }
       loadAccounts();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -176,6 +180,7 @@ export default function ChartOfAccountsPage() {
       setParentId(null);
       setIsPosting(true);
       loadAccounts();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -193,6 +198,7 @@ export default function ChartOfAccountsPage() {
         }),
       });
       loadAccounts();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -236,6 +242,7 @@ export default function ChartOfAccountsPage() {
       }
       cancelEdit();
       loadAccounts();
+      toast(t("common.saved"), "success");
     });
   };
 

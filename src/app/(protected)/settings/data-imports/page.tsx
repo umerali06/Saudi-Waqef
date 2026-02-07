@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
+import { useToast } from "@/components/toast";
+import { SkeletonBlock } from "@/components/skeleton";
+
 
 type ImportEntity = "items" | "customers" | "vendors" | "opening_balances";
 
@@ -88,6 +91,7 @@ const INITIAL_LOADING = {
 export default function DataImportsPage() {
   const { activeCompanyId } = useCompany();
   const { t, locale } = useTranslations();
+  const { toast } = useToast();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [files, setFiles] = useState(INITIAL_FILES);
   const [summaries, setSummaries] = useState(INITIAL_SUMMARIES);
@@ -354,6 +358,7 @@ export default function DataImportsPage() {
         setFiles((prev) => ({ ...prev, [entity]: null }));
         if (mode === "import") {
           loadJobs();
+          toast(t("common.saved"), "success");
         }
       } catch {
         setErrorKey("imports.error.failed");
@@ -462,7 +467,13 @@ export default function DataImportsPage() {
         <div className="border-b border-border px-4 py-3 text-sm font-semibold">
           {t("imports.historyTitle")}
         </div>
-        {jobs.length === 0 ? (
+        {loading ? (
+          <div className="p-4 space-y-2">
+            <SkeletonBlock className="h-10 w-full" />
+            <SkeletonBlock className="h-10 w-full" />
+            <SkeletonBlock className="h-10 w-full" />
+          </div>
+        ) : jobs.length === 0 ? (
           <div className="px-4 py-6 text-sm text-muted">{t("imports.historyEmpty")}</div>
         ) : (
           <div className="overflow-x-auto">

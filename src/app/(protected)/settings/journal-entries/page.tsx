@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
+import { SkeletonBlock } from "@/components/skeleton";
+// import { toast } from "@/components/toast";
+import { useToast } from "@/components/toast";
 
 type Account = {
   id: string;
@@ -35,6 +38,7 @@ const emptyLine = (): JournalLineForm => ({ accountId: "", debit: "", credit: ""
 export default function JournalEntriesPage() {
   const { activeCompanyId } = useCompany();
   const { t, locale } = useTranslations();
+  const { toast } = useToast();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -47,6 +51,8 @@ export default function JournalEntriesPage() {
   const [lines, setLines] = useState<JournalLineForm[]>([emptyLine(), emptyLine()]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [isEntriesLoading, setIsEntriesLoading] = useState(true);
+  const [isAccountsLoading, setIsAccountsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
 
   const postingAccounts = useMemo(
@@ -84,21 +90,23 @@ export default function JournalEntriesPage() {
   };
 
   const loadAccounts = useCallback(() => {
-    if (!activeCompanyId) {
-      return;
-    }
-    setErrorKey(null);
+    if (!activeCompanyId) return;
+    setIsAccountsLoading(true);
     fetch(`/api/coa?companyId=${activeCompanyId}`)
       .then((res) => res.json())
-      .then((payload) => setAccounts(payload.accounts ?? []))
-      .catch(() => setErrorKey("error.loadFailed"));
+      .then((data) => setAccounts(data.accounts ?? []))
+      .catch(() => setErrorKey("error.loadFailed"))
+      .finally(() => setIsAccountsLoading(false));
   }, [activeCompanyId]);
 
   const loadEntries = useCallback(() => {
     if (!activeCompanyId) {
+      setIsEntriesLoading(false);
       return;
     }
+    setIsEntriesLoading(true);
     setErrorKey(null);
+
     const params = new URLSearchParams({
       companyId: activeCompanyId,
       status: statusFilter,
@@ -111,8 +119,9 @@ export default function JournalEntriesPage() {
     }
     fetch(`/api/journal-entries?${params.toString()}`)
       .then((res) => res.json())
-      .then((payload) => setEntries(payload.entries ?? []))
-      .catch(() => setErrorKey("error.loadFailed"));
+      .then((data) => setEntries(data.entries ?? []))
+      .catch(() => setErrorKey("error.loadFailed"))
+      .finally(() => setIsEntriesLoading(false));
   }, [activeCompanyId, endDate, startDate, statusFilter]);
 
   useEffect(() => {
@@ -129,14 +138,13 @@ export default function JournalEntriesPage() {
         if (idx !== index) {
           return line;
         }
-        const next = { ...line, [field]: value };
+        const updated = { ...line, [field]: value };
         if (field === "debit" && value) {
-          next.credit = "";
+          updated.credit = "";
+        } else if (field === "credit" && value) {
+          updated.debit = "";
         }
-        if (field === "credit" && value) {
-          next.debit = "";
-        }
-        return next;
+        return updated;
       })
     );
   };
@@ -149,18 +157,24 @@ export default function JournalEntriesPage() {
     setLines((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-  const buildPayload = (status: "draft" | "posted") => ({
-    companyId: activeCompanyId,
-    date: entryDate,
-    memo: memo || null,
-    isAdjusting,
-    status,
-    lines: lines.map((line) => ({
-      accountId: line.accountId,
-      debit: Number(line.debit) || 0,
-      credit: Number(line.credit) || 0,
-    })),
-  });
+  const buildPayload = (status: "draft" | "posted") => {
+    const validLines = lines
+      .map((line) => ({
+        accountId: line.accountId,
+        debit: Number(line.debit) || 0,
+        credit: Number(line.credit) || 0,
+      }))
+      .filter((line) => line.accountId && (line.debit > 0 || line.credit > 0));
+
+    return {
+      companyId: activeCompanyId,
+      date: entryDate,
+      memo: memo || null,
+      isAdjusting,
+      status,
+      lines: validLines,
+    };
+  };
 
   const mapError = (message?: string) => {
     switch (message) {
@@ -188,13 +202,20 @@ export default function JournalEntriesPage() {
       return;
     }
     setErrorKey(null);
+
+    const payload = buildPayload(status);
+    if (payload.lines.length < 2) {
+      setErrorKey("journal.errors.unbalanced");
+      return;
+    }
+
     startTransition(async () => {
       const response = await fetch(
         editingId ? `/api/journal-entries/${editingId}` : "/api/journal-entries",
         {
           method: editingId ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(buildPayload(status)),
+          body: JSON.stringify(payload),
         }
       );
       const data = await response.json().catch(() => ({}));
@@ -204,6 +225,7 @@ export default function JournalEntriesPage() {
       }
       resetForm();
       loadEntries();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -237,6 +259,7 @@ export default function JournalEntriesPage() {
         return;
       }
       loadEntries();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -255,6 +278,7 @@ export default function JournalEntriesPage() {
         return;
       }
       loadEntries();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -272,6 +296,7 @@ export default function JournalEntriesPage() {
         return;
       }
       loadEntries();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -283,204 +308,244 @@ export default function JournalEntriesPage() {
       </div>
 
       <div className="app-card p-4">
-        <div className="grid gap-4 md:grid-cols-4">
-          <label className="text-sm">
-            <span className={`mb-1 block text-xs text-muted ${alignClass}`}>
-              {t("journal.filters.status")}
-            </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
-            >
-              <option value="all">{t("common.all")}</option>
-              <option value="draft">{t("journal.status.draft")}</option>
-              <option value="posted">{t("journal.status.posted")}</option>
-              <option value="void">{t("journal.status.void")}</option>
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className={`mb-1 block text-xs text-muted ${alignClass}`}>
-              {t("journal.filters.startDate")}
-            </span>
-            <input
-              type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
-            />
-          </label>
-          <label className="text-sm">
-            <span className={`mb-1 block text-xs text-muted ${alignClass}`}>
-              {t("journal.filters.endDate")}
-            </span>
-            <input
-              type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={endDate}
-              onChange={(event) => setEndDate(event.target.value)}
-            />
-          </label>
-          <div className="flex items-end">
-            <button
-              type="button"
-              className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
-              onClick={loadEntries}
-            >
-              {t("common.apply")}
-            </button>
+        {isEntriesLoading && entries.length === 0 ? (
+          <div className="grid gap-4 md:grid-cols-4">
+            <div>
+              <SkeletonBlock className="mb-1 h-4 w-16" />
+              <SkeletonBlock className="h-10 w-full" />
+            </div>
+            <div>
+              <SkeletonBlock className="mb-1 h-4 w-16" />
+              <SkeletonBlock className="h-10 w-full" />
+            </div>
+            <div>
+              <SkeletonBlock className="mb-1 h-4 w-16" />
+              <SkeletonBlock className="h-10 w-full" />
+            </div>
+            <div className="flex items-end">
+              <SkeletonBlock className="h-10 w-20" />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-4">
+            <label className="text-sm">
+              <span className={`mb-1 block text-xs text-muted ${alignClass}`}>
+                {t("journal.filters.status")}
+              </span>
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+              >
+                <option value="all">{t("common.all")}</option>
+                <option value="draft">{t("journal.status.draft")}</option>
+                <option value="posted">{t("journal.status.posted")}</option>
+                <option value="void">{t("journal.status.void")}</option>
+              </select>
+            </label>
+            <label className="text-sm">
+              <span className={`mb-1 block text-xs text-muted ${alignClass}`}>
+                {t("journal.filters.startDate")}
+              </span>
+              <input
+                type="date"
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={startDate}
+                onChange={(event) => setStartDate(event.target.value)}
+              />
+            </label>
+            <label className="text-sm">
+              <span className={`mb-1 block text-xs text-muted ${alignClass}`}>
+                {t("journal.filters.endDate")}
+              </span>
+              <input
+                type="date"
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={endDate}
+                onChange={(event) => setEndDate(event.target.value)}
+              />
+            </label>
+            <div className="flex items-end">
+              <button
+                type="button"
+                className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+                onClick={loadEntries}
+              >
+                {t("common.apply")}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="app-card p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">
-            {editingId ? t("journal.editTitle") : t("journal.addTitle")}
-          </h2>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={isAdjusting}
-              onChange={(event) => setIsAdjusting(event.target.checked)}
-            />
-            {t("journal.adjusting")}
-          </label>
-        </div>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label className={`text-sm ${alignClass}`}>
-            <span className="mb-1 block text-xs text-muted">{t("journal.date")}</span>
-            <input
-              type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={entryDate}
-              onChange={(event) => setEntryDate(event.target.value)}
-            />
-          </label>
-          <label className={`text-sm ${alignClass}`}>
-            <span className="mb-1 block text-xs text-muted">{t("journal.memo")}</span>
-            <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={memo}
-              onChange={(event) => setMemo(event.target.value)}
-              placeholder={t("journal.memoPlaceholder")}
-            />
-          </label>
-        </div>
+        {isAccountsLoading ? (
+          <div className="space-y-4">
+            <div className="flex justify-between">
+              <SkeletonBlock className="h-6 w-32" />
+              <SkeletonBlock className="h-5 w-24" />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <SkeletonBlock className="h-10 w-full" />
+              <SkeletonBlock className="h-10 w-full" />
+            </div>
+            <SkeletonBlock className="h-40 w-full" />
+            <div className="flex gap-4">
+              <SkeletonBlock className="h-8 w-24" />
+              <SkeletonBlock className="h-8 w-24" />
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">
+                {editingId ? t("journal.editTitle") : t("journal.addTitle")}
+              </h2>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={isAdjusting}
+                  onChange={(event) => setIsAdjusting(event.target.checked)}
+                />
+                {t("journal.adjusting")}
+              </label>
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <label className={`text-sm ${alignClass}`}>
+                <span className="mb-1 block text-xs text-muted">{t("journal.date")}</span>
+                <input
+                  type="date"
+                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  value={entryDate}
+                  onChange={(event) => setEntryDate(event.target.value)}
+                />
+              </label>
+              <label className={`text-sm ${alignClass}`}>
+                <span className="mb-1 block text-xs text-muted">{t("journal.memo")}</span>
+                <input
+                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  value={memo}
+                  onChange={(event) => setMemo(event.target.value)}
+                  placeholder={t("journal.memoPlaceholder")}
+                />
+              </label>
+            </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-surface-muted text-muted">
-              <tr>
-                <th className={`px-4 py-2 ${alignClass}`}>{t("journal.account")}</th>
-                <th className={`px-4 py-2 ${alignClass}`}>{t("journal.debit")}</th>
-                <th className={`px-4 py-2 ${alignClass}`}>{t("journal.credit")}</th>
-                <th className={`px-4 py-2 ${alignClass}`}>{t("journal.actions")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {lines.map((line, index) => (
-                <tr key={`${index}-${line.accountId}`}>
-                  <td className="px-4 py-2">
-                    <select
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-                      value={line.accountId}
-                      onChange={(event) => updateLine(index, "accountId", event.target.value)}
-                    >
-                      <option value="">{t("journal.accountPlaceholder")}</option>
-                      {postingAccounts.map((account) => (
-                        <option key={account.id} value={account.id}>
-                          {account.code} - {account.name}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-4 py-2">
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-                      value={line.debit}
-                      onChange={(event) => updateLine(index, "debit", event.target.value)}
-                    />
-                  </td>
-                  <td className="px-4 py-2">
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-                      value={line.credit}
-                      onChange={(event) => updateLine(index, "credit", event.target.value)}
-                    />
-                  </td>
-                  <td className="px-4 py-2">
-                    <button
-                      type="button"
-                      className="text-xs font-semibold text-primary"
-                      onClick={() => removeLine(index)}
-                      disabled={lines.length <= 2}
-                    >
-                      {t("journal.removeLine")}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
-          <button
-            type="button"
-            className="rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
-            onClick={addLine}
-          >
-            {t("journal.addLine")}
-          </button>
-          <div className="text-xs text-muted">
-            {t("journal.totalDebit")}: {formatAmount(totals.debit)}
-          </div>
-          <div className="text-xs text-muted">
-            {t("journal.totalCredit")}: {formatAmount(totals.credit)}
-          </div>
-          <div className={`text-xs ${difference === 0 ? "text-muted" : "text-red-500"}`}>
-            {t("journal.difference")}: {formatAmount(difference)}
-          </div>
-        </div>
-        {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-            {t(errorKey)}
-          </div>
-        ) : null}
-        <div className="mt-4 flex flex-wrap gap-3">
-          <button
-            type="button"
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
-            onClick={() => handleSubmit("draft")}
-            disabled={isPending}
-          >
-            {editingId ? t("journal.updateDraft") : t("journal.saveDraft")}
-          </button>
-          <button
-            type="button"
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
-            onClick={() => handleSubmit("posted")}
-            disabled={isPending}
-          >
-            {editingId ? t("journal.postNow") : t("journal.post")}
-          </button>
-          {editingId ? (
-            <button
-              type="button"
-              className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
-              onClick={resetForm}
-              disabled={isPending}
-            >
-              {t("common.cancel")}
-            </button>
-          ) : null}
-        </div>
+            <div className="mt-4 overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-surface-muted text-muted">
+                  <tr>
+                    <th className={`px-4 py-2 ${alignClass}`}>{t("journal.account")}</th>
+                    <th className={`px-4 py-2 ${alignClass}`}>{t("journal.debit")}</th>
+                    <th className={`px-4 py-2 ${alignClass}`}>{t("journal.credit")}</th>
+                    <th className={`px-4 py-2 ${alignClass}`}>{t("journal.actions")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {lines.map((line, index) => (
+                    <tr key={`${index}-${line.accountId}`}>
+                      <td className="px-4 py-2">
+                        <select
+                          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                          value={line.accountId}
+                          onChange={(event) => updateLine(index, "accountId", event.target.value)}
+                        >
+                          <option value="">{t("journal.accountPlaceholder")}</option>
+                          {postingAccounts.map((account) => (
+                            <option key={account.id} value={account.id}>
+                              {account.code} - {account.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                          value={line.debit}
+                          onChange={(event) => updateLine(index, "debit", event.target.value)}
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                          value={line.credit}
+                          onChange={(event) => updateLine(index, "credit", event.target.value)}
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-primary"
+                          onClick={() => removeLine(index)}
+                          disabled={lines.length <= 2}
+                        >
+                          {t("journal.removeLine")}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
+              <button
+                type="button"
+                className="rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+                onClick={addLine}
+              >
+                {t("journal.addLine")}
+              </button>
+              <div className="text-xs text-muted">
+                {t("journal.totalDebit")}: {formatAmount(totals.debit)}
+              </div>
+              <div className="text-xs text-muted">
+                {t("journal.totalCredit")}: {formatAmount(totals.credit)}
+              </div>
+              <div className={`text-xs ${difference === 0 ? "text-muted" : "text-red-500"}`}>
+                {t("journal.difference")}: {formatAmount(difference)}
+              </div>
+            </div>
+            {errorKey ? (
+              <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                {t(errorKey)}
+              </div>
+            ) : null}
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+                onClick={() => handleSubmit("draft")}
+                disabled={isPending || isAccountsLoading}
+              >
+                {editingId ? t("journal.updateDraft") : t("journal.saveDraft")}
+              </button>
+              <button
+                type="button"
+                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+                onClick={() => handleSubmit("posted")}
+                disabled={isPending || isAccountsLoading}
+              >
+                {editingId ? t("journal.postNow") : t("journal.post")}
+              </button>
+              {editingId ? (
+                <button
+                  type="button"
+                  className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+                  onClick={resetForm}
+                  disabled={isPending}
+                >
+                  {t("common.cancel")}
+                </button>
+              ) : null}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="app-card overflow-hidden">
@@ -488,7 +553,13 @@ export default function JournalEntriesPage() {
           <span>{t("journal.listTitle")}</span>
           <span className="text-xs text-muted">{entries.length}</span>
         </div>
-        {entries.length === 0 ? (
+        {isEntriesLoading ? (
+          <div className="p-4 space-y-2">
+            <SkeletonBlock className="h-10 w-full" />
+            <SkeletonBlock className="h-10 w-full" />
+            <SkeletonBlock className="h-10 w-full" />
+          </div>
+        ) : entries.length === 0 ? (
           <div className="p-4 text-sm text-muted">{t("journal.empty")}</div>
         ) : (
           <div className="overflow-x-auto">

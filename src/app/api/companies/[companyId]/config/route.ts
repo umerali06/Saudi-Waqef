@@ -47,7 +47,7 @@ export async function PUT(request: Request, context: RouteContext) {
 
   const normalized = {
     ...parsed.data,
-    periodLockDate: parsed.data.periodLockDate ?? undefined,
+    periodLockDate: parsed.data.periodLockDate ?? null,
   };
   await updateCompanyConfig(companyId, normalized);
   await recordAuditEvent({

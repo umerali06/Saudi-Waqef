@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
+import { useToast } from "@/components/toast";
 
 type Integration = {
   id: string;
@@ -65,8 +66,10 @@ const EMPTY_FORM: FormState = {
 export default function IntegrationsPage() {
   const { activeCompanyId, activeCompany } = useCompany();
   const { t, locale } = useTranslations();
+  const { toast } = useToast();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormState | null>(null);

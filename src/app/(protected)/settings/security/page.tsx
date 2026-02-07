@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
+import { SkeletonBlock } from "@/components/skeleton";
+import { useToast } from "@/components/toast";
 
 type MfaStatus = {
   mfaEnabled: boolean;
@@ -13,6 +15,7 @@ type MfaStatus = {
 export default function SecuritySettingsPage() {
   const { t, locale } = useTranslations();
   const { activeCompanyId, activeCompany } = useCompany();
+  const { toast } = useToast();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [status, setStatus] = useState<MfaStatus | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
@@ -21,6 +24,7 @@ export default function SecuritySettingsPage() {
   const [disableCode, setDisableCode] = useState("");
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [noticeKey, setNoticeKey] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
 
   const isAdmin = ["owner", "admin"].includes(activeCompany?.role ?? "");
@@ -29,6 +33,7 @@ export default function SecuritySettingsPage() {
     if (!activeCompanyId || !isAdmin) {
       return;
     }
+    setIsLoading(true);
     fetch(`/api/security/mfa?companyId=${activeCompanyId}`)
       .then((res) => res.json())
       .then((data) => {
@@ -38,7 +43,8 @@ export default function SecuritySettingsPage() {
           issuer: data.issuer ?? "",
         });
       })
-      .catch(() => setStatus(null));
+      .catch(() => setStatus(null))
+      .finally(() => setIsLoading(false));
   }, [activeCompanyId, isAdmin]);
 
   useEffect(() => {
@@ -85,6 +91,7 @@ export default function SecuritySettingsPage() {
       setOtpauth(null);
       setVerifyCode("");
       loadStatus();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -105,6 +112,7 @@ export default function SecuritySettingsPage() {
       setNoticeKey("security.mfa.disabled");
       setDisableCode("");
       loadStatus();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -126,14 +134,23 @@ export default function SecuritySettingsPage() {
               <h2 className="text-lg font-semibold">{t("security.mfa.title")}</h2>
               <p className="text-xs text-muted">{t("security.mfa.description")}</p>
             </div>
-            <div className="rounded-full bg-surface-muted px-3 py-1 text-xs">
-              {status?.mfaEnabled
-                ? t("security.mfa.status.enabled")
-                : t("security.mfa.status.disabled")}
-            </div>
+            {isLoading ? (
+              <SkeletonBlock className="h-6 w-20 rounded-full" />
+            ) : (
+              <div className="rounded-full bg-surface-muted px-3 py-1 text-xs">
+                {status?.mfaEnabled
+                  ? t("security.mfa.status.enabled")
+                  : t("security.mfa.status.disabled")}
+              </div>
+            )}
           </div>
 
-          {status?.mfaEnabled ? (
+          {isLoading ? (
+            <div className="space-y-3">
+              <SkeletonBlock className="h-4 w-64" />
+              <SkeletonBlock className="h-9 w-32" />
+            </div>
+          ) : status?.mfaEnabled ? (
             <div className="space-y-3">
               <label className="block text-sm">
                 <span className={`mb-1 block text-xs text-muted ${alignClass}`}>

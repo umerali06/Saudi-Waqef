@@ -5,6 +5,8 @@ import { useCompany } from "@/components/company-provider";
 import { useUnsavedChanges } from "@/components/unsaved-changes";
 import { useTranslations } from "@/i18n/provider";
 import { buildSequenceNumber } from "@/lib/utils/numbering";
+import { SkeletonBlock } from "@/components/skeleton";
+import { useToast } from "@/components/toast";
 
 type NumberingConfig = {
   invoicePrefix: string;
@@ -233,9 +235,11 @@ export default function NumberingSettingsPage() {
   const { activeCompanyId } = useCompany();
   const { t, locale } = useTranslations();
   const { setDirty, markClean } = useUnsavedChanges();
+  const { toast } = useToast();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [config, setConfig] = useState<NumberingConfig>(EMPTY_CONFIG);
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [initialSnapshot, setInitialSnapshot] = useState<string | null>(null);
 
@@ -247,6 +251,7 @@ export default function NumberingSettingsPage() {
     }
     setErrorKey(null);
     markClean();
+    setIsLoading(true);
     fetch(`/api/companies/${activeCompanyId}/config`)
       .then((res) => res.json())
       .then((data) => {
@@ -386,7 +391,8 @@ export default function NumberingSettingsPage() {
         setInitialSnapshot(JSON.stringify(nextConfig));
         markClean();
       })
-      .catch(() => setErrorKey("error.loadFailed"));
+      .catch(() => setErrorKey("error.loadFailed"))
+      .finally(() => setIsLoading(false));
   }, [activeCompanyId, markClean]);
 
   useEffect(() => {
@@ -423,6 +429,7 @@ export default function NumberingSettingsPage() {
       }
       setInitialSnapshot(JSON.stringify(config));
       markClean();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -449,111 +456,146 @@ export default function NumberingSettingsPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {SECTIONS.map((section: Section) => {
-          const prefix = config[section.prefix as FieldKey] as string;
-          const suffix = config[section.suffix as FieldKey] as string;
-          const nextNumber = config[section.next as FieldKey] as number;
-          const padding = config[section.padding as FieldKey] as number;
-          const resetYearly = config[section.reset as FieldKey] as boolean;
-          const lastResetYear = config[section.lastReset as FieldKey] as number | null;
-          const preview = buildSequenceNumber({
-            prefix,
-            suffix,
-            nextNumber,
-            padding,
-            resetYearly,
-            lastResetYear,
-            date: previewDate,
-          }).number;
-
-          return (
-            <div key={section.id} className="app-card p-5">
+        {isLoading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="app-card p-5">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-base font-semibold">{t(section.labelKey)}</h3>
-                <span className="rounded-full bg-surface-muted px-3 py-1 text-xs text-muted">
-                  {t("numbering.preview")}: {preview}
-                </span>
+                <SkeletonBlock className="h-6 w-32" />
+                <SkeletonBlock className="h-6 w-24 rounded-full" />
               </div>
               <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <label className={`text-sm ${alignClass}`}>
-                  <span className="mb-1 block text-xs text-muted">
-                    {t("numbering.prefix")}
-                  </span>
-                  <input
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-                    value={prefix}
-                    onChange={(event) =>
-                      updateField(section.prefix as FieldKey, event.target.value)
-                    }
-                  />
-                </label>
-                <label className={`text-sm ${alignClass}`}>
-                  <span className="mb-1 block text-xs text-muted">
-                    {t("numbering.suffix")}
-                  </span>
-                  <input
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-                    value={suffix}
-                    onChange={(event) =>
-                      updateField(section.suffix as FieldKey, event.target.value)
-                    }
-                  />
-                </label>
-                <label className={`text-sm ${alignClass}`}>
-                  <span className="mb-1 block text-xs text-muted">
-                    {t("numbering.padding")}
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-                    value={padding}
-                    onChange={(event) =>
-                      updateField(
-                        section.padding as FieldKey,
-                        Number(event.target.value)
-                      )
-                    }
-                  />
-                </label>
-                <label className={`text-sm ${alignClass}`}>
-                  <span className="mb-1 block text-xs text-muted">
-                    {t("numbering.nextNumber")}
-                  </span>
-                  <input
-                    type="number"
-                    min={1}
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-                    value={nextNumber}
-                    onChange={(event) =>
-                      updateField(section.next as FieldKey, Number(event.target.value))
-                    }
-                  />
-                </label>
+                <div>
+                  <SkeletonBlock className="mb-2 h-4 w-16" />
+                  <SkeletonBlock className="h-10 w-full" />
+                </div>
+                <div>
+                  <SkeletonBlock className="mb-2 h-4 w-16" />
+                  <SkeletonBlock className="h-10 w-full" />
+                </div>
+                <div>
+                  <SkeletonBlock className="mb-2 h-4 w-24" />
+                  <SkeletonBlock className="h-10 w-full" />
+                </div>
+                <div>
+                  <SkeletonBlock className="mb-2 h-4 w-24" />
+                  <SkeletonBlock className="h-10 w-full" />
+                </div>
               </div>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                <label className="flex items-center gap-2 text-xs text-muted">
-                  <input
-                    type="checkbox"
-                    checked={resetYearly}
-                    onChange={(event) =>
-                      updateField(
-                        section.reset as FieldKey,
-                        event.target.checked
-                      )
-                    }
-                  />
-                  {t("numbering.resetYearly")}
-                </label>
-                {lastResetYear ? (
-                  <span className="text-xs text-muted">
-                    {t("numbering.lastReset", { value: String(lastResetYear) })}
-                  </span>
-                ) : null}
+              <div className="mt-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <SkeletonBlock className="h-4 w-4 rounded" />
+                  <SkeletonBlock className="h-4 w-32" />
+                </div>
               </div>
             </div>
-          );
-        })}
+          ))
+        ) : (
+          SECTIONS.map((section: Section) => {
+            const prefix = config[section.prefix as FieldKey] as string;
+            const suffix = config[section.suffix as FieldKey] as string;
+            const nextNumber = config[section.next as FieldKey] as number;
+            const padding = config[section.padding as FieldKey] as number;
+            const resetYearly = config[section.reset as FieldKey] as boolean;
+            const lastResetYear = config[section.lastReset as FieldKey] as number | null;
+            const preview = buildSequenceNumber({
+              prefix,
+              suffix,
+              nextNumber,
+              padding,
+              resetYearly,
+              lastResetYear,
+              date: previewDate,
+            }).number;
+
+            return (
+              <div key={section.id} className="app-card p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-base font-semibold">{t(section.labelKey)}</h3>
+                  <span className="rounded-full bg-surface-muted px-3 py-1 text-xs text-muted">
+                    {t("numbering.preview")}: {preview}
+                  </span>
+                </div>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <label className={`text-sm ${alignClass}`}>
+                    <span className="mb-1 block text-xs text-muted">
+                      {t("numbering.prefix")}
+                    </span>
+                    <input
+                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      value={prefix}
+                      onChange={(event) =>
+                        updateField(section.prefix as FieldKey, event.target.value)
+                      }
+                    />
+                  </label>
+                  <label className={`text-sm ${alignClass}`}>
+                    <span className="mb-1 block text-xs text-muted">
+                      {t("numbering.suffix")}
+                    </span>
+                    <input
+                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      value={suffix}
+                      onChange={(event) =>
+                        updateField(section.suffix as FieldKey, event.target.value)
+                      }
+                    />
+                  </label>
+                  <label className={`text-sm ${alignClass}`}>
+                    <span className="mb-1 block text-xs text-muted">
+                      {t("numbering.padding")}
+                    </span>
+                    <input
+                      type="number"
+                      min={0}
+                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      value={padding}
+                      onChange={(event) =>
+                        updateField(
+                          section.padding as FieldKey,
+                          Number(event.target.value)
+                        )
+                      }
+                    />
+                  </label>
+                  <label className={`text-sm ${alignClass}`}>
+                    <span className="mb-1 block text-xs text-muted">
+                      {t("numbering.nextNumber")}
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      value={nextNumber}
+                      onChange={(event) =>
+                        updateField(section.next as FieldKey, Number(event.target.value))
+                      }
+                    />
+                  </label>
+                </div>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <label className="flex items-center gap-2 text-xs text-muted">
+                    <input
+                      type="checkbox"
+                      checked={resetYearly}
+                      onChange={(event) =>
+                        updateField(
+                          section.reset as FieldKey,
+                          event.target.checked
+                        )
+                      }
+                    />
+                    {t("numbering.resetYearly")}
+                  </label>
+                  {lastResetYear ? (
+                    <span className="text-xs text-muted">
+                      {t("numbering.lastReset", { value: String(lastResetYear) })}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {errorKey ? (

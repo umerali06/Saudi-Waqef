@@ -4,6 +4,8 @@ import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useCompany } from "@/components/company-provider";
 import { useUnsavedChanges } from "@/components/unsaved-changes";
+import { useToast } from "@/components/toast";
+import { SkeletonBlock } from "@/components/skeleton";
 import { useTranslations } from "@/i18n/provider";
 import { uploadToCloudinary } from "@/lib/cloudinary-client";
 
@@ -77,6 +79,7 @@ export default function CompanyProfilePage() {
   const { activeCompanyId } = useCompany();
   const { t, locale } = useTranslations();
   const { setDirty, markClean } = useUnsavedChanges();
+  const { toast } = useToast();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [profile, setProfile] = useState<CompanyProfile>(EMPTY_PROFILE);
   const [config, setConfig] = useState<CompanyConfig>(EMPTY_CONFIG);
@@ -86,6 +89,7 @@ export default function CompanyProfilePage() {
   const [isProfileSaving, setIsProfileSaving] = useState(false);
   const [isConfigSaving, setIsConfigSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [initialSnapshot, setInitialSnapshot] = useState<string | null>(null);
 
   const snapshot = useMemo(
@@ -98,6 +102,7 @@ export default function CompanyProfilePage() {
       return;
     }
     setErrorKey(null);
+    setIsLoading(true);
     markClean();
     Promise.all([
       fetch(`/api/companies/${activeCompanyId}`).then((res) => res.json()),
@@ -149,7 +154,8 @@ export default function CompanyProfilePage() {
         setInitialSnapshot(JSON.stringify({ profile: nextProfile, config: nextConfig, logoUrl: nextLogo }));
         markClean();
       })
-      .catch(() => setErrorKey("error.loadFailed"));
+      .catch(() => setErrorKey("error.loadFailed"))
+      .finally(() => setIsLoading(false));
   }, [activeCompanyId, markClean]);
 
   useEffect(() => {
@@ -210,6 +216,7 @@ export default function CompanyProfilePage() {
         }
         setInitialSnapshot(JSON.stringify({ profile, config, logoUrl }));
         markClean();
+        toast(t("common.saved"), "success");
       }
       if (!response.ok) {
         setErrorKey(mapProfileError(data?.error));
@@ -237,6 +244,7 @@ export default function CompanyProfilePage() {
       if (response.ok) {
         setInitialSnapshot(JSON.stringify({ profile, config, logoUrl }));
         markClean();
+        toast(t("common.saved"), "success");
       }
       setIsConfigSaving(false);
     });
@@ -272,37 +280,43 @@ export default function CompanyProfilePage() {
               {t("companyProfile.logo")}
             </span>
             <div className="flex flex-wrap items-center gap-3">
-              <input
-                type="file"
-                accept="image/*"
-                className="block text-xs"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) {
-                    void handleLogoUpload(file);
-                  }
-                }}
-              />
-              {logoUrl ? (
-                <>
-                  <Image
-                    src={logoUrl}
-                    alt={t("companyProfile.logoAlt")}
-                    className="h-10 w-auto rounded-md border border-border bg-surface p-1"
-                    width={160}
-                    height={40}
-                    unoptimized
-                  />
-                  <button
-                    type="button"
-                    className="text-xs font-semibold text-muted"
-                    onClick={() => setLogoUrl(null)}
-                  >
-                    {t("companyProfile.removeLogo")}
-                  </button>
-                </>
+              {isLoading ? (
+                <SkeletonBlock className="h-10 w-40" />
               ) : (
-                <span className="text-xs text-muted">{t("companyProfile.noLogo")}</span>
+                <>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="block text-xs"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) {
+                        void handleLogoUpload(file);
+                      }
+                    }}
+                  />
+                  {logoUrl ? (
+                    <>
+                      <Image
+                        src={logoUrl}
+                        alt={t("companyProfile.logoAlt")}
+                        className="h-10 w-auto rounded-md border border-border bg-surface p-1"
+                        width={160}
+                        height={40}
+                        unoptimized
+                      />
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-muted"
+                        onClick={() => setLogoUrl(null)}
+                      >
+                        {t("companyProfile.removeLogo")}
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-xs text-muted">{t("companyProfile.noLogo")}</span>
+                  )}
+                </>
               )}
             </div>
             {isUploading ? (
@@ -313,133 +327,169 @@ export default function CompanyProfilePage() {
             <span className="mb-1 block text-xs text-muted">
               {t("common.companyName")}
             </span>
-            <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
-              value={profile.name}
-              onChange={(event) =>
-                setProfile((prev) => ({ ...prev, name: event.target.value }))
-              }
-              required
-            />
+            {isLoading ? (
+              <SkeletonBlock className="h-10 w-full" />
+            ) : (
+              <input
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                value={profile.name}
+                onChange={(event) =>
+                  setProfile((prev) => ({ ...prev, name: event.target.value }))
+                }
+                required
+              />
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("companyProfile.legalName")}
             </span>
-            <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
-              value={profile.legalName}
-              onChange={(event) =>
-                setProfile((prev) => ({
-                  ...prev,
-                  legalName: event.target.value,
-                }))
-              }
-            />
+            {isLoading ? (
+              <SkeletonBlock className="h-10 w-full" />
+            ) : (
+              <input
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                value={profile.legalName}
+                onChange={(event) =>
+                  setProfile((prev) => ({
+                    ...prev,
+                    legalName: event.target.value,
+                  }))
+                }
+              />
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("companyProfile.vatNumber")}
             </span>
-            <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
-              value={profile.vatNumber}
-              onChange={(event) =>
-                setProfile((prev) => ({
-                  ...prev,
-                  vatNumber: event.target.value,
-                }))
-              }
-            />
+            {isLoading ? (
+              <SkeletonBlock className="h-10 w-full" />
+            ) : (
+              <input
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                value={profile.vatNumber}
+                onChange={(event) =>
+                  setProfile((prev) => ({
+                    ...prev,
+                    vatNumber: event.target.value,
+                  }))
+                }
+              />
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("companyProfile.crNumber")}
             </span>
-            <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
-              value={profile.crNumber}
-              onChange={(event) =>
-                setProfile((prev) => ({
-                  ...prev,
-                  crNumber: event.target.value,
-                }))
-              }
-            />
+            {isLoading ? (
+              <SkeletonBlock className="h-10 w-full" />
+            ) : (
+              <input
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                value={profile.crNumber}
+                onChange={(event) =>
+                  setProfile((prev) => ({
+                    ...prev,
+                    crNumber: event.target.value,
+                  }))
+                }
+              />
+            )}
           </label>
           <label className={`text-sm ${alignClass} md:col-span-2`}>
             <span className="mb-1 block text-xs text-muted">
               {t("companyProfile.address")}
             </span>
-            <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
-              value={profile.address}
-              onChange={(event) =>
-                setProfile((prev) => ({
-                  ...prev,
-                  address: event.target.value,
-                }))
-              }
-            />
+            {isLoading ? (
+              <SkeletonBlock className="h-10 w-full" />
+            ) : (
+              <input
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                value={profile.address}
+                onChange={(event) =>
+                  setProfile((prev) => ({
+                    ...prev,
+                    address: event.target.value,
+                  }))
+                }
+              />
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("companyProfile.currency")}
             </span>
-            <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={currencyLabel}
-              disabled
-            />
+            {isLoading ? (
+              <SkeletonBlock className="h-10 w-full" />
+            ) : (
+              <input
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={currencyLabel}
+                disabled
+              />
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("companyProfile.fiscalYearStart")}
             </span>
-            <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
-              value={profile.fiscalYearStart}
-              onChange={(event) =>
-                setProfile((prev) => ({
-                  ...prev,
-                  fiscalYearStart: event.target.value,
-                }))
-              }
-              placeholder="01-01"
-            />
+            {isLoading ? (
+              <SkeletonBlock className="h-10 w-full" />
+            ) : (
+              <input
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                value={profile.fiscalYearStart}
+                onChange={(event) =>
+                  setProfile((prev) => ({
+                    ...prev,
+                    fiscalYearStart: event.target.value,
+                  }))
+                }
+                placeholder="01-01"
+              />
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("companyProfile.timezone")}
             </span>
-            <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
-              value={profile.timezone}
-              onChange={(event) =>
-                setProfile((prev) => ({
-                  ...prev,
-                  timezone: event.target.value,
-                }))
-              }
-            />
+            {isLoading ? (
+              <SkeletonBlock className="h-10 w-full" />
+            ) : (
+              <input
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                value={profile.timezone}
+                onChange={(event) =>
+                  setProfile((prev) => ({
+                    ...prev,
+                    timezone: event.target.value,
+                  }))
+                }
+              />
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("companyProfile.defaultLanguage")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
-              value={profile.defaultLanguage}
-              onChange={(event) =>
-                setProfile((prev) => ({
-                  ...prev,
-                  defaultLanguage: event.target.value as "ar" | "en",
-                }))
-              }
-            >
-              <option value="ar">{t("language.ar")}</option>
-              <option value="en">{t("language.en")}</option>
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-10 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                value={profile.defaultLanguage}
+                onChange={(event) =>
+                  setProfile((prev) => ({
+                    ...prev,
+                    defaultLanguage: event.target.value as "ar" | "en",
+                  }))
+                }
+              >
+                <option value="ar">{t("language.ar")}</option>
+                <option value="en">{t("language.en")}</option>
+              </select>
+            )}
           </label>
         </div>
         {errorKey ? (

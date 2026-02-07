@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { useCompany } from "@/components/company-provider";
 import { useUnsavedChanges } from "@/components/unsaved-changes";
 import { useTranslations } from "@/i18n/provider";
+import { useToast } from "@/components/toast";
+import { SkeletonBlock } from "@/components/skeleton";
 
 type ApprovalConfig = {
   billApprovalThreshold: number;
@@ -19,9 +21,11 @@ export default function ApprovalsPage() {
   const { activeCompanyId } = useCompany();
   const { t, locale } = useTranslations();
   const { setDirty, markClean } = useUnsavedChanges();
+  const { toast } = useToast();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [config, setConfig] = useState<ApprovalConfig>(EMPTY_CONFIG);
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [initialSnapshot, setInitialSnapshot] = useState<string | null>(null);
 
@@ -33,6 +37,7 @@ export default function ApprovalsPage() {
     }
     setErrorKey(null);
     markClean();
+    setIsLoading(true);
     fetch(`/api/companies/${activeCompanyId}/config`)
       .then((res) => res.json())
       .then((data) => {
@@ -51,7 +56,8 @@ export default function ApprovalsPage() {
         setInitialSnapshot(JSON.stringify(nextConfig));
         markClean();
       })
-      .catch(() => setErrorKey("error.loadFailed"));
+      .catch(() => setErrorKey("error.loadFailed"))
+      .finally(() => setIsLoading(false));
   }, [activeCompanyId, markClean]);
 
   useEffect(() => {
@@ -82,6 +88,7 @@ export default function ApprovalsPage() {
       }
       setInitialSnapshot(JSON.stringify(config));
       markClean();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -98,36 +105,44 @@ export default function ApprovalsPage() {
             <span className="mb-1 block text-xs text-muted">
               {t("approvals.billThreshold")}
             </span>
-            <input
-              type="number"
-              min={0}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={config.billApprovalThreshold}
-              onChange={(event) =>
-                setConfig((prev) => ({
-                  ...prev,
-                  billApprovalThreshold: Number(event.target.value),
-                }))
-              }
-            />
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <input
+                type="number"
+                min={0}
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={config.billApprovalThreshold}
+                onChange={(event) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    billApprovalThreshold: Number(event.target.value),
+                  }))
+                }
+              />
+            )}
             <p className="mt-1 text-xs text-muted">{t("approvals.billHint")}</p>
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("approvals.payrollThreshold")}
             </span>
-            <input
-              type="number"
-              min={0}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={config.payrollApprovalThreshold}
-              onChange={(event) =>
-                setConfig((prev) => ({
-                  ...prev,
-                  payrollApprovalThreshold: Number(event.target.value),
-                }))
-              }
-            />
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <input
+                type="number"
+                min={0}
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={config.payrollApprovalThreshold}
+                onChange={(event) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    payrollApprovalThreshold: Number(event.target.value),
+                  }))
+                }
+              />
+            )}
             <p className="mt-1 text-xs text-muted">{t("approvals.payrollHint")}</p>
           </label>
         </div>

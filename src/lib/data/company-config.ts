@@ -73,7 +73,7 @@ export type CompanyConfig = {
   roundingMode: "standard" | "up" | "down";
   billApprovalThreshold: number;
   payrollApprovalThreshold: number;
-  periodLockDate?: string;
+  periodLockDate?: string | null;
   onboardingCompleted?: boolean;
 };
 

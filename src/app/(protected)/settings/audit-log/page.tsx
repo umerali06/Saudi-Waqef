@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
+import { useToast } from "@/components/toast";
+import { SkeletonBlock } from "@/components/skeleton";
 
 type AuditEvent = {
   id: string;
@@ -236,7 +238,12 @@ export default function AuditLogPage() {
           {t("auditLog.tableTitle")}
         </div>
         {loading ? (
-          <div className="p-4 text-sm text-muted">{t("common.loading")}</div>
+          <div className="space-y-4 p-4">
+            <SkeletonBlock className="h-10 w-full" />
+            <SkeletonBlock className="h-10 w-full" />
+            <SkeletonBlock className="h-10 w-full" />
+            <SkeletonBlock className="h-10 w-full" />
+          </div>
         ) : events.length === 0 ? (
           <div className="p-4 text-sm text-muted">{t("auditLog.empty")}</div>
         ) : (

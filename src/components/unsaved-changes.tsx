@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 type UnsavedChangesContextValue = {
   isDirty: boolean;
@@ -20,12 +20,12 @@ export function UnsavedChangesProvider({
 }) {
   const [isDirty, setIsDirty] = useState(false);
 
-  const setDirty = (dirty: boolean) => {
+  const setDirty = useCallback((dirty: boolean) => {
     setIsDirty(dirty);
-  };
+  }, []);
 
-  const markDirty = () => setIsDirty(true);
-  const markClean = () => setIsDirty(false);
+  const markDirty = useCallback(() => setIsDirty(true), []);
+  const markClean = useCallback(() => setIsDirty(false), []);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -48,7 +48,7 @@ export function UnsavedChangesProvider({
       markDirty,
       markClean,
     }),
-    [isDirty]
+    [isDirty, setDirty, markDirty, markClean]
   );
 
   return (

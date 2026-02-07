@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { useCompany } from "@/components/company-provider";
 import { useUnsavedChanges } from "@/components/unsaved-changes";
 import { useTranslations } from "@/i18n/provider";
+import { useToast } from "@/components/toast";
+import { SkeletonBlock } from "@/components/skeleton";
 
 type DateFormat = "yyyy-MM-dd" | "dd/MM/yyyy" | "MM/dd/yyyy";
 
@@ -29,9 +31,11 @@ export default function PreferencesPage() {
   const { activeCompanyId } = useCompany();
   const { t, locale } = useTranslations();
   const { setDirty, markClean } = useUnsavedChanges();
+  const { toast } = useToast();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [config, setConfig] = useState<PreferenceConfig>(EMPTY_CONFIG);
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [initialSnapshot, setInitialSnapshot] = useState<string | null>(null);
 
@@ -43,6 +47,7 @@ export default function PreferencesPage() {
     }
     setErrorKey(null);
     markClean();
+    setIsLoading(true);
     fetch(`/api/companies/${activeCompanyId}/config`)
       .then((res) => res.json())
       .then((data) => {
@@ -60,7 +65,8 @@ export default function PreferencesPage() {
         setInitialSnapshot(JSON.stringify(nextConfig));
         markClean();
       })
-      .catch(() => setErrorKey("error.loadFailed"));
+      .catch(() => setErrorKey("error.loadFailed"))
+      .finally(() => setIsLoading(false));
   }, [activeCompanyId, markClean]);
 
   useEffect(() => {
@@ -124,6 +130,7 @@ export default function PreferencesPage() {
       }
       setInitialSnapshot(JSON.stringify(config));
       markClean();
+      toast(t("common.saved"), "success");
     });
   };
 
@@ -140,20 +147,24 @@ export default function PreferencesPage() {
             <span className="mb-1 block text-xs text-muted">
               {t("preferences.dateFormat")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={config.dateFormat}
-              onChange={(event) =>
-                setConfig((prev) => ({
-                  ...prev,
-                  dateFormat: event.target.value as DateFormat,
-                }))
-              }
-            >
-              <option value="yyyy-MM-dd">YYYY-MM-DD</option>
-              <option value="dd/MM/yyyy">DD/MM/YYYY</option>
-              <option value="MM/dd/yyyy">MM/DD/YYYY</option>
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={config.dateFormat}
+                onChange={(event) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    dateFormat: event.target.value as DateFormat,
+                  }))
+                }
+              >
+                <option value="yyyy-MM-dd">YYYY-MM-DD</option>
+                <option value="dd/MM/yyyy">DD/MM/YYYY</option>
+                <option value="MM/dd/yyyy">MM/DD/YYYY</option>
+              </select>
+            )}
             <p className="mt-1 text-xs text-muted">
               {t("preferences.sample")}: {formatSampleDate(config.dateFormat)}
             </p>
@@ -162,19 +173,23 @@ export default function PreferencesPage() {
             <span className="mb-1 block text-xs text-muted">
               {t("preferences.timeFormat")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={config.timeFormat}
-              onChange={(event) =>
-                setConfig((prev) => ({
-                  ...prev,
-                  timeFormat: event.target.value as TimeFormat,
-                }))
-              }
-            >
-              <option value="24h">{t("preferences.time24")}</option>
-              <option value="12h">{t("preferences.time12")}</option>
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={config.timeFormat}
+                onChange={(event) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    timeFormat: event.target.value as TimeFormat,
+                  }))
+                }
+              >
+                <option value="24h">{t("preferences.time24")}</option>
+                <option value="12h">{t("preferences.time12")}</option>
+              </select>
+            )}
             <p className="mt-1 text-xs text-muted">
               {t("preferences.sample")}: {formatSampleTime(config.timeFormat)}
             </p>
@@ -183,38 +198,46 @@ export default function PreferencesPage() {
             <span className="mb-1 block text-xs text-muted">
               {t("preferences.roundingPrecision")}
             </span>
-            <input
-              type="number"
-              min={0}
-              max={6}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={config.roundingPrecision}
-              onChange={(event) =>
-                setConfig((prev) => ({
-                  ...prev,
-                  roundingPrecision: Number(event.target.value),
-                }))
-              }
-            />
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <input
+                type="number"
+                min={0}
+                max={6}
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={config.roundingPrecision}
+                onChange={(event) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    roundingPrecision: Number(event.target.value),
+                  }))
+                }
+              />
+            )}
           </label>
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("preferences.roundingMode")}
             </span>
-            <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-              value={config.roundingMode}
-              onChange={(event) =>
-                setConfig((prev) => ({
-                  ...prev,
-                  roundingMode: event.target.value as RoundingMode,
-                }))
-              }
-            >
-              <option value="standard">{t("preferences.rounding.standard")}</option>
-              <option value="up">{t("preferences.rounding.up")}</option>
-              <option value="down">{t("preferences.rounding.down")}</option>
-            </select>
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <select
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                value={config.roundingMode}
+                onChange={(event) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    roundingMode: event.target.value as RoundingMode,
+                  }))
+                }
+              >
+                <option value="standard">{t("preferences.rounding.standard")}</option>
+                <option value="up">{t("preferences.rounding.up")}</option>
+                <option value="down">{t("preferences.rounding.down")}</option>
+              </select>
+            )}
           </label>
         </div>
         <p className="mt-3 text-xs text-muted">

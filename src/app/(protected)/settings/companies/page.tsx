@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
+import { useToast } from "@/components/toast";
 
 export default function CompanySettingsPage() {
   const { data: session } = useSession();
   const { companies } = useCompany();
   const { t, locale } = useTranslations();
+  const { toast } = useToast();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [name, setName] = useState("");
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -70,6 +72,7 @@ export default function CompanySettingsPage() {
         return;
       }
       router.refresh();
+      toast(t("common.saved"), "success");
     });
   };
 

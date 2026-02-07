@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
+import { useToast } from "@/components/toast";
+import { SkeletonBlock } from "@/components/skeleton";
+
 
 type Account = {
   id: string;
@@ -20,12 +23,14 @@ type BalanceRow = {
 export default function OpeningBalancesPage() {
   const { activeCompanyId } = useCompany();
   const { t, locale } = useTranslations();
+  const { toast } = useToast();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [balances, setBalances] = useState<Record<string, BalanceRow>>({});
   const [asOfDate, setAsOfDate] = useState("");
   const [periodLockDate, setPeriodLockDate] = useState<string | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
 
   const formatDate = useCallback(
@@ -44,8 +49,10 @@ export default function OpeningBalancesPage() {
 
   const loadData = useCallback(() => {
     if (!activeCompanyId) {
+      setIsLoading(false);
       return;
     }
+    setIsLoading(true);
     setErrorKey(null);
     Promise.all([
       fetch(`/api/coa?companyId=${activeCompanyId}`).then((res) => res.json()),
@@ -70,7 +77,8 @@ export default function OpeningBalancesPage() {
         setAsOfDate(inferredDate);
         setPeriodLockDate(configData?.config?.periodLockDate ?? null);
       })
-      .catch(() => setErrorKey("error.loadFailed"));
+      .catch(() => setErrorKey("error.loadFailed"))
+      .finally(() => setIsLoading(false));
   }, [activeCompanyId]);
 
   useEffect(() => {
@@ -129,6 +137,8 @@ export default function OpeningBalancesPage() {
         } else {
           setErrorKey("opening.mustBalance");
         }
+      } else {
+        toast(t("common.saved"), "success");
       }
     });
   };
@@ -146,17 +156,25 @@ export default function OpeningBalancesPage() {
             <span className="mb-1 block text-xs text-muted">
               {t("opening.asOfDate")}
             </span>
-            <input
-              type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
-              value={asOfDate}
-              onChange={(event) => setAsOfDate(event.target.value)}
-              required
-            />
+            {isLoading ? (
+              <SkeletonBlock className="h-9 w-full" />
+            ) : (
+              <input
+                type="date"
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                value={asOfDate}
+                onChange={(event) => setAsOfDate(event.target.value)}
+                required
+              />
+            )}
           </label>
           <div className="text-sm text-muted">
             <p className="text-xs uppercase tracking-wide">{t("opening.lockDate")}</p>
-            <p className="mt-1 text-sm text-foreground">{formatDate(periodLockDate)}</p>
+            {isLoading ? (
+              <SkeletonBlock className="mt-1 h-5 w-24" />
+            ) : (
+              <p className="mt-1 text-sm text-foreground">{formatDate(periodLockDate)}</p>
+            )}
           </div>
         </div>
       </div>
@@ -176,12 +194,29 @@ export default function OpeningBalancesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {accounts.map((account) => {
-                const row = balances[account.id] ?? {
-                  accountId: account.id,
-                  debit: 0,
-                  credit: 0,
-                };
+              {isLoading
+                ? Array.from({ length: 5 }).map((_, idx) => (
+                    <tr key={idx}>
+                      <td className="px-4 py-2">
+                        <SkeletonBlock className="h-5 w-24" />
+                      </td>
+                      <td className="px-4 py-2">
+                        <SkeletonBlock className="h-5 w-48" />
+                      </td>
+                      <td className="px-4 py-2">
+                        <SkeletonBlock className="h-9 w-full" />
+                      </td>
+                      <td className="px-4 py-2">
+                        <SkeletonBlock className="h-9 w-full" />
+                      </td>
+                    </tr>
+                  ))
+                : accounts.map((account) => {
+                    const row = balances[account.id] ?? {
+                      accountId: account.id,
+                      debit: 0,
+                      credit: 0,
+                    };
                 return (
                   <tr key={account.id}>
                     <td className="px-4 py-2">{account.code}</td>
@@ -228,15 +263,25 @@ export default function OpeningBalancesPage() {
         </div>
         <div className="border-t border-border px-4 py-3 text-sm text-muted">
           <div className="flex flex-wrap gap-6">
-            <span>
-              {t("opening.totalDebit")}: {totals.debit.toFixed(2)}
-            </span>
-            <span>
-              {t("opening.totalCredit")}: {totals.credit.toFixed(2)}
-            </span>
-            <span>
-              {t("opening.difference")}: {difference.toFixed(2)}
-            </span>
+            {isLoading ? (
+              <>
+                <SkeletonBlock className="h-5 w-32" />
+                <SkeletonBlock className="h-5 w-32" />
+                <SkeletonBlock className="h-5 w-32" />
+              </>
+            ) : (
+              <>
+                <span>
+                  {t("opening.totalDebit")}: {totals.debit.toFixed(2)}
+                </span>
+                <span>
+                  {t("opening.totalCredit")}: {totals.credit.toFixed(2)}
+                </span>
+                <span>
+                  {t("opening.difference")}: {difference.toFixed(2)}
+                </span>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -253,9 +298,9 @@ export default function OpeningBalancesPage() {
       ) : null}
       <button
         type="button"
-        className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+        className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:opacity-50"
         onClick={handleSave}
-        disabled={isPending || difference !== 0}
+        disabled={isPending || difference !== 0 || isLoading}
       >
         {t("opening.save")}
       </button>

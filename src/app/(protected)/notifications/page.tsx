@@ -1,95 +1,46 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCompany } from "@/components/company-provider";
 import { SkeletonBlock } from "@/components/skeleton";
 import { useTranslations } from "@/i18n/provider";
-
-type Notification = {
-  id: string;
-  companyId: string;
-  type: string;
-  title: string;
-  body: string;
-  status: "read" | "unread";
-  createdAt: string;
-  readAt?: string | null;
-};
+import { useNotifications } from "@/components/notifications-provider";
 
 export default function NotificationsPage() {
   const { activeCompanyId } = useCompany();
   const { t, locale } = useTranslations();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  
+  const { notifications: allNotifications, loading, markAsRead, markAllAsRead, refresh } = useNotifications();
   const [statusFilter, setStatusFilter] = useState("all");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [isPending, startTransition] = useTransition();
 
+  // Refresh on mount to ensure fresh data
   useEffect(() => {
-    if (!activeCompanyId) {
-      return;
-    }
-    const params = new URLSearchParams();
-    params.set("companyId", activeCompanyId);
-    params.set("status", statusFilter);
-    setLoading(true);
-    fetch(`/api/notifications?${params.toString()}`)
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => setNotifications(data.notifications ?? []))
-      .catch(() => setError(t("notifications.errors.loadFailed")))
-      .finally(() => setLoading(false));
-  }, [activeCompanyId, statusFilter, t]);
+    refresh();
+  }, [refresh]);
+
+  const notifications = useMemo(() => {
+    if (statusFilter === "all") return allNotifications;
+    return allNotifications.filter((item) => item.status === statusFilter);
+  }, [allNotifications, statusFilter]);
 
   const unreadCount = useMemo(
-    () => notifications.filter((item) => item.status === "unread").length,
-    [notifications]
+    () => allNotifications.filter((item) => item.status === "unread").length,
+    [allNotifications]
   );
 
-  const markRead = (id: string) => {
-    startTransition(async () => {
-      const response = await fetch(`/api/notifications/${id}`, {
-        method: "PATCH",
-      });
-      if (!response.ok) {
-        setError(t("notifications.errors.updateFailed"));
-        return;
-      }
-      setNotifications((prev) =>
-        prev.map((item) =>
-          item.id === id ? { ...item, status: "read" } : item
-        )
-      );
-    });
-  };
-
-  const markAll = () => {
-    if (!activeCompanyId) {
-      return;
+  const formatDate = (value: string) => {
+    try {
+      return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(new Date(value));
+    } catch (e) {
+      return value;
     }
-    startTransition(async () => {
-      const response = await fetch("/api/notifications/mark-all-read", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ companyId: activeCompanyId }),
-      });
-      if (!response.ok) {
-        setError(t("notifications.errors.updateFailed"));
-        return;
-      }
-      setNotifications((prev) =>
-        prev.map((item) => ({ ...item, status: "read" }))
-      );
-    });
   };
 
-  const formatDate = (value: string) =>
-    new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(value));
-
-  const statusStyles: Record<Notification["status"], string> = {
+  const statusStyles: Record<string, string> = {
     read: "bg-slate-200 text-slate-700",
     unread: "bg-emerald-100 text-emerald-700",
   };
@@ -105,12 +56,6 @@ export default function NotificationsPage() {
           {t("notifications.unread", { count: String(unreadCount) })}
         </div>
       </div>
-
-      {error ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-          {error}
-        </div>
-      ) : null}
 
       <div className={`app-card p-4 ${alignClass}`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -143,9 +88,34 @@ export default function NotificationsPage() {
             </a>
             <button
               type="button"
+              className="cursor-pointer rounded-xl border border-border bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20"
+              onClick={async () => {
+                if (!activeCompanyId) return;
+                try {
+                  await fetch("/api/notifications", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      companyId: activeCompanyId,
+                      title: "Test Notification",
+                      body: "This is a test notification to verify functionality.",
+                      type: "info",
+                    }),
+                  });
+                  refresh();
+                } catch (error) {
+                  console.error("Failed to send test notification", error);
+                }
+              }}
+              disabled={!activeCompanyId}
+            >
+              Test Notification
+            </button>
+            <button
+              type="button"
               className="cursor-pointer rounded-xl border border-border px-3 py-2 text-xs font-semibold text-foreground"
-              onClick={markAll}
-              disabled={isPending || notifications.length === 0}
+              onClick={() => markAllAsRead()}
+              disabled={unreadCount === 0}
             >
               {t("notifications.markAllRead")}
             </button>
@@ -157,7 +127,7 @@ export default function NotificationsPage() {
         <div className="border-b border-border px-4 py-3 text-sm font-semibold">
           {t("notifications.listTitle")}
         </div>
-        {loading ? (
+        {loading && notifications.length === 0 ? (
           <div className="space-y-3 p-4">
             {Array.from({ length: 4 }).map((_, index) => (
               <div key={index} className="space-y-2">
@@ -187,8 +157,7 @@ export default function NotificationsPage() {
                       <button
                         type="button"
                         className="cursor-pointer rounded-lg border border-border px-2 py-1 text-xs font-semibold"
-                        onClick={() => markRead(item.id)}
-                        disabled={isPending}
+                        onClick={() => markAsRead(item.id)}
                       >
                         {t("notifications.markRead")}
                       </button>
