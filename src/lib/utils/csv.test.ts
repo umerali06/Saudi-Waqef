@@ -19,4 +19,9 @@ describe("csv utils", () => {
     expect(parsed.headers).toEqual(headers);
     expect(parsed.rows).toEqual(rows);
   });
+
+  it("prefixes UTF-8 BOM for spreadsheet compatibility", () => {
+    const csv = toCsv(["name"], [["عميل"]]);
+    expect(csv.charCodeAt(0)).toBe(0xfeff);
+  });
 });

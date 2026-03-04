@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "docs:integration": "node scripts/docs/generate-integration-docs.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

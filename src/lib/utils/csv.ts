@@ -3,7 +3,11 @@ type ParsedCsv = {
   rows: string[][];
 };
 
+const UTF8_BOM = "\uFEFF";
+
 export function parseCsv(input: string): ParsedCsv {
+  const normalizedInput =
+    input.charCodeAt(0) === 0xfeff ? input.slice(1) : input;
   const rows: string[][] = [];
   let current: string[] = [];
   let value = "";
@@ -19,10 +23,10 @@ export function parseCsv(input: string): ParsedCsv {
     current = [];
   };
 
-  for (let i = 0; i < input.length; i += 1) {
-    const char = input[i];
+  for (let i = 0; i < normalizedInput.length; i += 1) {
+    const char = normalizedInput[i];
     if (char === "\"") {
-      const nextChar = input[i + 1];
+      const nextChar = normalizedInput[i + 1];
       if (inQuotes && nextChar === "\"") {
         value += "\"";
         i += 1;
@@ -36,7 +40,7 @@ export function parseCsv(input: string): ParsedCsv {
       continue;
     }
     if ((char === "\n" || char === "\r") && !inQuotes) {
-      if (char === "\r" && input[i + 1] === "\n") {
+      if (char === "\r" && normalizedInput[i + 1] === "\n") {
         i += 1;
       }
       pushValue();
@@ -53,7 +57,7 @@ export function parseCsv(input: string): ParsedCsv {
 
   const headers = rows.shift() ?? [];
   return {
-    headers: headers.map((header) => header.trim()),
+    headers: headers.map((header) => header.replace(/^\uFEFF/, "").trim()),
     rows: rows.filter((row) => row.some((cell) => cell.trim() !== "")),
   };
 }
@@ -69,5 +73,5 @@ export function toCsv(headers: string[], rows: string[][]) {
     headers.map(escapeValue).join(","),
     ...rows.map((row) => row.map((cell) => escapeValue(cell)).join(",")),
   ];
-  return lines.join("\n");
+  return `${UTF8_BOM}${lines.join("\n")}`;
 }

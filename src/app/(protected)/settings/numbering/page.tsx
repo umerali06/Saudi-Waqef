@@ -5,6 +5,7 @@ import { useCompany } from "@/components/company-provider";
 import { useUnsavedChanges } from "@/components/unsaved-changes";
 import { useTranslations } from "@/i18n/provider";
 import { buildSequenceNumber } from "@/lib/utils/numbering";
+// toast is already imported via useToast hook below
 import { SkeletonBlock } from "@/components/skeleton";
 import { useToast } from "@/components/toast";
 

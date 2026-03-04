@@ -1,0 +1,87 @@
+collection,filters,orderBy,sourceFiles
+accounting_periods,companyId ==,,src/lib/data/accounting-periods.ts
+api_key_usage,companyId ==,,src/lib/data/api-keys.ts
+api_keys,companyId ==,,src/lib/data/api-keys.ts
+api_keys,tokenHash ==,,src/lib/data/api-keys.ts
+attendance_holidays,companyId ==,,src/lib/data/attendance-holidays.ts
+attendance_records,companyId ==,,src/lib/data/attendance-records.ts
+attendance_records,companyId ==|date ==|employeeId ==,,src/lib/data/attendance-records.ts
+audit_logs,companyId ==,,src/lib/data/audit-logs.ts
+bank_statement_lines,accountId ==|companyId ==,,src/lib/data/bank-statement-lines.ts
+bank_transfers,companyId ==,,src/lib/data/bank-transfers.ts
+bill_attachments,billId ==,,src/lib/data/bill-attachments.ts
+bill_payments,billId ==,,src/lib/data/bill-payments.ts
+billing_invoices,companyId ==,,src/lib/data/billing-invoices.ts
+cash_adjustments,companyId ==,,src/lib/data/cash-adjustments.ts
+cash_bank_accounts,companyId ==,,src/lib/data/cash-bank-accounts.ts
+cash_transactions,accountId ==|companyId ==,,src/lib/data/cash-transactions.ts
+chart_accounts,code ==|companyId ==,,src/lib/data/chart-accounts.ts
+chart_accounts,companyId ==,,src/lib/data/chart-accounts.ts
+chart_accounts,parentId ==,,src/lib/data/chart-accounts.ts
+companies,createdAt >=|name ==,,src/lib/data/kpis.ts
+contacts,companyId ==|partyId ==|partyType ==,,src/lib/data/contacts.ts
+credit_note_refunds,creditNoteId ==,,src/lib/data/credit-note-refunds.ts
+customers,companyId ==,,src/lib/data/customers.ts
+departments,companyId ==,,src/lib/data/departments.ts
+documents,companyId ==,,src/lib/data/documents.ts
+dr_drills,,startedAt desc,src/lib/data/disaster-recovery.ts
+email_outbox,companyId ==|sourceId ==|sourceType ==,createdAt desc,src/lib/data/email-outbox.ts
+email_outbox,status ==,,src/lib/data/email-outbox.ts
+employee_contracts,employeeId ==,,src/lib/data/employee-contracts.ts
+employee_contracts,employeeId ==|status ==,,src/lib/data/employee-contracts.ts
+employee_documents,employeeId ==,,src/lib/data/employee-documents.ts
+employee_transfers,employeeId ==,,src/lib/data/employee-transfers.ts
+employees,companyId ==,,src/lib/data/employees.ts
+employees,companyId ==|userId ==,,src/lib/data/employees.ts
+expense_attachments,expenseId ==,,src/lib/data/expense-attachments.ts
+expense_categories,companyId ==,,src/lib/data/expense-categories.ts
+expenses,companyId ==,,src/lib/data/expenses.ts
+import_jobs,companyId ==,,src/lib/data/import-jobs.ts
+integration_jobs,integrationId ==,,src/lib/data/integration-jobs.ts
+integration_logs,integrationId ==,,src/lib/data/integration-logs.ts
+integrations,companyId ==,,src/lib/data/integrations.ts
+inventory_adjustments,itemId ==,,src/lib/data/inventory-adjustments.ts
+invites,token ==,,src/lib/data/invites.ts
+invoice_attachments,invoiceId ==,,src/lib/data/invoice-attachments.ts
+invoice_payments,invoiceId ==,,src/lib/data/invoice-payments.ts
+item_attachments,itemId ==,,src/lib/data/item-attachments.ts
+items,companyId ==,,src/lib/data/items.ts
+journal_entries,companyId ==,,src/lib/data/journal-entries.ts
+kb_categories,,order asc,src/lib/data/knowledge-base.ts
+leave_adjustments,companyId ==,,src/lib/data/leave-adjustments.ts
+leave_requests,companyId ==,,src/lib/data/leave-requests.ts
+leave_types,companyId ==,,src/lib/data/leave-types.ts
+memberships,companyId ==,,src/lib/data/memberships.ts
+memberships,companyId ==|userId ==,,src/lib/data/memberships.ts
+memberships,userId ==,,src/lib/data/memberships.ts
+migration_runs,,startedAt desc,src/lib/data/migrations.ts
+notification_preferences,companyId ==|userId ==,,src/lib/data/notification-preferences.ts
+notifications,userId ==,,src/lib/data/notifications.ts
+open_items,companyId ==,,src/lib/data/open-items.ts
+open_items,companyPartyKey ==,,src/lib/data/open-items.ts
+opening_balances,companyId ==,,src/lib/data/opening-balances.ts
+password_resets,tokenHash ==,,src/lib/data/password-resets.ts
+payment_methods,companyId ==,,src/lib/data/payment-methods.ts
+payment_receipts,companyId ==,,src/lib/data/payment-receipts.ts
+payment_terms,companyId ==,,src/lib/data/payment-terms.ts
+payroll_adjustments,runId ==,,src/lib/data/payroll-adjustments.ts
+payroll_run_items,runId ==,,src/lib/data/payroll-run-items.ts
+payroll_runs,companyId ==,,src/lib/data/payroll-runs.ts
+positions,companyId ==,,src/lib/data/positions.ts
+purchase_bills,companyId ==,,src/lib/data/purchase-bills.ts
+recurring_invoices,companyId ==,,src/lib/data/recurring-invoices.ts
+registration_requests,,createdAt desc,src/lib/data/registration-requests.ts
+report_exports,companyId ==,,src/lib/data/report-exports.ts
+sales_credit_notes,companyId ==,,src/lib/data/credit-notes.ts
+sales_invoices,companyId ==,,src/lib/data/sales-invoices.ts
+sales_invoices,companyId ==|createdAt >=,,src/lib/data/system-metrics.ts
+support_tickets,companyId ==,,src/lib/data/support-tickets.ts
+tax_categories,companyId ==,,src/lib/data/tax-categories.ts
+telemetry_events,name ==,,src/lib/data/telemetry.ts
+users,emailLower ==,,src/lib/data/users.ts
+vat_adjustments,companyId ==|periodId ==,,src/lib/data/vat-adjustments.ts
+vat_periods,companyId ==,,src/lib/data/vat-periods.ts
+vendor_credit_notes,companyId ==,,src/lib/data/vendor-credit-notes.ts
+vendor_payments,companyId ==,,src/lib/data/vendor-payments.ts
+vendors,companyId ==,,src/lib/data/vendors.ts
+zatca_artifacts,invoiceId ==,,src/lib/data/zatca-artifacts.ts

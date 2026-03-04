@@ -1,0 +1,216 @@
+fromCollection,foreignKeyField,toCollection
+accounting_payment_methods,companyId,companies
+accounting_payment_methods,defaultAccountId,default_accounts (inferred)
+accounting_periods,companyId,companies
+api_key_usage,companyId,companies
+api_key_usage,keyId,api_keys
+api_keys,companyId,companies
+attendance_holidays,companyId,companies
+attendance_records,companyId,companies
+attendance_records,employeeId,employees
+attendance_settings,companyId,companies
+audit_logs,companyId,companies
+audit_logs,entityId,entitys (inferred)
+audit_logs,userId,users
+bank_statement_lines,accountId,chart_accounts
+bank_statement_lines,companyId,companies
+bank_statement_lines,matchedCashTransactionId,matched_cash_transactions (inferred)
+bank_transfers,companyId,companies
+bank_transfers,fromAccountId,from_accounts (inferred)
+bank_transfers,journalEntryId,journal_entrys (inferred)
+bank_transfers,toAccountId,to_accounts (inferred)
+bill_attachments,billId,purchase_bills
+bill_attachments,companyId,companies
+bill_payments,accountId,chart_accounts
+bill_payments,billId,purchase_bills
+bill_payments,companyId,companies
+bill_payments,journalEntryId,journal_entrys (inferred)
+billing_invoices,companyId,companies
+billing_invoices,planId,plans (inferred)
+billing_invoices,subscriptionId,subscriptions
+cash_adjustments,accountId,chart_accounts
+cash_adjustments,companyId,companies
+cash_adjustments,journalEntryId,journal_entrys (inferred)
+cash_adjustments,offsetAccountId,offset_accounts (inferred)
+cash_bank_accounts,accountId,chart_accounts
+cash_bank_accounts,companyId,companies
+cash_transactions,accountId,chart_accounts
+cash_transactions,companyId,companies
+cash_transactions,sourceId,sources (inferred)
+chart_accounts,companyId,companies
+chart_accounts,parentId,parents (inferred)
+company_defaults,defaultPurchasePaymentTermId,default_purchase_payment_terms (inferred)
+company_defaults,defaultPurchaseTaxCategoryId,default_purchase_tax_categorys (inferred)
+company_defaults,defaultSalesPaymentTermId,default_sales_payment_terms (inferred)
+company_defaults,defaultSalesTaxCategoryId,default_sales_tax_categorys (inferred)
+company_defaults,discountAccountId,discount_accounts (inferred)
+company_defaults,payableAccountId,payable_accounts (inferred)
+company_defaults,purchasesAccountId,purchases_accounts (inferred)
+company_defaults,receivableAccountId,receivable_accounts (inferred)
+company_defaults,salesAccountId,sales_accounts (inferred)
+company_defaults,vatInputAccountId,vat_input_accounts (inferred)
+company_defaults,vatOutputAccountId,vat_output_accounts (inferred)
+contacts,companyId,companies
+contacts,partyId,partys (inferred)
+credit_note_refunds,accountId,chart_accounts
+credit_note_refunds,companyId,companies
+credit_note_refunds,creditNoteId,credit_notes (inferred)
+credit_note_refunds,journalEntryId,journal_entrys (inferred)
+customers,companyId,companies
+customers,paymentTermId,payment_terms
+departments,companyId,companies
+departments,managerId,managers (inferred)
+documents,companyId,companies
+documents,entityId,entitys (inferred)
+email_outbox,companyId,companies
+email_outbox,sourceId,sources (inferred)
+employee_contracts,companyId,companies
+employee_contracts,employeeId,employees
+employee_documents,companyId,companies
+employee_documents,employeeId,employees
+employee_transfers,companyId,companies
+employee_transfers,employeeId,employees
+employee_transfers,fromDepartmentId,from_departments (inferred)
+employee_transfers,fromPositionId,from_positions (inferred)
+employee_transfers,toDepartmentId,to_departments (inferred)
+employee_transfers,toPositionId,to_positions (inferred)
+employees,companyId,companies
+employees,departmentId,departments
+employees,managerId,managers (inferred)
+employees,nationalId,nationals (inferred)
+employees,positionId,positions
+employees,userId,users
+expense_attachments,companyId,companies
+expense_attachments,expenseId,expenses
+expense_categories,companyId,companies
+expense_categories,expenseAccountId,expense_accounts (inferred)
+expenses,categoryId,expense_categories
+expenses,companyId,companies
+expenses,expenseAccountId,expense_accounts (inferred)
+expenses,journalEntryId,journal_entrys (inferred)
+expenses,paymentAccountId,payment_accounts (inferred)
+expenses,reimbursementAccountId,reimbursement_accounts (inferred)
+expenses,reimbursementEntryId,reimbursement_entrys (inferred)
+expenses,taxCategoryId,tax_categorys (inferred)
+expenses,vendorId,vendors
+impersonations,adminUserId,admin_users (inferred)
+impersonations,companyId,companies
+impersonations,targetUserId,target_users (inferred)
+import_jobs,companyId,companies
+integration_jobs,companyId,companies
+integration_jobs,integrationId,integrations
+integration_logs,companyId,companies
+integration_logs,integrationId,integrations
+integrations,companyId,companies
+inventory_adjustments,companyId,companies
+inventory_adjustments,itemId,items
+invoice_attachments,companyId,companies
+invoice_attachments,invoiceId,sales_invoices
+invoice_payments,accountId,chart_accounts
+invoice_payments,companyId,companies
+invoice_payments,invoiceId,sales_invoices
+invoice_payments,journalEntryId,journal_entrys (inferred)
+item_attachments,companyId,companies
+item_attachments,itemId,items
+items,companyId,companies
+items,expenseAccountId,expense_accounts (inferred)
+items,incomeAccountId,income_accounts (inferred)
+items,taxCategoryId,tax_categorys (inferred)
+journal_entries,companyId,companies
+journal_entries,sourceId,sources (inferred)
+kb_articles,categoryId,expense_categories
+kb_categories,articleId,articles (inferred)
+kb_categories,companyId,companies
+kb_categories,userId,users
+kb_feedback,articleId,articles (inferred)
+kb_feedback,companyId,companies
+kb_feedback,userId,users
+leave_adjustments,companyId,companies
+leave_adjustments,employeeId,employees
+leave_adjustments,leaveTypeId,leave_types
+leave_requests,companyId,companies
+leave_requests,employeeId,employees
+leave_requests,leaveTypeId,leave_types
+leave_types,companyId,companies
+memberships,companyId,companies
+memberships,userId,users
+migration_registry,lastRunId,last_runs (inferred)
+migration_runs,migrationId,migrations (inferred)
+notification_preferences,companyId,companies
+notification_preferences,userId,users
+notifications,companyId,companies
+notifications,userId,users
+open_items,companyId,companies
+open_items,partyId,partys (inferred)
+opening_balances,accountId,chart_accounts
+password_resets,userId,users
+payment_methods,companyId,companies
+payment_receipts,accountId,chart_accounts
+payment_receipts,companyId,companies
+payment_receipts,customerId,customers
+payment_receipts,journalEntryId,journal_entrys (inferred)
+payment_terms,companyId,companies
+payroll_adjustments,companyId,companies
+payroll_adjustments,runId,payroll_runs
+payroll_adjustments,runItemId,run_items (inferred)
+payroll_run_items,companyId,companies
+payroll_run_items,contractId,contracts (inferred)
+payroll_run_items,employeeId,employees
+payroll_run_items,runId,payroll_runs
+payroll_runs,companyId,companies
+payroll_runs,journalEntryId,journal_entrys (inferred)
+payroll_runs,paymentAccountId,payment_accounts (inferred)
+payroll_runs,paymentJournalEntryId,payment_journal_entrys (inferred)
+payroll_settings,companyId,companies
+payroll_settings,paymentAccountId,payment_accounts (inferred)
+payroll_settings,payrollPayableAccountId,payroll_payable_accounts (inferred)
+payroll_settings,salaryDeductionsAccountId,salary_deductions_accounts (inferred)
+payroll_settings,salaryExpenseAccountId,salary_expense_accounts (inferred)
+positions,companyId,companies
+positions,departmentId,departments
+purchase_bills,companyId,companies
+purchase_bills,journalEntryId,journal_entrys (inferred)
+purchase_bills,openItemId,open_items
+purchase_bills,paymentTermId,payment_terms
+purchase_bills,vendorId,vendors
+recurring_invoices,companyId,companies
+recurring_invoices,customerId,customers
+recurring_invoices,itemId,items
+recurring_invoices,paymentTermId,payment_terms
+recurring_invoices,taxCategoryId,tax_categorys (inferred)
+report_exports,companyId,companies
+report_exports,userId,users
+sales_credit_notes,companyId,companies
+sales_credit_notes,customerId,customers
+sales_credit_notes,invoiceId,sales_invoices
+sales_credit_notes,journalEntryId,journal_entrys (inferred)
+sales_invoices,companyId,companies
+sales_invoices,customerId,customers
+sales_invoices,journalEntryId,journal_entrys (inferred)
+sales_invoices,openItemId,open_items
+sales_invoices,paymentTermId,payment_terms
+subscriptions,companyId,companies
+subscriptions,planId,plans (inferred)
+support_tickets,companyId,companies
+support_tickets,userId,users
+system_admins,userId,users
+system_alerts,entityId,entitys (inferred)
+tax_categories,companyId,companies
+telemetry_events,companyId,companies
+telemetry_events,userId,users
+user_security,userId,users
+vat_adjustments,companyId,companies
+vat_adjustments,periodId,periods (inferred)
+vat_periods,companyId,companies
+vendor_credit_notes,billId,purchase_bills
+vendor_credit_notes,companyId,companies
+vendor_credit_notes,journalEntryId,journal_entrys (inferred)
+vendor_credit_notes,vendorId,vendors
+vendor_payments,accountId,chart_accounts
+vendor_payments,companyId,companies
+vendor_payments,journalEntryId,journal_entrys (inferred)
+vendor_payments,vendorId,vendors
+vendors,companyId,companies
+vendors,paymentTermId,payment_terms
+zatca_artifacts,companyId,companies
+zatca_artifacts,invoiceId,sales_invoices
