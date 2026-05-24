@@ -6,6 +6,8 @@ import type { LeaveType } from "@/lib/data/leave-types";
 import type { EmployeeContractRecord } from "@/lib/data/employee-contracts";
 import type { AttendanceSettings } from "@/lib/data/attendance-settings";
 import type { PayrollSettings } from "@/lib/data/payroll-settings";
+import { calculateEndOfServiceBenefit } from "@/lib/utils/end-of-service";
+import type { EmployeeRecord } from "@/lib/data/employees";
 
 describe("date helpers", () => {
   it("calculates inclusive days", () => {
@@ -114,6 +116,9 @@ describe("computePayrollForEmployee", () => {
       cycle: "monthly",
       overtimeMultiplier: 1.5,
       latenessPenaltyPerMinute: 2,
+      absenceDailyRateMode: "labor_law_30",
+      eosbEnabled: true,
+      eosbWageBasis: "actual",
       gosiEnabled: true,
       gosiEmployeeRate: 2,
       gosiEmployerRate: 0,
@@ -142,13 +147,82 @@ describe("computePayrollForEmployee", () => {
     expect(result.fixedDeductions).toBeCloseTo(100, 2);
     expect(result.overtimePay).toBeCloseTo(36.29, 2);
     expect(result.latenessDeduction).toBeCloseTo(20, 2);
-    expect(result.unpaidLeaveDeduction).toBeCloseTo(238.71, 2);
-    expect(result.absenceDeduction).toBeCloseTo(119.35, 2);
+    expect(result.unpaidLeaveDeduction).toBeCloseTo(246.67, 2);
+    expect(result.absenceDeduction).toBeCloseTo(123.33, 2);
     expect(result.gosiDeduction).toBeCloseTo(74, 2);
     expect(result.grossPay).toBeCloseTo(3736.29, 2);
-    expect(result.totalDeductions).toBeCloseTo(552.06, 2);
-    expect(result.netPay).toBeCloseTo(3184.23, 2);
+    expect(result.totalDeductions).toBeCloseTo(564, 2);
+    expect(result.netPay).toBeCloseTo(3172.29, 2);
     expect(result.absentDays).toBe(1);
     expect(result.unpaidLeaveDays).toBe(2);
+    expect(result.dailyRate).toBeCloseTo(123.33, 2);
+  });
+});
+
+describe("calculateEndOfServiceBenefit", () => {
+  it("calculates a prorated resignation award under Saudi labor law", () => {
+    const employee: EmployeeRecord = {
+      id: "e1",
+      companyId: "co1",
+      nameAr: "أحمد",
+      nameEn: "Ahmed",
+      hireDate: "2020-01-01",
+      status: "terminated",
+      terminationDate: "2026-01-01",
+      terminationCategory: "resignation",
+      createdAt: new Date(),
+    };
+
+    const contract: EmployeeContractRecord = {
+      id: "c1",
+      companyId: "co1",
+      employeeId: "e1",
+      type: "full_time",
+      status: "ended",
+      startDate: "2020-01-01",
+      endDate: "2026-01-01",
+      salary: {
+        basic: 4000,
+        housingAllowance: 1000,
+        transportAllowance: 500,
+        otherAllowance: 500,
+        deductions: 0,
+        currency: "SAR",
+      },
+      createdAt: new Date(),
+    };
+
+    const payrollSettings: PayrollSettings = {
+      companyId: "co1",
+      cycle: "monthly",
+      overtimeMultiplier: 1.5,
+      latenessPenaltyPerMinute: 0,
+      absenceDailyRateMode: "labor_law_30",
+      eosbEnabled: true,
+      eosbWageBasis: "actual",
+      gosiEnabled: false,
+      gosiEmployeeRate: 0,
+      gosiEmployerRate: 0,
+      incomeTaxEnabled: false,
+      incomeTaxRate: 0,
+      salaryExpenseAccountId: null,
+      payrollPayableAccountId: null,
+      salaryDeductionsAccountId: null,
+      paymentAccountId: null,
+      createdAt: new Date(),
+    };
+
+    const result = calculateEndOfServiceBenefit({
+      employee,
+      contract,
+      payrollSettings,
+    });
+
+    expect(result.eligible).toBe(true);
+    expect(result.monthlyWage).toBe(6000);
+    expect(result.serviceYears).toBeCloseTo(6.01, 2);
+    expect(result.awardBeforeAdjustment).toBeCloseTo(21049.32, 2);
+    expect(result.adjustmentFactor).toBeCloseTo(2 / 3, 4);
+    expect(result.awardAmount).toBeCloseTo(14032.88, 2);
   });
 });

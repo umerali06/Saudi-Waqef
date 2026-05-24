@@ -44,6 +44,7 @@ type Employee = {
   employmentType?: string | null;
   status: "active" | "suspended" | "terminated";
   terminationDate?: string | null;
+  terminationCategory?: string | null;
   terminationReason?: string | null;
   notes?: string | null;
   onboarding?: OnboardingTask[];
@@ -105,6 +106,18 @@ type EmployeeTransfer = {
   reason?: string | null;
 };
 
+type EndOfServiceSummary = {
+  eligible: boolean;
+  basis: "actual" | "basic";
+  monthlyWage: number;
+  serviceDays: number;
+  serviceYears: number;
+  awardBeforeAdjustment: number;
+  adjustmentFactor: number;
+  awardAmount: number;
+  terminationCategory: string;
+};
+
 type OnboardingTask = {
   id: string;
   title: string;
@@ -134,6 +147,7 @@ type EmployeeForm = {
   employmentType: string;
   status: "active" | "suspended" | "terminated";
   terminationDate: string;
+  terminationCategory: string;
   terminationReason: string;
   notes: string;
   transferEffectiveDate: string;
@@ -153,6 +167,8 @@ const mapEmployeeError = (error?: string) => {
       return "hr.employees.invalidUser";
     case "Duplicate employee":
       return "hr.employees.duplicate";
+    case "Invalid payload":
+      return "hr.employees.invalidPayload";
     default:
       return "error.saveFailed";
   }
@@ -174,6 +190,7 @@ export default function EmployeeDetailPage() {
   const [contracts, setContracts] = useState<EmployeeContract[]>([]);
   const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
   const [transfers, setTransfers] = useState<EmployeeTransfer[]>([]);
+  const [endOfServiceSummary, setEndOfServiceSummary] = useState<EndOfServiceSummary | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [successKey, setSuccessKey] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -240,6 +257,18 @@ export default function EmployeeDetailPage() {
     ],
     [t]
   );
+
+  const terminationCategoryOptions = useMemo(
+    () => [
+      { value: "employer_termination", label: t("hr.employees.terminationCategory.employer_termination") },
+      { value: "resignation", label: t("hr.employees.terminationCategory.resignation") },
+      { value: "contract_end", label: t("hr.employees.terminationCategory.contract_end") },
+      { value: "force_majeure", label: t("hr.employees.terminationCategory.force_majeure") },
+      { value: "retirement", label: t("hr.employees.terminationCategory.retirement") },
+      { value: "other", label: t("hr.employees.terminationCategory.other") },
+    ],
+    [t]
+  );
   const displayEmployeeName = (item?: EmployeeOption | null) =>
     item ? (locale === "ar" ? item.nameAr : item.nameEn) : "-";
 
@@ -287,6 +316,7 @@ export default function EmployeeDetailPage() {
           employmentType: record.employmentType ?? "",
           status: record.status,
           terminationDate: record.terminationDate ?? "",
+          terminationCategory: record.terminationCategory ?? "",
           terminationReason: record.terminationReason ?? "",
           notes: record.notes ?? "",
           transferEffectiveDate: "",
@@ -328,11 +358,13 @@ export default function EmployeeDetailPage() {
       fetch(`/api/employees/${employeeId}/contracts`).then((res) => res.json()),
       fetch(`/api/employees/${employeeId}/documents`).then((res) => res.json()),
       fetch(`/api/employees/${employeeId}/transfers`).then((res) => res.json()),
+      fetch(`/api/employees/${employeeId}/end-of-service`).then((res) => res.json()),
     ])
-      .then(([contractData, documentData, transferData]) => {
+      .then(([contractData, documentData, transferData, eosData]) => {
         setContracts(contractData.contracts ?? []);
         setDocuments(documentData.documents ?? []);
         setTransfers(transferData.transfers ?? []);
+        setEndOfServiceSummary(eosData.summary ?? null);
       })
       .catch(() => setErrorKey("error.loadFailed"))
       .finally(() => setLoadingRelated(false));
@@ -370,6 +402,10 @@ export default function EmployeeDetailPage() {
       setErrorKey("hr.employees.missingTerminationDate");
       return;
     }
+    if (form.status === "terminated" && !form.terminationCategory) {
+      setErrorKey("hr.employees.missingTerminationCategory");
+      return;
+    }
 
     setErrorKey(null);
     setSuccessKey(null);
@@ -399,6 +435,8 @@ export default function EmployeeDetailPage() {
           employmentType: form.employmentType || null,
           status: form.status,
           terminationDate: form.status === "terminated" ? form.terminationDate : null,
+          terminationCategory:
+            form.status === "terminated" ? form.terminationCategory : null,
           terminationReason:
             form.status === "terminated" ? form.terminationReason.trim() || null : null,
           notes: form.notes.trim() || null,
@@ -502,6 +540,8 @@ export default function EmployeeDetailPage() {
       loadRelated();
     });
   };
+
+  const formatMoney = (value: number, currency = "SAR") => `${value.toFixed(2)} ${currency}`;
 
   const handleContractStatus = (contractId: string, status: EmployeeContract["status"]) => {
     if (!employeeId) {
@@ -619,11 +659,11 @@ export default function EmployeeDetailPage() {
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">{t("hr.employees.detailsTitle")}</h1>
-          <p className="text-sm text-muted">{t("hr.employees.detailsSubtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("hr.employees.detailsTitle")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("hr.employees.detailsSubtitle")}</p>
         </div>
         <Link
           href="/hr/employees"
@@ -634,12 +674,12 @@ export default function EmployeeDetailPage() {
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
       {successKey ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
           {t(successKey)}
         </div>
       ) : null}
@@ -657,7 +697,7 @@ export default function EmployeeDetailPage() {
         </div>
       ) : (
         <>
-          <div className="app-card p-5">
+          <div className="app-card p-6 card-modern">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">{t("hr.employees.profileTitle")}</h2>
               <span className="text-xs text-muted">{t("common.optional")}</span>
@@ -668,7 +708,7 @@ export default function EmployeeDetailPage() {
                   {t("hr.employees.employeeNumber")}
                 </span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.employeeNumber}
                   onChange={(event) => updateField("employeeNumber", event.target.value)}
                 />
@@ -678,7 +718,7 @@ export default function EmployeeDetailPage() {
                   {t("hr.employees.nameAr")}
                 </span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.nameAr}
                   onChange={(event) => updateField("nameAr", event.target.value)}
                   required
@@ -689,7 +729,7 @@ export default function EmployeeDetailPage() {
                   {t("hr.employees.nameEn")}
                 </span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.nameEn}
                   onChange={(event) => updateField("nameEn", event.target.value)}
                   required
@@ -702,7 +742,7 @@ export default function EmployeeDetailPage() {
                   {t("hr.employees.nationalId")}
                 </span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.nationalId}
                   onChange={(event) => updateField("nationalId", event.target.value)}
                 />
@@ -712,7 +752,7 @@ export default function EmployeeDetailPage() {
                   {t("hr.employees.iqamaNumber")}
                 </span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.iqamaNumber}
                   onChange={(event) => updateField("iqamaNumber", event.target.value)}
                 />
@@ -722,7 +762,7 @@ export default function EmployeeDetailPage() {
                   {t("hr.employees.passportNumber")}
                 </span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.passportNumber}
                   onChange={(event) => updateField("passportNumber", event.target.value)}
                 />
@@ -734,7 +774,7 @@ export default function EmployeeDetailPage() {
                   {t("hr.employees.nationality")}
                 </span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.nationality}
                   onChange={(event) => updateField("nationality", event.target.value)}
                 />
@@ -743,7 +783,7 @@ export default function EmployeeDetailPage() {
                 <span className="mb-1 block text-xs text-muted">{t("hr.employees.dob")}</span>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.dob}
                   onChange={(event) => updateField("dob", event.target.value)}
                 />
@@ -751,7 +791,7 @@ export default function EmployeeDetailPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("hr.employees.gender")}</span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.gender}
                   onChange={(event) => updateField("gender", event.target.value)}
                 >
@@ -766,7 +806,7 @@ export default function EmployeeDetailPage() {
                 <span className="mb-1 block text-xs text-muted">{t("common.email")}</span>
                 <input
                   type="email"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.email}
                   onChange={(event) => updateField("email", event.target.value)}
                 />
@@ -774,7 +814,7 @@ export default function EmployeeDetailPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("common.phone")}</span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.phone}
                   onChange={(event) => updateField("phone", event.target.value)}
                 />
@@ -782,7 +822,7 @@ export default function EmployeeDetailPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("hr.employees.address")}</span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.address}
                   onChange={(event) => updateField("address", event.target.value)}
                 />
@@ -795,7 +835,7 @@ export default function EmployeeDetailPage() {
                 </span>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.hireDate}
                   onChange={(event) => updateField("hireDate", event.target.value)}
                   required
@@ -806,7 +846,7 @@ export default function EmployeeDetailPage() {
                   {t("hr.employees.employmentType")}
                 </span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.employmentType}
                   onChange={(event) => updateField("employmentType", event.target.value)}
                 >
@@ -821,7 +861,7 @@ export default function EmployeeDetailPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("common.status")}</span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.status}
                   onChange={(event) =>
                     updateField(
@@ -844,7 +884,7 @@ export default function EmployeeDetailPage() {
                   {t("hr.employees.department")}
                 </span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.departmentId}
                   onChange={(event) => updateField("departmentId", event.target.value)}
                   disabled={loadingLookups}
@@ -862,7 +902,7 @@ export default function EmployeeDetailPage() {
                   {t("hr.employees.position")}
                 </span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.positionId}
                   onChange={(event) => updateField("positionId", event.target.value)}
                   disabled={loadingLookups}
@@ -880,7 +920,7 @@ export default function EmployeeDetailPage() {
                   {t("hr.employees.manager")}
                 </span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.managerId}
                   onChange={(event) => updateField("managerId", event.target.value)}
                   disabled={loadingLookups}
@@ -895,41 +935,95 @@ export default function EmployeeDetailPage() {
               </label>
             </div>
             {form.status === "terminated" ? (
-              <div className="mt-4 grid gap-4 md:grid-cols-3">
-                <label className={`text-sm ${alignClass}`}>
-                  <span className="mb-1 block text-xs text-muted">
-                    {t("hr.employees.terminationDate")}
+                <div className="mt-4 grid gap-4 md:grid-cols-4">
+                  <label className={`text-sm ${alignClass}`}>
+                    <span className="mb-1 block text-xs text-muted">
+                      {t("hr.employees.terminationDate")}
                   </span>
                   <input
                     type="date"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={form.terminationDate}
                     onChange={(event) =>
                       updateField("terminationDate", event.target.value)
                     }
                   />
                 </label>
+                <label className={`text-sm ${alignClass}`}>
+                  <span className="mb-1 block text-xs text-muted">
+                    {t("hr.employees.terminationCategory")}
+                  </span>
+                  <select
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+                    value={form.terminationCategory}
+                    onChange={(event) =>
+                      updateField("terminationCategory", event.target.value)
+                    }
+                  >
+                    <option value="">{t("common.none")}</option>
+                    {terminationCategoryOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label className={`text-sm md:col-span-2 ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">
                     {t("hr.employees.terminationReason")}
                   </span>
                   <input
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={form.terminationReason}
                     onChange={(event) =>
                       updateField("terminationReason", event.target.value)
                     }
-                  />
-                </label>
+                    />
+                  </label>
+                </div>
+              ) : null}
+
+              <div className="mt-6 rounded-2xl border border-border bg-surface px-4 py-3">
+                <h3 className="text-sm font-semibold">{t("hr.employees.eosbTitle")}</h3>
+                <p className="mt-1 text-xs text-muted">{t("hr.employees.eosbSubtitle")}</p>
+                {endOfServiceSummary?.eligible ? (
+                  <div className="mt-3 grid gap-4 md:grid-cols-4">
+                    <div>
+                      <p className="text-xs text-muted">{t("hr.employees.eosbAward")}</p>
+                      <p className="text-sm font-semibold">
+                        {formatMoney(endOfServiceSummary.awardAmount)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted">{t("hr.employees.eosbServiceYears")}</p>
+                      <p className="text-sm font-semibold">
+                        {endOfServiceSummary.serviceYears.toFixed(2)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted">{t("hr.employees.eosbMonthlyWage")}</p>
+                      <p className="text-sm font-semibold">
+                        {formatMoney(endOfServiceSummary.monthlyWage)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted">{t("hr.employees.terminationCategory")}</p>
+                      <p className="text-sm font-semibold">
+                        {t(`hr.employees.terminationCategory.${endOfServiceSummary.terminationCategory}`)}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-xs text-muted">{t("hr.employees.eosbUnavailable")}</p>
+                )}
               </div>
-            ) : null}
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">
                   {t("hr.employees.linkedUser")}
                 </span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.userId}
                   onChange={(event) => updateField("userId", event.target.value)}
                   disabled={loadingLookups}
@@ -945,7 +1039,7 @@ export default function EmployeeDetailPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("common.notes")}</span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.notes}
                   onChange={(event) => updateField("notes", event.target.value)}
                 />
@@ -958,7 +1052,7 @@ export default function EmployeeDetailPage() {
                 </span>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.transferEffectiveDate}
                   onChange={(event) =>
                     updateField("transferEffectiveDate", event.target.value)
@@ -970,7 +1064,7 @@ export default function EmployeeDetailPage() {
                   {t("hr.transfers.reason")}
                 </span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.transferReason}
                   onChange={(event) => updateField("transferReason", event.target.value)}
                 />
@@ -980,18 +1074,18 @@ export default function EmployeeDetailPage() {
               type="button"
               onClick={handleSave}
               disabled={isPending}
-              className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+              className="mt-4 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
             >
               {t("common.save")}
             </button>
           </div>
 
-          <div className="app-card p-5">
+          <div className="app-card p-6 card-modern">
             <h2 className="text-lg font-semibold">{t("hr.onboarding.title")}</h2>
-            <p className="mt-1 text-sm text-muted">{t("hr.onboarding.subtitle")}</p>
+            <p className="mt-1 text-sm text-muted page-subtitle">{t("hr.onboarding.subtitle")}</p>
             <div className="mt-4 space-y-2">
               {form.onboarding.length === 0 ? (
-                <p className="text-sm text-muted">{t("hr.onboarding.empty")}</p>
+                <p className="text-sm text-muted page-subtitle">{t("hr.onboarding.empty")}</p>
               ) : (
                 form.onboarding.map((task) => (
                   <label key={task.id} className="flex items-center gap-2 text-sm">
@@ -1007,7 +1101,7 @@ export default function EmployeeDetailPage() {
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <input
-                className="flex-1 rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="flex-1 rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={newTaskTitle}
                 onChange={(event) => setNewTaskTitle(event.target.value)}
                 placeholder={t("hr.onboarding.addPlaceholder")}
@@ -1015,20 +1109,20 @@ export default function EmployeeDetailPage() {
               <button
                 type="button"
                 onClick={handleAddTask}
-                className="rounded-xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary"
+                className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary"
               >
                 {t("hr.onboarding.add")}
               </button>
             </div>
           </div>
-          <div className="app-card p-5">
+          <div className="app-card p-6 card-modern">
             <h2 className="text-lg font-semibold">{t("hr.contracts.title")}</h2>
-            <p className="mt-1 text-sm text-muted">{t("hr.contracts.subtitle")}</p>
+            <p className="mt-1 text-sm text-muted page-subtitle">{t("hr.contracts.subtitle")}</p>
             <div className="mt-4 grid gap-4 md:grid-cols-3">
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("hr.contracts.type")}</span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={contractType}
                   onChange={(event) =>
                     setContractType(event.target.value as EmployeeContract["type"])
@@ -1044,7 +1138,7 @@ export default function EmployeeDetailPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("hr.contracts.status")}</span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={contractStatus}
                   onChange={(event) =>
                     setContractStatus(event.target.value as EmployeeContract["status"])
@@ -1061,7 +1155,7 @@ export default function EmployeeDetailPage() {
                 <span className="mb-1 block text-xs text-muted">{t("hr.contracts.startDate")}</span>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={contractStartDate}
                   onChange={(event) => setContractStartDate(event.target.value)}
                 />
@@ -1072,7 +1166,7 @@ export default function EmployeeDetailPage() {
                 <span className="mb-1 block text-xs text-muted">{t("hr.contracts.endDate")}</span>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={contractEndDate}
                   onChange={(event) => setContractEndDate(event.target.value)}
                 />
@@ -1083,7 +1177,7 @@ export default function EmployeeDetailPage() {
                 </span>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={contractProbation}
                   onChange={(event) => setContractProbation(event.target.value)}
                 />
@@ -1093,7 +1187,7 @@ export default function EmployeeDetailPage() {
                   {t("hr.contracts.currency")}
                 </span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={salaryCurrency}
                   onChange={(event) => setSalaryCurrency(event.target.value)}
                 />
@@ -1108,7 +1202,7 @@ export default function EmployeeDetailPage() {
                   type="number"
                   min="0"
                   step="0.01"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={salaryBasic}
                   onChange={(event) => setSalaryBasic(event.target.value)}
                 />
@@ -1121,7 +1215,7 @@ export default function EmployeeDetailPage() {
                   type="number"
                   min="0"
                   step="0.01"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={salaryHousing}
                   onChange={(event) => setSalaryHousing(event.target.value)}
                 />
@@ -1134,7 +1228,7 @@ export default function EmployeeDetailPage() {
                   type="number"
                   min="0"
                   step="0.01"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={salaryTransport}
                   onChange={(event) => setSalaryTransport(event.target.value)}
                 />
@@ -1149,7 +1243,7 @@ export default function EmployeeDetailPage() {
                   type="number"
                   min="0"
                   step="0.01"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={salaryOther}
                   onChange={(event) => setSalaryOther(event.target.value)}
                 />
@@ -1162,7 +1256,7 @@ export default function EmployeeDetailPage() {
                   type="number"
                   min="0"
                   step="0.01"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={salaryDeductions}
                   onChange={(event) => setSalaryDeductions(event.target.value)}
                 />
@@ -1171,7 +1265,7 @@ export default function EmployeeDetailPage() {
                 <span className={`mb-1 block text-xs text-muted ${alignClass}`}>
                   {t("hr.contracts.total")}
                 </span>
-                <div className="rounded-xl border border-border bg-surface px-3 py-2 text-sm">
+                <div className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm">
                   {salaryTotal} {salaryCurrency || "SAR"}
                 </div>
               </div>
@@ -1180,7 +1274,7 @@ export default function EmployeeDetailPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("common.notes")}</span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={contractNotes}
                   onChange={(event) => setContractNotes(event.target.value)}
                 />
@@ -1189,7 +1283,7 @@ export default function EmployeeDetailPage() {
             <button
               type="button"
               onClick={handleCreateContract}
-              className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+              className="mt-4 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
             >
               {t("hr.contracts.create")}
             </button>
@@ -1204,11 +1298,11 @@ export default function EmployeeDetailPage() {
                   ))}
                 </div>
               ) : contracts.length === 0 ? (
-                <p className="mt-2 text-sm text-muted">{t("hr.contracts.empty")}</p>
+                <p className="mt-2 text-sm text-muted page-subtitle">{t("hr.contracts.empty")}</p>
               ) : (
                 <div className="mt-3 overflow-x-auto">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-surface-muted text-muted">
+                  <table className="min-w-full text-sm table-modern">
+                    <thead className="bg-surface-muted text-muted thead-modern">
                       <tr>
                         <th className={`px-3 py-2 ${alignClass}`}>
                           {t("hr.contracts.type")}
@@ -1268,14 +1362,14 @@ export default function EmployeeDetailPage() {
               )}
             </div>
           </div>
-          <div className="app-card p-5">
+          <div className="app-card p-6 card-modern">
             <h2 className="text-lg font-semibold">{t("hr.documents.title")}</h2>
-            <p className="mt-1 text-sm text-muted">{t("hr.documents.subtitle")}</p>
+            <p className="mt-1 text-sm text-muted page-subtitle">{t("hr.documents.subtitle")}</p>
             <div className="mt-4 grid gap-4 md:grid-cols-3">
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("hr.documents.type")}</span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={documentType}
                   onChange={(event) =>
                     setDocumentType(event.target.value as EmployeeDocument["type"])
@@ -1290,7 +1384,7 @@ export default function EmployeeDetailPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("hr.documents.name")}</span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={documentName}
                   onChange={(event) => setDocumentName(event.target.value)}
                 />
@@ -1300,7 +1394,7 @@ export default function EmployeeDetailPage() {
                   {t("hr.documents.storage")}
                 </span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={documentStorage}
                   onChange={(event) =>
                     setDocumentStorage(event.target.value as "cloudinary" | "firestore")
@@ -1318,7 +1412,7 @@ export default function EmployeeDetailPage() {
                 </span>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={documentIssuedAt}
                   onChange={(event) => setDocumentIssuedAt(event.target.value)}
                 />
@@ -1329,7 +1423,7 @@ export default function EmployeeDetailPage() {
                 </span>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={documentExpiresAt}
                   onChange={(event) => setDocumentExpiresAt(event.target.value)}
                 />
@@ -1352,7 +1446,7 @@ export default function EmployeeDetailPage() {
                   {t("hr.documents.content")}
                 </span>
                 <textarea
-                  className="min-h-[100px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="min-h-[100px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={documentContent}
                   onChange={(event) => setDocumentContent(event.target.value)}
                 />
@@ -1361,7 +1455,7 @@ export default function EmployeeDetailPage() {
             <button
               type="button"
               onClick={handleUploadDocument}
-              className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+              className="mt-4 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
             >
               {t("hr.documents.upload")}
             </button>
@@ -1376,13 +1470,13 @@ export default function EmployeeDetailPage() {
                   ))}
                 </div>
               ) : documents.length === 0 ? (
-                <p className="mt-2 text-sm text-muted">{t("hr.documents.empty")}</p>
+                <p className="mt-2 text-sm text-muted page-subtitle">{t("hr.documents.empty")}</p>
               ) : (
                 <div className="mt-3 space-y-2">
                   {documents.map((document) => (
                     <div
                       key={document.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     >
                       <div>
                         <p className="font-semibold">{document.name}</p>
@@ -1418,9 +1512,9 @@ export default function EmployeeDetailPage() {
               )}
             </div>
           </div>
-          <div className="app-card p-5">
+          <div className="app-card p-6 card-modern">
             <h2 className="text-lg font-semibold">{t("hr.transfers.title")}</h2>
-            <p className="mt-1 text-sm text-muted">{t("hr.transfers.subtitle")}</p>
+            <p className="mt-1 text-sm text-muted page-subtitle">{t("hr.transfers.subtitle")}</p>
             {loadingRelated ? (
               <div className="mt-3 space-y-2">
                 <SkeletonBlock className="h-4 w-40" />
@@ -1429,11 +1523,11 @@ export default function EmployeeDetailPage() {
                 ))}
               </div>
             ) : transfers.length === 0 ? (
-              <p className="mt-3 text-sm text-muted">{t("hr.transfers.empty")}</p>
+              <p className="mt-3 text-sm text-muted page-subtitle">{t("hr.transfers.empty")}</p>
             ) : (
               <div className="mt-3 overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-surface-muted text-muted">
+                <table className="min-w-full text-sm table-modern">
+                  <thead className="bg-surface-muted text-muted thead-modern">
                     <tr>
                       <th className={`px-3 py-2 ${alignClass}`}>
                         {t("hr.transfers.effectiveDate")}

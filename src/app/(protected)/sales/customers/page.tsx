@@ -401,17 +401,17 @@ export default function CustomersPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">{t("customers.title")}</h1>
-          <p className="text-sm text-muted">{t("customers.subtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("customers.title")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("customers.subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={handleExport}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
             disabled={isPending}
           >
             {t("common.export")}
@@ -419,7 +419,7 @@ export default function CustomersPage() {
           <button
             type="button"
             onClick={handleDownloadTemplate}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
             disabled={isPending}
           >
             {t("common.downloadTemplate")}
@@ -435,7 +435,7 @@ export default function CustomersPage() {
           <button
             type="button"
             onClick={handleImport}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
             disabled={isPending || !importFile}
           >
             {t("common.import")}
@@ -444,14 +444,14 @@ export default function CustomersPage() {
       </div>
       <p className="text-xs text-muted">{t("customers.importHint")}</p>
 
-      <div className="app-card p-4">
+      <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-4">
           <label className="text-sm">
             <span className={`mb-1 block text-xs text-muted ${alignClass}`}>
               {t("common.search")}
             </span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("customers.searchPlaceholder")}
@@ -462,7 +462,7 @@ export default function CustomersPage() {
               {t("customers.statusFilter")}
             </span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
             >
@@ -479,7 +479,7 @@ export default function CustomersPage() {
               {t("customers.vatFilter")}
             </span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={vatFilter}
               onChange={(event) => setVatFilter(event.target.value)}
             >
@@ -493,7 +493,7 @@ export default function CustomersPage() {
               {t("customers.balanceFilter")}
             </span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={balanceFilter}
               onChange={(event) => setBalanceFilter(event.target.value)}
             >
@@ -507,7 +507,7 @@ export default function CustomersPage() {
             {t("customers.bulkStatus")}
           </span>
           <select
-            className="rounded-xl border border-border bg-surface px-3 py-2 text-xs"
+            className="rounded-2xl border border-border bg-surface px-3 py-2 text-xs"
             value={bulkStatus}
             onChange={(event) =>
               setBulkStatus(event.target.value as "active" | "inactive" | "blacklisted")
@@ -522,7 +522,7 @@ export default function CustomersPage() {
           <button
             type="button"
             onClick={handleBulkStatus}
-            className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="rounded-2xl bg-primary px-3 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
             disabled={isPending || selectedIds.length === 0}
           >
             {t("common.apply")}
@@ -530,7 +530,7 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      <form onSubmit={handleCreate} className="app-card p-5">
+      <form onSubmit={handleCreate} className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t("customers.addTitle")}</h2>
           <span className="text-xs text-muted">
@@ -541,7 +541,7 @@ export default function CustomersPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("customers.name")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={name}
               onChange={(event) => setName(event.target.value)}
               required
@@ -550,7 +550,7 @@ export default function CustomersPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("customers.legalName")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={legalName}
               onChange={(event) => setLegalName(event.target.value)}
             />
@@ -558,7 +558,7 @@ export default function CustomersPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("customers.crNumber")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={crNumber}
               onChange={(event) => setCrNumber(event.target.value)}
             />
@@ -566,7 +566,7 @@ export default function CustomersPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("customers.vatNumber")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={vatNumber}
               onChange={(event) => setVatNumber(event.target.value)}
               required={vatRegistered}
@@ -584,7 +584,7 @@ export default function CustomersPage() {
             <span className="mb-1 block text-xs text-muted">{t("common.email")}</span>
             <input
               type="email"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
@@ -592,7 +592,7 @@ export default function CustomersPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.phone")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
             />
@@ -600,7 +600,7 @@ export default function CustomersPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("customers.paymentTerms")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={paymentTermId}
               onChange={(event) => setPaymentTermId(event.target.value)}
               disabled={loadingTerms}
@@ -619,7 +619,7 @@ export default function CustomersPage() {
               type="number"
               min="0"
               step="0.01"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={creditLimit}
               onChange={(event) => setCreditLimit(event.target.value)}
             />
@@ -627,7 +627,7 @@ export default function CustomersPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.currency")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={currency}
               onChange={(event) => setCurrency(event.target.value)}
             />
@@ -635,7 +635,7 @@ export default function CustomersPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.status")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={status}
               onChange={(event) =>
                 setStatus(event.target.value as "active" | "inactive" | "blacklisted")
@@ -653,7 +653,7 @@ export default function CustomersPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("customers.billingAddress")}</span>
             <textarea
-              className="min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={billingAddress}
               onChange={(event) => setBillingAddress(event.target.value)}
             />
@@ -661,7 +661,7 @@ export default function CustomersPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("customers.shippingAddress")}</span>
             <textarea
-              className="min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={shippingAddress}
               onChange={(event) => setShippingAddress(event.target.value)}
             />
@@ -671,7 +671,7 @@ export default function CustomersPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.notes")}</span>
             <textarea
-              className="min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
             />
@@ -679,7 +679,7 @@ export default function CustomersPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.tags")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={tags}
               onChange={(event) => setTags(event.target.value)}
               placeholder={t("customers.tagsHint")}
@@ -687,13 +687,13 @@ export default function CustomersPage() {
           </label>
         </div>
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
         <button
           type="submit"
-          className="mt-4 w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+          className="mt-4 w-fit rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           disabled={isPending}
         >
           {t("common.add")}
@@ -722,7 +722,7 @@ export default function CustomersPage() {
         </div>
       ) : null}
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="flex items-center justify-between border-b border-border px-4 py-2 text-sm font-semibold">
           <span>{t("customers.listTitle")}</span>
           <span className="text-xs text-muted">{loadingCustomers ? "—" : customers.length}</span>
@@ -739,8 +739,8 @@ export default function CustomersPage() {
           <div className="p-4 text-sm text-muted">{t("customers.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>
                     <input

@@ -1,6 +1,17 @@
 import { z } from "zod";
 
 const optionalString = z.string().optional().nullable();
+const optionalTerminationCategory = z
+  .enum([
+    "employer_termination",
+    "resignation",
+    "contract_end",
+    "force_majeure",
+    "retirement",
+    "other",
+  ])
+  .optional()
+  .nullable();
 
 const departmentBaseSchema = z.object({
   companyId: z.string().min(1),
@@ -61,6 +72,7 @@ const employeeBaseSchema = z.object({
     .nullable(),
   status: z.enum(["active", "suspended", "terminated"]).optional(),
   terminationDate: optionalString,
+  terminationCategory: optionalTerminationCategory,
   terminationReason: optionalString,
   notes: optionalString,
   onboarding: z.array(onboardingTaskSchema).optional(),
@@ -75,6 +87,13 @@ const refineEmployee = (
       code: z.ZodIssueCode.custom,
       message: "Termination date required",
       path: ["terminationDate"],
+    });
+  }
+  if (data.status === "terminated" && !data.terminationCategory) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Termination category required",
+      path: ["terminationCategory"],
     });
   }
 };

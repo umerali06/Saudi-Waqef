@@ -271,29 +271,29 @@ export default function VatReportsPage() {
     formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold">{t("reports.vat.title")}</h1>
-          <p className="text-sm text-muted">{t("reports.vat.subtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("reports.vat.title")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("reports.vat.subtitle")}</p>
         </div>
         <HelpLink query="vat" />
       </div>
 
       {!vatEnabled ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">
           {t("reports.vat.disabled")}
         </div>
       ) : null}
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("reports.vat.period")}
             </span>
             <select
-              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={selectedPeriodId}
               onChange={(event) => setSelectedPeriodId(event.target.value)}
             >
@@ -324,7 +324,7 @@ export default function VatReportsPage() {
                   : null
               }
               disabled={!selectedPeriod || isPending}
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {selectedPeriod?.status === "open"
                 ? t("reports.vat.file")
@@ -334,7 +334,7 @@ export default function VatReportsPage() {
               type="button"
               onClick={() => handleExport("csv")}
               disabled={!selectedPeriodId}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
               {t("reports.vat.exportCsv")}
             </button>
@@ -342,7 +342,7 @@ export default function VatReportsPage() {
               type="button"
               onClick={() => handleExport("zatca")}
               disabled={!selectedPeriodId}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
               {t("reports.vat.exportZatca")}
             </button>
@@ -350,14 +350,14 @@ export default function VatReportsPage() {
               type="button"
               onClick={() => handleExport("pdf")}
               disabled={!selectedPeriodId}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
               {t("reports.vat.exportPdf")}
             </button>
           </div>
         </div>
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
@@ -382,7 +382,7 @@ export default function VatReportsPage() {
 
       {summary ? (
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="app-card p-4">
+          <div className="app-card p-6 card-modern">
             <h2 className="text-sm font-semibold">{t("reports.vat.sales")}</h2>
             <div className="mt-3 space-y-1 text-sm text-muted">
               <p>
@@ -396,7 +396,7 @@ export default function VatReportsPage() {
               </p>
             </div>
           </div>
-          <div className="app-card p-4">
+          <div className="app-card p-6 card-modern">
             <h2 className="text-sm font-semibold">{t("reports.vat.purchases")}</h2>
             <div className="mt-3 space-y-1 text-sm text-muted">
               <p>
@@ -415,12 +415,12 @@ export default function VatReportsPage() {
 
       {summary ? (
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="app-card overflow-hidden">
+          <div className="app-card overflow-hidden card-modern">
             <div className="border-b border-border px-4 py-2 text-sm font-semibold">
               {t("reports.vat.breakdownSales")}
             </div>
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("reports.vat.rate")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("reports.vat.type")}</th>
@@ -449,12 +449,12 @@ export default function VatReportsPage() {
             </table>
           </div>
 
-          <div className="app-card overflow-hidden">
+          <div className="app-card overflow-hidden card-modern">
             <div className="border-b border-border px-4 py-2 text-sm font-semibold">
               {t("reports.vat.breakdownPurchases")}
             </div>
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("reports.vat.rate")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("reports.vat.type")}</th>
@@ -485,16 +485,16 @@ export default function VatReportsPage() {
         </div>
       ) : null}
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("reports.vat.adjustmentsTitle")}</h2>
-        <p className="text-sm text-muted">{t("reports.vat.adjustmentsSubtitle")}</p>
+        <p className="text-sm text-muted page-subtitle">{t("reports.vat.adjustmentsSubtitle")}</p>
         <div className="mt-4 grid gap-4 md:grid-cols-4">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("reports.vat.adjustmentType")}
             </span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={adjustmentType}
               onChange={(event) =>
                 setAdjustmentType(event.target.value as "output" | "input")
@@ -512,7 +512,7 @@ export default function VatReportsPage() {
               type="number"
               min="0"
               step="0.01"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={adjustmentAmount}
               onChange={(event) => setAdjustmentAmount(event.target.value)}
             />
@@ -522,7 +522,7 @@ export default function VatReportsPage() {
               {t("reports.vat.adjustmentReason")}
             </span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={adjustmentReason}
               onChange={(event) => setAdjustmentReason(event.target.value)}
             />
@@ -533,19 +533,19 @@ export default function VatReportsPage() {
             type="button"
             onClick={handleAddAdjustment}
             disabled={!selectedPeriodId || isPending}
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {t("reports.vat.addAdjustment")}
           </button>
           {errorKey ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
               {t(errorKey)}
             </div>
           ) : null}
         </div>
-        <div className="mt-4 overflow-hidden rounded-xl border border-border">
-          <table className="min-w-full text-sm">
-            <thead className="bg-surface-muted text-muted">
+        <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+          <table className="min-w-full text-sm table-modern">
+            <thead className="bg-surface-muted text-muted thead-modern">
               <tr>
                 <th className={`px-4 py-2 ${alignClass}`}>{t("reports.vat.adjustmentType")}</th>
                 <th className={`px-4 py-2 ${alignClass}`}>{t("reports.vat.adjustmentReason")}</th>
@@ -578,7 +578,7 @@ export default function VatReportsPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           <h2 className="text-lg font-semibold">{t("reports.vat.generateTitle")}</h2>
           <div className="mt-4 flex flex-wrap items-end gap-4">
             <label className={`text-sm ${alignClass}`}>
@@ -587,7 +587,7 @@ export default function VatReportsPage() {
               </span>
               <input
                 type="number"
-                className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={year}
                 onChange={(event) => setYear(Number(event.target.value))}
               />
@@ -597,7 +597,7 @@ export default function VatReportsPage() {
                 {t("reports.vat.frequency")}
               </span>
               <select
-                className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={frequency}
                 onChange={(event) =>
                   setFrequency(event.target.value as "monthly" | "quarterly")
@@ -610,7 +610,7 @@ export default function VatReportsPage() {
             <button
               type="button"
               onClick={handleGenerate}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary"
+              className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary"
               disabled={isPending}
             >
               {t("reports.vat.generate")}
@@ -618,13 +618,13 @@ export default function VatReportsPage() {
           </div>
         </div>
 
-        <form onSubmit={handleCreatePeriod} className="app-card p-5">
+        <form onSubmit={handleCreatePeriod} className="app-card p-6 card-modern">
           <h2 className="text-lg font-semibold">{t("reports.vat.createTitle")}</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("reports.vat.name")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={newPeriod.name}
                 onChange={(event) =>
                   setNewPeriod((prev) => ({ ...prev, name: event.target.value }))
@@ -638,7 +638,7 @@ export default function VatReportsPage() {
               </span>
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={newPeriod.startDate}
                 onChange={(event) =>
                   setNewPeriod((prev) => ({ ...prev, startDate: event.target.value }))
@@ -652,7 +652,7 @@ export default function VatReportsPage() {
               </span>
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={newPeriod.endDate}
                 onChange={(event) =>
                   setNewPeriod((prev) => ({ ...prev, endDate: event.target.value }))
@@ -665,7 +665,7 @@ export default function VatReportsPage() {
                 {t("reports.vat.frequency")}
               </span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={newPeriod.frequency}
                 onChange={(event) =>
                   setNewPeriod((prev) => ({
@@ -681,7 +681,7 @@ export default function VatReportsPage() {
           </div>
           <button
             type="submit"
-            className="mt-4 w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="mt-4 w-fit rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
             disabled={isPending}
           >
             {t("reports.vat.create")}
@@ -689,7 +689,7 @@ export default function VatReportsPage() {
         </form>
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="border-b border-border px-4 py-2 text-sm font-semibold">
           {t("reports.vat.periodsTitle")}
         </div>
@@ -697,8 +697,8 @@ export default function VatReportsPage() {
           <div className="p-4 text-sm text-muted">{t("reports.vat.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("reports.vat.name")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("reports.vat.startDate")}</th>

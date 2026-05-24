@@ -197,26 +197,26 @@ export default function BillingPlansPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("billing.plansTitle")}</h1>
-        <p className="text-sm text-muted">{t("billing.plansSubtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("billing.plansTitle")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("billing.plansSubtitle")}</p>
       </div>
 
       {!isAdmin ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">
           {t("billing.adminOnly")}
         </div>
       ) : null}
 
       {isAdmin ? (
-        <form onSubmit={handleSubmit} className="app-card p-5">
+        <form onSubmit={handleSubmit} className="app-card p-6 card-modern">
           <h2 className="text-lg font-semibold">{t("billing.planFormTitle")}</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("billing.planCode")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.code}
                 onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
                 required
@@ -227,7 +227,7 @@ export default function BillingPlansPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("billing.planName")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.name}
                 onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
                 required
@@ -237,7 +237,7 @@ export default function BillingPlansPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("billing.planDescription")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.description}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, description: event.target.value }))
@@ -249,7 +249,7 @@ export default function BillingPlansPage() {
               <input
                 type="number"
                 min={0}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.priceMonthly}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, priceMonthly: Number(event.target.value) }))
@@ -261,7 +261,7 @@ export default function BillingPlansPage() {
               <input
                 type="number"
                 min={0}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.priceYearly}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, priceYearly: Number(event.target.value) }))
@@ -273,7 +273,7 @@ export default function BillingPlansPage() {
               <input
                 type="number"
                 min={1}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.maxUsers}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, maxUsers: Number(event.target.value) }))
@@ -285,7 +285,7 @@ export default function BillingPlansPage() {
               <input
                 type="number"
                 min={1}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.maxCompanies}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, maxCompanies: event.target.value }))
@@ -298,7 +298,7 @@ export default function BillingPlansPage() {
                 type="number"
                 min={0}
                 max={365}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.trialDays}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, trialDays: Number(event.target.value) }))
@@ -311,7 +311,7 @@ export default function BillingPlansPage() {
                 type="number"
                 min={0}
                 max={365}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.graceDays}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, graceDays: Number(event.target.value) }))
@@ -321,7 +321,7 @@ export default function BillingPlansPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("billing.currency")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.currency}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, currency: event.target.value }))
@@ -377,7 +377,7 @@ export default function BillingPlansPage() {
                 <button
                   type="button"
                   onClick={handleUpdate}
-                  className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
+                  className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
                   disabled={isPending}
                 >
                   {t("billing.updatePlan")}
@@ -388,7 +388,7 @@ export default function BillingPlansPage() {
                     setEditingId(null);
                     setForm(EMPTY_PLAN);
                   }}
-                  className="rounded-xl border border-border px-4 py-2 text-sm font-semibold"
+                  className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold"
                 >
                   {t("common.cancel")}
                 </button>
@@ -396,7 +396,7 @@ export default function BillingPlansPage() {
             ) : (
               <button
                 type="submit"
-                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
+                className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
                 disabled={isPending}
               >
                 {t("billing.createPlan")}
@@ -406,7 +406,7 @@ export default function BillingPlansPage() {
         </form>
       ) : null}
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="border-b border-border px-4 py-2 text-sm font-semibold">
           {t("billing.plansList")}
         </div>

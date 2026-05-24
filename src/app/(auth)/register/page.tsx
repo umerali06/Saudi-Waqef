@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useTranslations } from "@/i18n/provider";
 
@@ -11,14 +11,40 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    companyName: "",
+    companyId: "",
     phone: "",
     requestedRole: "accountant",
   });
+  const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
   
   const [isPending, startTransition] = useTransition();
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/register/companies")
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        if (!active) return;
+        const items = Array.isArray(data?.companies) ? data.companies : [];
+        setCompanies(items);
+      })
+      .catch(() => {
+        if (!active) return;
+        setCompanies([]);
+        setError("error.generic");
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoadingCompanies(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +63,7 @@ export default function RegisterPage() {
         }
 
         setSubmitted(true);
-      } catch (err) {
+      } catch {
         setError("error.generic"); // Use a generic error or add a specific one
       }
     });
@@ -128,19 +154,27 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label htmlFor="companyName" className="sr-only">
+            <label htmlFor="companyId" className="sr-only">
               {t("auth.register.company")}
             </label>
-            <input
-              id="companyName"
-              name="companyName"
-              type="text"
+            <select
+              id="companyId"
+              name="companyId"
               required
               className={`relative block w-full rounded-md border-0 py-1.5 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6 px-3 ${alignClass}`}
-              placeholder={t("auth.register.company")}
-              value={formData.companyName}
+              value={formData.companyId}
               onChange={handleChange}
-            />
+              disabled={loadingCompanies || companies.length === 0}
+            >
+              <option value="">
+                {loadingCompanies ? t("common.loading") : t("auth.register.company")}
+              </option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label htmlFor="phone" className="sr-only">
@@ -171,8 +205,8 @@ export default function RegisterPage() {
               <option value="admin">{t("auth.register.role.admin")}</option>
               <option value="accountant">{t("auth.register.role.accountant")}</option>
               <option value="hr">{t("auth.register.role.hr")}</option>
-              <option value="sales">{t("auth.register.role.sales")}</option>
-              <option value="purchases">{t("auth.register.role.purchases")}</option>
+              <option value="employee">{t("role.employee")}</option>
+              <option value="viewer">{t("role.viewer")}</option>
             </select>
           </div>
         </div>

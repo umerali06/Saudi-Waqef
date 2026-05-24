@@ -86,6 +86,25 @@ export async function listMembershipsByCompany(companyId: string) {
   });
 }
 
+export async function listUserIdsByRoles(roles: Role[]) {
+  if (roles.length === 0) {
+    return [];
+  }
+
+  const snapshot = await db
+    .collection("memberships")
+    .where("role", "in", roles)
+    .get();
+
+  return Array.from(
+    new Set(
+      snapshot.docs
+        .map((doc) => doc.data().userId)
+        .filter((userId): userId is string => typeof userId === "string" && userId.length > 0)
+    )
+  );
+}
+
 export async function updateMembershipRole(membershipId: string, role: Role) {
   await db.collection("memberships").doc(membershipId).set(
     {

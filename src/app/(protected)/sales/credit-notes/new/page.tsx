@@ -350,19 +350,19 @@ export default function NewCreditNotePage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("creditNote.createTitle")}</h1>
-        <p className="text-sm text-muted">{t("creditNote.createSubtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("creditNote.createTitle")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("creditNote.createSubtitle")}</p>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("creditNote.selectInvoice")}</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("creditNote.invoice")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={invoiceId}
               onChange={(event) => setInvoiceId(event.target.value)}
             >
@@ -378,7 +378,7 @@ export default function NewCreditNotePage() {
             <span className="mb-1 block text-xs text-muted">{t("creditNote.issueDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={issueDate}
               onChange={(event) => setIssueDate(event.target.value)}
             />
@@ -386,14 +386,14 @@ export default function NewCreditNotePage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("creditNote.reason")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
             />
           </label>
         </div>
         {invoice ? (
-          <div className="mt-4 rounded-xl border border-border bg-surface p-4 text-sm">
+          <div className="mt-4 rounded-2xl border border-border bg-surface p-4 text-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-xs text-muted">{invoice.customerName}</p>
@@ -408,13 +408,13 @@ export default function NewCreditNotePage() {
         ) : null}
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t("creditNote.linesTitle")}</h2>
           <span className="text-xs text-muted">{lines.length}</span>
         </div>
         {lines.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">{t("creditNote.linesEmpty")}</p>
+          <p className="mt-4 text-sm text-muted page-subtitle">{t("creditNote.linesEmpty")}</p>
         ) : (
           <div className="mt-4 space-y-3">
             {lines.map((line, index) => {
@@ -441,7 +441,7 @@ export default function NewCreditNotePage() {
                 taxInclusive: Boolean(config?.taxInclusive),
               });
               return (
-                <div key={line.id} className="grid gap-3 rounded-xl border border-border p-3 md:grid-cols-7">
+                <div key={line.id} className="grid gap-3 rounded-2xl border border-border p-3 md:grid-cols-7">
                   <div className={`text-sm ${alignClass} md:col-span-2`}>
                     <p className="text-xs text-muted">{t("invoice.item")}</p>
                     <p className="font-semibold">{line.description}</p>
@@ -456,7 +456,7 @@ export default function NewCreditNotePage() {
                       min="0"
                       max={line.maxQuantity}
                       step="0.01"
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                       value={line.quantity}
                       onChange={(event) =>
                         handleLineChange(index, "quantity", event.target.value)
@@ -466,7 +466,7 @@ export default function NewCreditNotePage() {
                   <label className={`text-sm ${alignClass}`}>
                     <span className="mb-1 block text-xs text-muted">{t("invoice.unit")}</span>
                     <select
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                       value={line.unit}
                       onChange={(event) => handleLineChange(index, "unit", event.target.value)}
                     >
@@ -483,7 +483,7 @@ export default function NewCreditNotePage() {
                       type="number"
                       min="0"
                       step="0.01"
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                       value={line.unitPrice}
                       onChange={(event) =>
                         handleLineChange(index, "unitPrice", event.target.value)
@@ -496,7 +496,7 @@ export default function NewCreditNotePage() {
                       type="number"
                       min="0"
                       step="0.1"
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                       value={line.discountRate}
                       onChange={(event) =>
                         handleLineChange(index, "discountRate", event.target.value)
@@ -506,7 +506,7 @@ export default function NewCreditNotePage() {
                   <label className={`text-sm ${alignClass}`}>
                     <span className="mb-1 block text-xs text-muted">{t("invoice.taxCategory")}</span>
                     <select
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                       value={line.taxCategoryId}
                       onChange={(event) =>
                         handleLineChange(index, "taxCategoryId", event.target.value)
@@ -539,17 +539,17 @@ export default function NewCreditNotePage() {
         )}
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-2">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.notes")}</span>
             <textarea
-              className="min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
             />
           </label>
-          <div className="rounded-xl border border-border bg-surface-muted p-4 text-sm">
+          <div className="rounded-2xl border border-border bg-surface-muted p-4 text-sm">
             <div className="flex items-center justify-between">
               <span>{t("invoice.subtotal")}</span>
               <span>{totals.subtotal.toFixed(2)}</span>
@@ -570,7 +570,7 @@ export default function NewCreditNotePage() {
         </div>
 
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
@@ -578,7 +578,7 @@ export default function NewCreditNotePage() {
           <button
             type="button"
             onClick={() => handleSubmit("draft")}
-            className="rounded-xl border border-border px-4 py-2 text-sm font-semibold"
+            className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold"
             disabled={isPending}
           >
             {t("creditNote.saveDraft")}
@@ -586,7 +586,7 @@ export default function NewCreditNotePage() {
           <button
             type="button"
             onClick={() => handleSubmit("issued")}
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
             disabled={isPending}
           >
             {t("creditNote.issue")}

@@ -103,7 +103,7 @@ export default function ReceiptPrintPage() {
   }
 
   if (!receipt) {
-    return <p className="text-sm text-muted">{t("common.loading")}</p>;
+    return <p className="text-sm text-muted page-subtitle">{t("common.loading")}</p>;
   }
 
   return (
@@ -113,14 +113,14 @@ export default function ReceiptPrintPage() {
           <button
             type="button"
             onClick={() => window.print()}
-            className="rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+            className="rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
           >
             {t("common.print")}
           </button>
         </div>
         <div className="space-y-2">
           <p className="text-xs text-muted">{t("receipt.detailsTitle")}</p>
-          <h1 className="text-2xl font-semibold">{receipt.receiptNumber}</h1>
+          <h1 className="text-2xl font-semibold page-title">{receipt.receiptNumber}</h1>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           <div>
@@ -145,19 +145,19 @@ export default function ReceiptPrintPage() {
           </div>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-border p-3 text-sm">
+          <div className="rounded-2xl border border-border p-3 text-sm">
             <p className="text-xs text-muted">{t("receipt.total")}</p>
             <p className="mt-1 font-semibold">
               {formatCurrency(receipt.totalAmount, receipt.currency)}
             </p>
           </div>
-          <div className="rounded-xl border border-border p-3 text-sm">
+          <div className="rounded-2xl border border-border p-3 text-sm">
             <p className="text-xs text-muted">{t("receipt.applied")}</p>
             <p className="mt-1 font-semibold">
               {formatCurrency(receipt.appliedAmount, receipt.currency)}
             </p>
           </div>
-          <div className="rounded-xl border border-border p-3 text-sm">
+          <div className="rounded-2xl border border-border p-3 text-sm">
             <p className="text-xs text-muted">{t("receipt.unapplied")}</p>
             <p className="mt-1 font-semibold">
               {formatCurrency(receipt.unappliedAmount, receipt.currency)}
@@ -165,8 +165,8 @@ export default function ReceiptPrintPage() {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-surface-muted text-muted">
+          <table className="min-w-full text-sm table-modern">
+            <thead className="bg-surface-muted text-muted thead-modern">
               <tr>
                 <th className={`px-3 py-2 ${alignClass}`}>{t("invoice.number")}</th>
                 <th className={`px-3 py-2 ${alignClass}`}>{t("common.amount")}</th>

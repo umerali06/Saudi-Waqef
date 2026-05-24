@@ -143,7 +143,7 @@ export default function AdminRegistrationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{t("admin.registrations.title")}</h1>
+          <h1 className="text-2xl font-bold page-title">{t("admin.registrations.title")}</h1>
           <p className="text-gray-500">{t("admin.registrations.subtitle")}</p>
         </div>
         <div className="flex gap-2">
@@ -189,7 +189,7 @@ export default function AdminRegistrationsPage() {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                  {t("admin.lists.empty")}
+                  {t("admin.registrations.empty")}
                 </td>
               </tr>
             ) : (

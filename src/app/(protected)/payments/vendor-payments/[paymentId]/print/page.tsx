@@ -103,7 +103,7 @@ export default function VendorPaymentPrintPage() {
   }
 
   if (!payment) {
-    return <p className="text-sm text-muted">{t("common.loading")}</p>;
+    return <p className="text-sm text-muted page-subtitle">{t("common.loading")}</p>;
   }
 
   return (
@@ -113,14 +113,14 @@ export default function VendorPaymentPrintPage() {
           <button
             type="button"
             onClick={() => window.print()}
-            className="rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+            className="rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
           >
             {t("common.print")}
           </button>
         </div>
         <div className="space-y-2">
           <p className="text-xs text-muted">{t("vendorPayment.detailsTitle")}</p>
-          <h1 className="text-2xl font-semibold">{payment.paymentNumber}</h1>
+          <h1 className="text-2xl font-semibold page-title">{payment.paymentNumber}</h1>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           <div>
@@ -145,19 +145,19 @@ export default function VendorPaymentPrintPage() {
           </div>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-border p-3 text-sm">
+          <div className="rounded-2xl border border-border p-3 text-sm">
             <p className="text-xs text-muted">{t("vendorPayment.total")}</p>
             <p className="mt-1 font-semibold">
               {formatCurrency(payment.totalAmount, payment.currency)}
             </p>
           </div>
-          <div className="rounded-xl border border-border p-3 text-sm">
+          <div className="rounded-2xl border border-border p-3 text-sm">
             <p className="text-xs text-muted">{t("vendorPayment.applied")}</p>
             <p className="mt-1 font-semibold">
               {formatCurrency(payment.appliedAmount, payment.currency)}
             </p>
           </div>
-          <div className="rounded-xl border border-border p-3 text-sm">
+          <div className="rounded-2xl border border-border p-3 text-sm">
             <p className="text-xs text-muted">{t("vendorPayment.unapplied")}</p>
             <p className="mt-1 font-semibold">
               {formatCurrency(payment.unappliedAmount, payment.currency)}
@@ -165,8 +165,8 @@ export default function VendorPaymentPrintPage() {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-surface-muted text-muted">
+          <table className="min-w-full text-sm table-modern">
+            <thead className="bg-surface-muted text-muted thead-modern">
               <tr>
                 <th className={`px-3 py-2 ${alignClass}`}>{t("bill.number")}</th>
                 <th className={`px-3 py-2 ${alignClass}`}>{t("common.amount")}</th>

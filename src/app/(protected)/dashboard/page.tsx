@@ -84,7 +84,7 @@ const buildDefaultRange = (): DateRange => {
 };
 
 const SkeletonBlock = ({ className }: { className: string }) => (
-  <div className={`animate-pulse rounded-xl bg-surface-muted ${className}`} />
+  <div className={`animate-pulse rounded-2xl bg-surface-muted ${className}`} />
 );
 
 export default function DashboardPage() {
@@ -263,7 +263,7 @@ export default function DashboardPage() {
   const showSkeleton = loading && !overview;
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           {showSkeleton ? (
@@ -274,11 +274,11 @@ export default function DashboardPage() {
             </div>
           ) : (
             <>
-              <p className="text-sm text-muted">{t("dashboard.title")}</p>
-              <h1 className="text-2xl font-semibold">
+              <p className="text-sm text-muted page-subtitle">{t("dashboard.title")}</p>
+              <h1 className="text-2xl font-semibold page-title">
                 {activeCompany?.name ?? t("common.company")}
               </h1>
-              <p className="text-sm text-muted">{t("analytics.subtitle")}</p>
+              <p className="text-sm text-muted page-subtitle">{t("analytics.subtitle")}</p>
             </>
           )}
         </div>
@@ -301,7 +301,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="app-card p-4">
+      <div className="app-card p-6 card-modern">
         {showSkeleton ? (
           <div className="flex flex-wrap items-end gap-4">
             <SkeletonBlock className="h-9 w-40" />
@@ -319,7 +319,7 @@ export default function DashboardPage() {
                 </span>
                 <input
                   type="date"
-                  className="w-40 rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                  className="w-40 rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                   value={filters.startDate}
                   onChange={(event) =>
                     setFilters((prev) => ({ ...prev, startDate: event.target.value }))
@@ -332,7 +332,7 @@ export default function DashboardPage() {
                 </span>
                 <input
                   type="date"
-                  className="w-40 rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                  className="w-40 rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                   value={filters.endDate}
                   onChange={(event) =>
                     setFilters((prev) => ({ ...prev, endDate: event.target.value }))
@@ -341,7 +341,7 @@ export default function DashboardPage() {
               </label>
               <button
                 type="button"
-                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
+                className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
                 onClick={() => {
                   setAppliedRange(filters);
                   loadOverview(filters);
@@ -352,7 +352,7 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
-                className="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground"
+                className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold text-foreground"
                 onClick={() => loadOverview(appliedRange, true)}
                 disabled={loading}
               >
@@ -360,7 +360,7 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
-                className="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground"
+                className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold text-foreground"
                 onClick={handleExport}
                 disabled={loading}
               >
@@ -382,7 +382,7 @@ export default function DashboardPage() {
             <div className="space-y-3">
               <h2 className="text-lg font-semibold">{t("analytics.section.accounting")}</h2>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <div className="app-panel p-4">
+                <div className="app-panel kpi-panel stat-card kpi-panel p-4"><span className="stat-icon" data-icon="default" aria-hidden="true"></span>
                   <p className="text-xs text-muted">{t("analytics.kpi.revenue")}</p>
                   <p className="text-xl font-semibold">{formatCurrency(overview.accounting.revenue)}</p>
                   <p className="mt-1 text-xs text-muted">{trendLabel(overview.accounting.revenueTrend)}</p>
@@ -391,7 +391,7 @@ export default function DashboardPage() {
                     calcPreviousValue(overview.accounting.revenue, overview.accounting.revenueTrend)
                   )}
                 </div>
-                <div className="app-panel p-4">
+                <div className="app-panel kpi-panel stat-card kpi-panel p-4"><span className="stat-icon" data-icon="default" aria-hidden="true"></span>
                   <p className="text-xs text-muted">{t("analytics.kpi.expenses")}</p>
                   <p className="text-xl font-semibold">{formatCurrency(overview.accounting.expenses)}</p>
                   <p className="mt-1 text-xs text-muted">{trendLabel(overview.accounting.expensesTrend)}</p>
@@ -400,7 +400,7 @@ export default function DashboardPage() {
                     calcPreviousValue(overview.accounting.expenses, overview.accounting.expensesTrend)
                   )}
                 </div>
-                <div className="app-panel p-4">
+                <div className="app-panel kpi-panel stat-card kpi-panel p-4"><span className="stat-icon" data-icon="default" aria-hidden="true"></span>
                   <p className="text-xs text-muted">{t("analytics.kpi.overdueInvoices")}</p>
                   <p className="text-xl font-semibold">{formatNumber(overview.accounting.overdueCount)}</p>
                   <p className="mt-1 text-xs text-muted">
@@ -408,7 +408,7 @@ export default function DashboardPage() {
                     {formatCurrency(overview.accounting.overdueAmount, overview.currency)}
                   </p>
                 </div>
-                <div className="app-panel p-4">
+                <div className="app-panel kpi-panel stat-card kpi-panel p-4"><span className="stat-icon" data-icon="default" aria-hidden="true"></span>
                   <p className="text-xs text-muted">{t("analytics.kpi.cashBalance")}</p>
                   <p className="text-xl font-semibold">
                     {formatCurrency(overview.accounting.cashBalance, overview.currency)}
@@ -426,19 +426,19 @@ export default function DashboardPage() {
             <div className="space-y-3">
               <h2 className="text-lg font-semibold">{t("analytics.section.vat")}</h2>
               <div className="grid gap-4 md:grid-cols-3">
-                <div className="app-panel p-4">
+                <div className="app-panel kpi-panel stat-card kpi-panel p-4"><span className="stat-icon" data-icon="default" aria-hidden="true"></span>
                   <p className="text-xs text-muted">{t("analytics.kpi.vatOutput")}</p>
                   <p className="text-xl font-semibold">
                     {formatCurrency(overview.vat.outputVat, overview.currency)}
                   </p>
                 </div>
-                <div className="app-panel p-4">
+                <div className="app-panel kpi-panel stat-card kpi-panel p-4"><span className="stat-icon" data-icon="default" aria-hidden="true"></span>
                   <p className="text-xs text-muted">{t("analytics.kpi.vatInput")}</p>
                   <p className="text-xl font-semibold">
                     {formatCurrency(overview.vat.inputVat, overview.currency)}
                   </p>
                 </div>
-                <div className="app-panel p-4">
+                <div className="app-panel kpi-panel stat-card kpi-panel p-4"><span className="stat-icon" data-icon="default" aria-hidden="true"></span>
                   <p className="text-xs text-muted">{t("analytics.kpi.vatNet")}</p>
                   <p className="text-xl font-semibold">
                     {formatCurrency(overview.vat.netVat, overview.currency)}
@@ -452,21 +452,21 @@ export default function DashboardPage() {
             <div className="space-y-3">
               <h2 className="text-lg font-semibold">{t("analytics.section.hr")}</h2>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <div className="app-panel p-4">
+                <div className="app-panel kpi-panel stat-card kpi-panel p-4"><span className="stat-icon" data-icon="default" aria-hidden="true"></span>
                   <p className="text-xs text-muted">{t("analytics.kpi.headcount")}</p>
                   <p className="text-xl font-semibold">{formatNumber(overview.hr.headcount)}</p>
                 </div>
-                <div className="app-panel p-4">
+                <div className="app-panel kpi-panel stat-card kpi-panel p-4"><span className="stat-icon" data-icon="default" aria-hidden="true"></span>
                   <p className="text-xs text-muted">{t("analytics.kpi.activeEmployees")}</p>
                   <p className="text-xl font-semibold">{formatNumber(overview.hr.activeEmployees)}</p>
                 </div>
-                <div className="app-panel p-4">
+                <div className="app-panel kpi-panel stat-card kpi-panel p-4"><span className="stat-icon" data-icon="default" aria-hidden="true"></span>
                   <p className="text-xs text-muted">{t("analytics.kpi.absenteeism")}</p>
                   <p className="text-xl font-semibold">
                     {formatPercent(overview.hr.absenteeismRate)}
                   </p>
                 </div>
-                <div className="app-panel p-4">
+                <div className="app-panel kpi-panel stat-card kpi-panel p-4"><span className="stat-icon" data-icon="default" aria-hidden="true"></span>
                   <p className="text-xs text-muted">{t("analytics.kpi.payrollCost")}</p>
                   <p className="text-xl font-semibold">
                     {formatCurrency(overview.hr.payrollCost, overview.currency)}
@@ -482,7 +482,7 @@ export default function DashboardPage() {
 
           {canSeeAccounting ? (
             <div className="grid gap-4 lg:grid-cols-3">
-              <div className="app-card p-4">
+              <div className="app-card p-6 card-modern">
                 <h3 className="text-sm font-semibold">{t("analytics.table.topCustomers")}</h3>
                 <div className="mt-3">
                   {renderBarList(
@@ -495,7 +495,7 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
-              <div className="app-card p-4">
+              <div className="app-card p-6 card-modern">
                 <h3 className="text-sm font-semibold">{t("analytics.table.expenseCategories")}</h3>
                 <div className="mt-3">
                   {renderBarList(
@@ -508,13 +508,13 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
-              <div className="app-card p-4">
+              <div className="app-card p-6 card-modern">
                 <h3 className="text-sm font-semibold">{t("analytics.table.overdueTitle")}</h3>
                 {overview.details.overdueInvoices.length === 0 ? (
-                  <p className="mt-3 text-sm text-muted">{t("analytics.table.overdueEmpty")}</p>
+                  <p className="mt-3 text-sm text-muted page-subtitle">{t("analytics.table.overdueEmpty")}</p>
                 ) : (
                   <div className="mt-3 overflow-x-auto">
-                    <table className="min-w-full text-sm">
+                    <table className="min-w-full text-sm table-modern">
                       <thead className="text-xs text-muted">
                         <tr>
                           <th className={`px-2 py-1 ${alignClass}`}>
@@ -571,25 +571,25 @@ export default function DashboardPage() {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <Link
                 href="/sales/invoices"
-                className="app-card p-4 text-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="app-card p-6 text-sm transition hover:-translate-y-0.5 hover:shadow-md card-modern"
               >
                 {t("analytics.link.sales")}
               </Link>
               <Link
                 href="/purchases/expenses"
-                className="app-card p-4 text-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="app-card p-6 text-sm transition hover:-translate-y-0.5 hover:shadow-md card-modern"
               >
                 {t("analytics.link.expenses")}
               </Link>
               <Link
                 href="/hr/payroll"
-                className="app-card p-4 text-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="app-card p-6 text-sm transition hover:-translate-y-0.5 hover:shadow-md card-modern"
               >
                 {t("analytics.link.payroll")}
               </Link>
               <Link
                 href="/reports/vat"
-                className="app-card p-4 text-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="app-card p-6 text-sm transition hover:-translate-y-0.5 hover:shadow-md card-modern"
               >
                 {t("analytics.link.vat")}
               </Link>
@@ -619,7 +619,7 @@ export default function DashboardPage() {
           </div>
           <div className="grid gap-4 lg:grid-cols-3">
             {[1, 2, 3].map((item) => (
-              <div key={item} className="app-card space-y-3 p-4">
+              <div key={item} className="app-card space-y-3 p-4 card-modern">
                 <SkeletonBlock className="h-4 w-40" />
                 <SkeletonBlock className="h-3 w-full" />
                 <SkeletonBlock className="h-3 w-5/6" />

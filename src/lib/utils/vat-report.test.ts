@@ -1,13 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildVatSummary } from "@/lib/utils/vat-report";
 
-const listSalesInvoices = vi.fn();
-const listPurchaseBills = vi.fn();
-const listSalesCreditNotes = vi.fn();
-const listVendorCreditNotes = vi.fn();
-const listExpenses = vi.fn();
-const listTaxCategories = vi.fn();
-const listVatAdjustments = vi.fn();
+const {
+  listSalesInvoices,
+  listPurchaseBills,
+  listSalesCreditNotes,
+  listVendorCreditNotes,
+  listExpenses,
+  listTaxCategories,
+  listVatAdjustments,
+} = vi.hoisted(() => ({
+  listSalesInvoices: vi.fn(),
+  listPurchaseBills: vi.fn(),
+  listSalesCreditNotes: vi.fn(),
+  listVendorCreditNotes: vi.fn(),
+  listExpenses: vi.fn(),
+  listTaxCategories: vi.fn(),
+  listVatAdjustments: vi.fn(),
+}));
 
 vi.mock("@/lib/data/sales-invoices", () => ({ listSalesInvoices }));
 vi.mock("@/lib/data/purchase-bills", () => ({ listPurchaseBills }));

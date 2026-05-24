@@ -62,13 +62,28 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   // Initial fetch and polling
   useEffect(() => {
+    if (!activeCompanyId) {
+      setNotifications([]);
+      return;
+    }
+
     fetchNotifications();
     const interval = setInterval(() => {
       fetchNotifications(true);
-    }, 30000); // Poll every 30 seconds
+    }, 5000);
 
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
+    const handleFocus = () => {
+      fetchNotifications(true);
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleFocus);
+    };
+  }, [activeCompanyId, fetchNotifications]);
 
   const markAsRead = async (id: string) => {
     // Optimistic update
@@ -80,7 +95,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "read" }),
       });
-    } catch (error) {
+    } catch {
       // Revert if failed (optional, or just show error)
       toast(t("notifications.errors.updateFailed"), "error");
       fetchNotifications(true);
@@ -102,7 +117,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ companyId: activeCompanyId }),
       });
       if (!res.ok) throw new Error("Failed");
-    } catch (error) {
+    } catch {
        toast(t("notifications.errors.updateFailed"), "error");
        fetchNotifications(true);
     }

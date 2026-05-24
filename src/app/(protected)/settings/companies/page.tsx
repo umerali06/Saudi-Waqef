@@ -77,15 +77,15 @@ export default function CompanySettingsPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("settings.company.title")}</h1>
-        <p className="text-sm text-muted">{t("settings.company.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("settings.company.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("settings.company.subtitle")}</p>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="app-card p-4"
+        className="app-card p-6 card-modern"
       >
         <div className="flex flex-col gap-2">
           <label className={`text-sm font-medium ${alignClass}`}>
@@ -94,18 +94,18 @@ export default function CompanySettingsPage() {
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+            className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
             placeholder={t("settings.company.placeholder")}
             required
           />
           {errorKey ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
               {t(errorKey)}
             </div>
           ) : null}
           <button
             type="submit"
-            className="mt-2 w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="mt-2 w-fit rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
             disabled={isPending}
           >
             {t("common.createCompany")}
@@ -113,7 +113,7 @@ export default function CompanySettingsPage() {
         </div>
       </form>
 
-      <div className="app-card">
+      <div className="app-card card-modern">
         <div className="border-b border-border px-4 py-2 text-sm font-semibold">
           {t("settings.company.listTitle")}
         </div>
@@ -141,7 +141,7 @@ export default function CompanySettingsPage() {
         </div>
       </div>
       {leaveErrorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
           {t(leaveErrorKey)}
         </div>
       ) : null}

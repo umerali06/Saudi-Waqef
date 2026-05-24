@@ -117,3 +117,25 @@ export async function updateCompanyStatus(
     { merge: true }
   );
 }
+
+export async function listActiveCompanies(options?: { limit?: number }) {
+  const limit = options?.limit && options.limit > 0 ? options.limit : 500;
+  const snapshot = await db
+    .collection("companies")
+    .where("status", "==", "active")
+    .limit(limit)
+    .get();
+
+  const companies = snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      name: String(data.name ?? "").trim(),
+      createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(0),
+    };
+  });
+
+  return companies
+    .filter((company) => company.name.length > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}

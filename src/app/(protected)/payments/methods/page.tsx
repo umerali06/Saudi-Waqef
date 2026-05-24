@@ -168,24 +168,24 @@ export default function PaymentMethodsPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("payments.methods.title")}</h1>
-        <p className="text-sm text-muted">{t("payments.methods.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("payments.methods.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("payments.methods.subtitle")}</p>
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
 
-      <div className="app-card p-4">
+      <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-4">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("payments.methods.code")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={code}
               onChange={(event) => setCode(event.target.value)}
               disabled={Boolean(editingId)}
@@ -194,7 +194,7 @@ export default function PaymentMethodsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("payments.methods.name")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
@@ -204,7 +204,7 @@ export default function PaymentMethodsPage() {
               {t("payments.methods.defaultAccount")}
             </span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={defaultAccountId}
               onChange={(event) => setDefaultAccountId(event.target.value)}
             >
@@ -219,7 +219,7 @@ export default function PaymentMethodsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("payments.methods.status")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={status}
               onChange={(event) => setStatus(event.target.value as "active" | "inactive")}
             >
@@ -236,7 +236,7 @@ export default function PaymentMethodsPage() {
             type="button"
             onClick={handleSubmit}
             disabled={isPending}
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           >
             {editingId ? t("payments.methods.update") : t("payments.methods.create")}
           </button>
@@ -244,7 +244,7 @@ export default function PaymentMethodsPage() {
             <button
               type="button"
               onClick={resetForm}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary"
+              className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary"
             >
               {t("common.cancel")}
             </button>
@@ -257,7 +257,7 @@ export default function PaymentMethodsPage() {
         </div>
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="flex items-center justify-between border-b border-border px-4 py-2 text-sm font-semibold">
           <span>{t("payments.methods.listTitle")}</span>
           <span className="text-xs text-muted">
@@ -275,8 +275,8 @@ export default function PaymentMethodsPage() {
           <div className="p-4 text-sm text-muted">{t("payments.methods.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("payments.methods.code")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("payments.methods.name")}</th>

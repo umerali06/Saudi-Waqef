@@ -151,7 +151,7 @@ export default function ProfitLossPage() {
     compareSection?: ProfitLossSection,
     compareLookup?: Map<string, number> | null
   ) => (
-    <div className="app-card overflow-hidden">
+    <div className="app-card overflow-hidden card-modern">
       <div className="border-b border-border px-4 py-2 text-sm font-semibold">
         {title}
       </div>
@@ -159,8 +159,8 @@ export default function ProfitLossPage() {
         <div className="p-4 text-sm text-muted">{t("reports.profitLoss.empty")}</div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-surface-muted text-muted">
+          <table className="min-w-full text-sm table-modern">
+            <thead className="bg-surface-muted text-muted thead-modern">
               <tr>
                 <th className={`px-4 py-2 ${alignClass}`}>
                   {t("reports.profitLoss.account")}
@@ -225,13 +225,13 @@ export default function ProfitLossPage() {
   const showSkeleton = loading && !report;
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("reports.profitLoss.title")}</h1>
-        <p className="text-sm text-muted">{t("reports.profitLoss.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("reports.profitLoss.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("reports.profitLoss.subtitle")}</p>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-end gap-4">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
@@ -239,7 +239,7 @@ export default function ProfitLossPage() {
             </span>
             <input
               type="date"
-              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={startDate}
               onChange={(event) => setStartDate(event.target.value)}
             />
@@ -250,7 +250,7 @@ export default function ProfitLossPage() {
             </span>
             <input
               type="date"
-              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={endDate}
               onChange={(event) => setEndDate(event.target.value)}
             />
@@ -259,7 +259,7 @@ export default function ProfitLossPage() {
             type="button"
             onClick={loadReport}
             disabled={isPending}
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {t("reports.profitLoss.view")}
           </button>
@@ -281,7 +281,7 @@ export default function ProfitLossPage() {
                 </span>
                 <input
                   type="date"
-                  className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={compareStartDate}
                   onChange={(event) => setCompareStartDate(event.target.value)}
                 />
@@ -292,7 +292,7 @@ export default function ProfitLossPage() {
                 </span>
                 <input
                   type="date"
-                  className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={compareEndDate}
                   onChange={(event) => setCompareEndDate(event.target.value)}
                 />
@@ -305,7 +305,7 @@ export default function ProfitLossPage() {
             type="button"
             onClick={() => handleExport("csv")}
             disabled={isPending}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
           >
             {t("reports.profitLoss.exportCsv")}
           </button>
@@ -313,13 +313,13 @@ export default function ProfitLossPage() {
             type="button"
             onClick={() => handleExport("pdf")}
             disabled={isPending}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
           >
             {t("reports.profitLoss.exportPdf")}
           </button>
         </div>
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
@@ -359,7 +359,7 @@ export default function ProfitLossPage() {
             compareMap?.revenue ?? null
           )
         : showSkeleton ? (
-            <div className="app-card space-y-3 p-4">
+            <div className="app-card space-y-3 p-4 card-modern">
               <SkeletonBlock className="h-4 w-40" />
               <SkeletonBlock className="h-10 w-full" />
               <SkeletonBlock className="h-10 w-full" />
@@ -374,7 +374,7 @@ export default function ProfitLossPage() {
             compareMap?.cogs ?? null
           )
         : showSkeleton ? (
-            <div className="app-card space-y-3 p-4">
+            <div className="app-card space-y-3 p-4 card-modern">
               <SkeletonBlock className="h-4 w-40" />
               <SkeletonBlock className="h-10 w-full" />
               <SkeletonBlock className="h-10 w-full" />
@@ -389,7 +389,7 @@ export default function ProfitLossPage() {
             compareMap?.expenses ?? null
           )
         : showSkeleton ? (
-            <div className="app-card space-y-3 p-4">
+            <div className="app-card space-y-3 p-4 card-modern">
               <SkeletonBlock className="h-4 w-40" />
               <SkeletonBlock className="h-10 w-full" />
               <SkeletonBlock className="h-10 w-full" />
@@ -398,7 +398,7 @@ export default function ProfitLossPage() {
           ) : null}
 
       {report ? (
-        <div className="app-card p-4 text-sm">
+        <div className="app-card p-6 text-sm card-modern">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span className="font-semibold">{t("reports.profitLoss.grossProfit")}</span>
             <span className="font-semibold">{formatAmount(report.grossProfit)}</span>
@@ -409,7 +409,7 @@ export default function ProfitLossPage() {
           </div>
         </div>
       ) : showSkeleton ? (
-        <div className="app-card space-y-3 p-4">
+        <div className="app-card space-y-3 p-4 card-modern">
           <SkeletonBlock className="h-4 w-40" />
           <SkeletonBlock className="h-3 w-full" />
           <SkeletonBlock className="h-3 w-5/6" />

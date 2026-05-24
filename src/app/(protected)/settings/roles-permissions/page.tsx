@@ -61,20 +61,20 @@ export default function RolesPermissionsPage() {
   const alignClass = locale === "ar" ? "text-right" : "text-left";
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("permissions.title")}</h1>
-        <p className="text-sm text-muted">{t("permissions.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("permissions.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("permissions.subtitle")}</p>
       </div>
 
       {PERMISSION_SECTIONS.map((section) => (
-        <div key={section.titleKey} className="app-card overflow-hidden">
+        <div key={section.titleKey} className="app-card overflow-hidden card-modern">
           <div className="border-b border-border px-4 py-2 text-sm font-semibold">
             {t(section.titleKey)}
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("permissions.permissionHeader")}</th>
                   {ROLE_OPTIONS.map((role) => (

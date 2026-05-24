@@ -39,14 +39,14 @@ export default function AdminKpisPage() {
   }
 
   if (!kpis) {
-    return <p className="text-sm text-muted">{t("common.loading")}</p>;
+    return <p className="text-sm text-muted page-subtitle">{t("common.loading")}</p>;
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("admin.kpis.title")}</h1>
-        <p className="text-sm text-muted">{t("admin.kpis.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("admin.kpis.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("admin.kpis.subtitle")}</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -65,7 +65,7 @@ export default function AdminKpisPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="app-card p-4">
+        <div className="app-card p-6 card-modern">
           <p className="text-xs text-muted">{t("admin.kpis.invoices")}</p>
           <p className="text-lg font-semibold">{formatNumber(kpis.invoicesLast30Days)}</p>
           <p className="text-xs text-muted">
@@ -73,17 +73,17 @@ export default function AdminKpisPage() {
             {formatNumber(kpis.invoicesPerCompany)}
           </p>
         </div>
-        <div className="app-card p-4">
+        <div className="app-card p-6 card-modern">
           <p className="text-xs text-muted">{t("admin.kpis.payrollRuns")}</p>
           <p className="text-lg font-semibold">{formatNumber(kpis.payrollRunsLast30Days)}</p>
         </div>
-        <div className="app-card p-4">
+        <div className="app-card p-6 card-modern">
           <p className="text-xs text-muted">{t("admin.kpis.supportTickets")}</p>
           <p className="text-lg font-semibold">{formatNumber(kpis.supportTicketsLast30Days)}</p>
         </div>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">{t("admin.kpis.onboardingTitle")}</h2>
@@ -94,15 +94,15 @@ export default function AdminKpisPage() {
           </div>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm">
+          <div className="rounded-2xl border border-border bg-surface px-4 py-3 text-sm">
             <p className="text-xs text-muted">{t("admin.kpis.onboardingStarted")}</p>
             <p className="text-lg font-semibold">{formatNumber(kpis.onboardingStarted)}</p>
           </div>
-          <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm">
+          <div className="rounded-2xl border border-border bg-surface px-4 py-3 text-sm">
             <p className="text-xs text-muted">{t("admin.kpis.onboardingCompleted")}</p>
             <p className="text-lg font-semibold">{formatNumber(kpis.onboardingCompleted)}</p>
           </div>
-          <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm">
+          <div className="rounded-2xl border border-border bg-surface px-4 py-3 text-sm">
             <p className="text-xs text-muted">{t("admin.kpis.onboardingConversion")}</p>
             <p className="text-lg font-semibold">
               {formatPercent(kpis.onboardingConversionRate / 100, 1)}
@@ -110,11 +110,11 @@ export default function AdminKpisPage() {
           </div>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm">
+          <div className="rounded-2xl border border-border bg-surface px-4 py-3 text-sm">
             <p className="text-xs text-muted">{t("admin.kpis.churn")}</p>
             <p className="text-lg font-semibold">{formatNumber(kpis.churnLast30Days)}</p>
           </div>
-          <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm">
+          <div className="rounded-2xl border border-border bg-surface px-4 py-3 text-sm">
             <p className="text-xs text-muted">{t("admin.kpis.notes")}</p>
             <p className="text-xs text-muted">{t("admin.kpis.notesHint")}</p>
           </div>

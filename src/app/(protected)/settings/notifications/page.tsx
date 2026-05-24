@@ -200,24 +200,24 @@ export default function NotificationSettingsPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("notifications.settings.title")}</h1>
-        <p className="text-sm text-muted">{t("notifications.settings.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("notifications.settings.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("notifications.settings.subtitle")}</p>
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
           {error}
         </div>
       ) : null}
       {message ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           {message}
         </div>
       ) : null}
 
-      <div className={`app-card p-4 ${alignClass}`}>
+      <div className={`app-card p-6 ${alignClass}`}>
         <h2 className="text-sm font-semibold">{t("notifications.settings.defaultChannels")}</h2>
         {isLoading ? (
           <div className="mt-3 flex gap-4">
@@ -255,7 +255,7 @@ export default function NotificationSettingsPage() {
         )}
       </div>
 
-      <div className={`app-card p-4 ${alignClass}`}>
+      <div className={`app-card p-6 ${alignClass}`}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-sm font-semibold">{t("notifications.emailDelivery.title")}</h2>
@@ -275,7 +275,7 @@ export default function NotificationSettingsPage() {
         </div>
 
         <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
-          <div className="rounded-xl border border-border bg-surface-muted px-3 py-2">
+          <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
             <p className="text-xs text-muted">{t("notifications.emailDelivery.mode")}</p>
             <p className="font-semibold">
               {emailStatus?.mode === "immediate"
@@ -283,14 +283,14 @@ export default function NotificationSettingsPage() {
                 : t("notifications.emailDelivery.modeQueue")}
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-surface-muted px-3 py-2">
+          <div className="rounded-2xl border border-border bg-surface-muted px-3 py-2">
             <p className="text-xs text-muted">{t("notifications.emailDelivery.fromAddress")}</p>
             <p className="font-semibold">{emailStatus?.fromAddress ?? "--"}</p>
           </div>
         </div>
 
         {!emailStatus?.configured ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t("notifications.emailDelivery.missingConfig")}
           </div>
         ) : null}
@@ -299,7 +299,7 @@ export default function NotificationSettingsPage() {
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <button
               type="button"
-              className="cursor-pointer rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+              className="cursor-pointer rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
               onClick={handleDispatch}
               disabled={dispatching}
             >
@@ -316,7 +316,7 @@ export default function NotificationSettingsPage() {
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button
             type="button"
-            className="cursor-pointer rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+            className="cursor-pointer rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
             onClick={handleVerify}
             disabled={verifying}
           >
@@ -329,7 +329,7 @@ export default function NotificationSettingsPage() {
           </p>
         </div>
 
-        <div className="mt-4 rounded-xl border border-border bg-surface-muted px-3 py-2 text-xs text-muted">
+        <div className="mt-4 rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs text-muted">
           <p className="font-semibold">{t("notifications.emailDelivery.gmailTitle")}</p>
           <p className="mt-1">{t("notifications.emailDelivery.gmailHint")}</p>
           <p className="mt-1">
@@ -348,7 +348,7 @@ export default function NotificationSettingsPage() {
         </div>
       </div>
 
-      <div className="app-card">
+      <div className="app-card card-modern">
         <div className="border-b border-border px-4 py-3 text-sm font-semibold">
           {t("notifications.settings.byType")}
         </div>
@@ -403,7 +403,7 @@ export default function NotificationSettingsPage() {
         <div className="border-t border-border px-4 py-3">
           <button
             type="button"
-            className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm"
+            className="cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm"
             onClick={handleSave}
             disabled={isPending}
           >
@@ -412,7 +412,7 @@ export default function NotificationSettingsPage() {
         </div>
       </div>
 
-      <div className={`app-card p-4 ${alignClass}`}>
+      <div className={`app-card p-6 ${alignClass}`}>
         <h2 className="text-sm font-semibold">{t("notifications.preview.title")}</h2>
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           <label className="text-sm">
@@ -420,7 +420,7 @@ export default function NotificationSettingsPage() {
             <select
               value={templateType}
               onChange={(event) => setTemplateType(event.target.value as typeof NOTIFICATION_TYPES[number])}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
             >
               {types.map((item) => (
                 <option key={item.key} value={item.key}>
@@ -434,7 +434,7 @@ export default function NotificationSettingsPage() {
             <select
               value={templateLocale}
               onChange={(event) => setTemplateLocale(event.target.value as "ar" | "en")}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
             >
               <option value="ar">{t("language.ar")}</option>
               <option value="en">{t("language.en")}</option>
@@ -443,14 +443,14 @@ export default function NotificationSettingsPage() {
           <div className="flex items-end">
             <button
               type="button"
-              className="cursor-pointer rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+              className="cursor-pointer rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
               onClick={handleTest}
             >
               {t("notifications.preview.testSend")}
             </button>
           </div>
         </div>
-        <div className="mt-4 rounded-xl border border-border bg-surface-muted p-3 text-sm">
+        <div className="mt-4 rounded-2xl border border-border bg-surface-muted p-3 text-sm">
           <p className="text-xs text-muted">{t("notifications.preview.subject")}</p>
           <p className="font-semibold">{preview?.subject ?? "--"}</p>
           <p className="mt-2 text-xs text-muted">{t("notifications.preview.body")}</p>

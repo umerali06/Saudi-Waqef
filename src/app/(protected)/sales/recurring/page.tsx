@@ -311,16 +311,16 @@ export default function RecurringInvoicesPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">{t("sales.recurringTitle")}</h1>
-          <p className="text-sm text-muted">{t("sales.recurringSubtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("sales.recurringTitle")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("sales.recurringSubtitle")}</p>
         </div>
         <button
           type="button"
           onClick={handleRun}
-          className="rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+          className="rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
           disabled={loading}
         >
           {t("sales.recurringRun")}
@@ -328,17 +328,17 @@ export default function RecurringInvoicesPage() {
       </div>
 
       {noticeKey ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
           {t(noticeKey)}
         </div>
       ) : null}
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
 
-      <form onSubmit={handleCreate} className="app-card p-5">
+      <form onSubmit={handleCreate} className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">
             {editingId ? t("sales.recurringEdit") : t("sales.recurringCreate")}
@@ -357,7 +357,7 @@ export default function RecurringInvoicesPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("customers.customer")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={customerId}
               onChange={(event) => setCustomerId(event.target.value)}
               disabled={loadingData}
@@ -373,7 +373,7 @@ export default function RecurringInvoicesPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("sales.recurringFrequency")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={frequency}
               onChange={(event) => setFrequency(event.target.value as "weekly" | "monthly")}
             >
@@ -385,7 +385,7 @@ export default function RecurringInvoicesPage() {
             <span className="mb-1 block text-xs text-muted">{t("sales.recurringNextRun")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={nextRunDate}
               onChange={(event) => setNextRunDate(event.target.value)}
             />
@@ -395,7 +395,7 @@ export default function RecurringInvoicesPage() {
             <input
               type="number"
               min="0"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={dueDays}
               onChange={(event) => setDueDays(event.target.value)}
             />
@@ -413,11 +413,11 @@ export default function RecurringInvoicesPage() {
                 })
               : [];
             return (
-              <div key={line.id} className="grid gap-3 rounded-xl border border-border p-3 md:grid-cols-6">
+              <div key={line.id} className="grid gap-3 rounded-2xl border border-border p-3 md:grid-cols-6">
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("invoice.item")}</span>
                   <select
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.itemId}
                     onChange={(event) => handleLineChange(index, "itemId", event.target.value)}
                   >
@@ -435,7 +435,7 @@ export default function RecurringInvoicesPage() {
                     type="number"
                     min="0"
                     step="0.01"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.quantity}
                     onChange={(event) => handleLineChange(index, "quantity", event.target.value)}
                   />
@@ -443,7 +443,7 @@ export default function RecurringInvoicesPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("invoice.unit")}</span>
                   <select
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.unit}
                     onChange={(event) => handleLineChange(index, "unit", event.target.value)}
                   >
@@ -461,7 +461,7 @@ export default function RecurringInvoicesPage() {
                     type="number"
                     min="0"
                     step="0.01"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.unitPrice}
                     onChange={(event) => handleLineChange(index, "unitPrice", event.target.value)}
                   />
@@ -472,7 +472,7 @@ export default function RecurringInvoicesPage() {
                     type="number"
                     min="0"
                     step="0.1"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.discountRate}
                     onChange={(event) => handleLineChange(index, "discountRate", event.target.value)}
                   />
@@ -480,7 +480,7 @@ export default function RecurringInvoicesPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("invoice.taxCategory")}</span>
                   <select
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.taxCategoryId}
                     onChange={(event) => handleLineChange(index, "taxCategoryId", event.target.value)}
                   >
@@ -494,7 +494,7 @@ export default function RecurringInvoicesPage() {
                 </label>
                 <div className="md:col-span-6 flex items-center justify-between gap-2">
                   <input
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.description}
                     onChange={(event) => handleLineChange(index, "description", event.target.value)}
                     placeholder={t("invoice.description")}
@@ -513,21 +513,21 @@ export default function RecurringInvoicesPage() {
           <button
             type="button"
             onClick={addLine}
-            className="rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+            className="rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
           >
             {t("common.addLine")}
           </button>
         </div>
         <button
           type="submit"
-          className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
+          className="mt-4 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
           disabled={isPending}
         >
           {editingId ? t("common.update") : t("common.save")}
         </button>
       </form>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="flex items-center justify-between border-b border-border px-4 py-2 text-sm font-semibold">
           <span>{t("sales.recurringList")}</span>
           <span className="text-xs text-muted">{loadingData ? "—" : recurring.length}</span>
@@ -543,8 +543,8 @@ export default function RecurringInvoicesPage() {
           <div className="p-4 text-sm text-muted">{t("sales.recurringEmpty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-3 py-2 ${alignClass}`}>{t("customers.customer")}</th>
                   <th className={`px-3 py-2 ${alignClass}`}>{t("sales.recurringFrequency")}</th>

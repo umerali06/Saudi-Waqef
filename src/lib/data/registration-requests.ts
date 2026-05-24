@@ -6,6 +6,7 @@ export type RegistrationRequest = {
   id: string;
   email: string;
   name: string;
+  companyId?: string;
   companyName: string;
   phone?: string;
   requestedRole: string;
@@ -19,6 +20,7 @@ const COLLECTION = "registration_requests";
 export async function createRegistrationRequest(params: {
   email: string;
   name: string;
+  companyId?: string;
   companyName: string;
   phone?: string;
   requestedRole: string;
@@ -30,6 +32,7 @@ export async function createRegistrationRequest(params: {
     email: params.email.trim(),
     emailLower: normalizedEmail,
     name: params.name.trim(),
+    companyId: params.companyId?.trim() || null,
     companyName: params.companyName.trim(),
     phone: params.phone?.trim() || null,
     requestedRole: params.requestedRole,
@@ -55,6 +58,7 @@ export async function getRegistrationRequests(status?: "pending" | "approved" | 
       id: doc.id,
       email: data.email,
       name: data.name,
+      companyId: data.companyId ?? undefined,
       companyName: data.companyName,
       phone: data.phone,
       requestedRole: data.requestedRole,
@@ -77,6 +81,7 @@ export async function getRegistrationRequestById(id: string) {
     id: doc.id,
     email: data.email,
     name: data.name,
+    companyId: data.companyId ?? undefined,
     companyName: data.companyName,
     phone: data.phone,
     requestedRole: data.requestedRole,

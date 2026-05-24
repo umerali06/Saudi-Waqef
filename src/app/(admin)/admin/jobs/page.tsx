@@ -27,20 +27,20 @@ export default function AdminJobsPage() {
   }, [t]);
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("admin.jobs.title")}</h1>
-        <p className="text-sm text-muted">{t("admin.jobs.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("admin.jobs.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("admin.jobs.subtitle")}</p>
       </div>
 
       {error ? <p className="text-sm text-red-500">{error}</p> : null}
 
-      <div className="app-card">
+      <div className="app-card card-modern">
         <div className={`border-b border-border px-4 py-3 text-sm font-semibold ${alignClass}`}>
           {t("admin.jobs.listTitle")}
         </div>
         {jobs.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-muted">{t("admin.jobs.empty")}</p>
+          <p className="px-4 py-4 text-sm text-muted page-subtitle">{t("admin.jobs.empty")}</p>
         ) : (
           <div className="divide-y divide-border">
             {jobs.map((job) => (

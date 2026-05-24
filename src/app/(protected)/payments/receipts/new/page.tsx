@@ -245,18 +245,18 @@ export default function NewReceiptPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("receipt.createTitle")}</h1>
-        <p className="text-sm text-muted">{t("receipt.createSubtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("receipt.createTitle")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("receipt.createSubtitle")}</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="app-card p-5">
+      <form onSubmit={handleSubmit} className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-3">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("receipt.customer")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={customerId}
               onChange={(event) => setCustomerId(event.target.value)}
               required
@@ -273,7 +273,7 @@ export default function NewReceiptPage() {
             <span className="mb-1 block text-xs text-muted">{t("receipt.date")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={receiptDate}
               onChange={(event) => setReceiptDate(event.target.value)}
               required
@@ -285,7 +285,7 @@ export default function NewReceiptPage() {
               type="number"
               min="0"
               step="0.01"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={totalAmount}
               onChange={(event) => setTotalAmount(event.target.value)}
               required
@@ -294,7 +294,7 @@ export default function NewReceiptPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("receipt.method")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={method}
               onChange={(event) => setMethod(event.target.value)}
               required
@@ -310,7 +310,7 @@ export default function NewReceiptPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("receipt.account")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={accountId}
               onChange={(event) => setAccountId(event.target.value)}
               required
@@ -326,7 +326,7 @@ export default function NewReceiptPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.reference")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={reference}
               onChange={(event) => setReference(event.target.value)}
               placeholder={t("receipt.referencePlaceholder")}
@@ -337,11 +337,11 @@ export default function NewReceiptPage() {
         <div className="mt-6">
           <h2 className="text-sm font-semibold">{t("receipt.allocations")}</h2>
           {invoices.length === 0 ? (
-            <p className="mt-2 text-sm text-muted">{t("receipt.noInvoices")}</p>
+            <p className="mt-2 text-sm text-muted page-subtitle">{t("receipt.noInvoices")}</p>
           ) : (
             <div className="mt-3 overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-surface-muted text-muted">
+              <table className="min-w-full text-sm table-modern">
+                <thead className="bg-surface-muted text-muted thead-modern">
                   <tr>
                     <th className={`px-3 py-2 ${alignClass}`}>{t("receipt.invoice")}</th>
                     <th className={`px-3 py-2 ${alignClass}`}>{t("common.issueDate")}</th>
@@ -364,7 +364,7 @@ export default function NewReceiptPage() {
                           type="number"
                           min="0"
                           step="0.01"
-                          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                          className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                           value={allocations[invoice.id] ?? ""}
                           onChange={(event) =>
                             handleAllocationChange(invoice.id, event.target.value)
@@ -380,25 +380,25 @@ export default function NewReceiptPage() {
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-border bg-surface-muted p-3 text-sm">
+          <div className="rounded-2xl border border-border bg-surface-muted p-3 text-sm">
             <p className="text-xs text-muted">{t("receipt.applied")}</p>
             <p className="mt-1 font-semibold">{formatCurrency(appliedAmount)}</p>
           </div>
-          <div className="rounded-xl border border-border bg-surface-muted p-3 text-sm">
+          <div className="rounded-2xl border border-border bg-surface-muted p-3 text-sm">
             <p className="text-xs text-muted">{t("receipt.unapplied")}</p>
             <p className="mt-1 font-semibold">{formatCurrency(unappliedAmount)}</p>
           </div>
         </div>
 
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
 
         <button
           type="submit"
-          className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+          className="mt-4 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           disabled={isPending}
         >
           {t("receipt.save")}

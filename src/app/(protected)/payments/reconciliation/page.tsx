@@ -301,18 +301,18 @@ export default function ReconciliationPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("reconciliation.title")}</h1>
-        <p className="text-sm text-muted">{t("reconciliation.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("reconciliation.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("reconciliation.subtitle")}</p>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-3">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("reconciliation.account")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={accountId}
               onChange={(event) => setAccountId(event.target.value)}
               disabled={loadingAccounts}
@@ -330,7 +330,7 @@ export default function ReconciliationPage() {
           <button
             type="button"
             onClick={handleDownloadTemplate}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-xs font-semibold"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-xs font-semibold"
             disabled={isPending}
           >
             {t("reconciliation.downloadTemplate")}
@@ -346,7 +346,7 @@ export default function ReconciliationPage() {
           <button
             type="button"
             onClick={handleImport}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-xs font-semibold"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-xs font-semibold"
             disabled={isPending || !importFile || !accountId}
           >
             {t("reconciliation.import")}
@@ -354,19 +354,19 @@ export default function ReconciliationPage() {
           <button
             type="button"
             onClick={handleAutoMatch}
-            className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast"
+            className="rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast"
             disabled={isPending || !accountId}
           >
             {t("reconciliation.autoMatch")}
           </button>
         </div>
         {noticeKey ? (
-          <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+          <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
             {t(noticeKey)}
           </div>
         ) : null}
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
@@ -384,7 +384,7 @@ export default function ReconciliationPage() {
         ) : null}
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="flex items-center justify-between border-b border-border px-4 py-2 text-sm font-semibold">
           <span>{t("reconciliation.linesTitle")}</span>
           <span className="text-xs text-muted">
@@ -402,8 +402,8 @@ export default function ReconciliationPage() {
           <div className="p-4 text-sm text-muted">{t("reconciliation.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("reconciliation.date")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("reconciliation.description")}</th>

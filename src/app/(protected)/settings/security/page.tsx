@@ -117,18 +117,18 @@ export default function SecuritySettingsPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("settings.security.title")}</h1>
-        <p className="text-sm text-muted">{t("settings.security.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("settings.security.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("settings.security.subtitle")}</p>
       </div>
 
       {!isAdmin ? (
-        <div className="app-card p-4 text-sm text-muted">
+        <div className="app-card p-6 text-sm text-muted card-modern">
           {t("settings.security.restricted")}
         </div>
       ) : (
-        <div className="app-card space-y-4 p-4">
+        <div className="app-card space-y-4 p-4 card-modern">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className={alignClass}>
               <h2 className="text-lg font-semibold">{t("security.mfa.title")}</h2>
@@ -159,7 +159,7 @@ export default function SecuritySettingsPage() {
                 <input
                   type="text"
                   inputMode="numeric"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                   value={disableCode}
                   onChange={(event) => setDisableCode(event.target.value)}
                   placeholder={t("security.mfa.codePlaceholder")}
@@ -169,7 +169,7 @@ export default function SecuritySettingsPage() {
                 type="button"
                 onClick={handleDisable}
                 disabled={isPending}
-                className="rounded-xl border border-border px-4 py-2 text-sm font-semibold transition hover:bg-surface-muted"
+                className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold transition hover:bg-surface-muted"
               >
                 {t("security.mfa.disable")}
               </button>
@@ -181,7 +181,7 @@ export default function SecuritySettingsPage() {
                 type="button"
                 onClick={handleEnroll}
                 disabled={isPending}
-                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+                className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
               >
                 {t("security.mfa.enable")}
               </button>
@@ -190,7 +190,7 @@ export default function SecuritySettingsPage() {
               ) : null}
 
               {secret ? (
-                <div className="space-y-3 rounded-xl border border-border bg-surface-muted p-3 text-sm">
+                <div className="space-y-3 rounded-2xl border border-border bg-surface-muted p-3 text-sm">
                   <div className="text-xs text-muted">{t("security.mfa.secretLabel")}</div>
                   <div className="break-all font-mono text-xs">{secret}</div>
                   {otpauth ? (
@@ -206,7 +206,7 @@ export default function SecuritySettingsPage() {
                     <input
                       type="text"
                       inputMode="numeric"
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                      className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                       value={verifyCode}
                       onChange={(event) => setVerifyCode(event.target.value)}
                       placeholder={t("security.mfa.codePlaceholder")}
@@ -216,7 +216,7 @@ export default function SecuritySettingsPage() {
                     type="button"
                     onClick={handleVerify}
                     disabled={isPending}
-                    className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+                    className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
                   >
                     {t("security.mfa.verify")}
                   </button>
@@ -226,12 +226,12 @@ export default function SecuritySettingsPage() {
           )}
 
           {errorKey ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
               {t(errorKey)}
             </div>
           ) : null}
           {noticeKey ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
               {t(noticeKey)}
             </div>
           ) : null}

@@ -26,15 +26,15 @@ export default function AdminAuditPage() {
   }, [t]);
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">{t("admin.audit.title")}</h1>
-          <p className="text-sm text-muted">{t("admin.audit.subtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("admin.audit.title")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("admin.audit.subtitle")}</p>
         </div>
         <a
           href="/api/admin/audit/export"
-          className="rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+          className="rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
         >
           {t("admin.audit.exportCsv")}
         </a>
@@ -42,12 +42,12 @@ export default function AdminAuditPage() {
 
       {error ? <p className="text-sm text-red-500">{error}</p> : null}
 
-      <div className="app-card">
+      <div className="app-card card-modern">
         <div className={`border-b border-border px-4 py-3 text-sm font-semibold ${alignClass}`}>
           {t("admin.audit.listTitle")}
         </div>
         {events.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-muted">{t("admin.audit.empty")}</p>
+          <p className="px-4 py-4 text-sm text-muted page-subtitle">{t("admin.audit.empty")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

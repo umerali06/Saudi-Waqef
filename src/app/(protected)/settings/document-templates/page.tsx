@@ -330,13 +330,13 @@ export default function DocumentTemplatesPage() {
   const accentColor = branding.accentColor || "#0c5f5a";
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("templates.title")}</h1>
-        <p className="text-sm text-muted">{t("templates.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("templates.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("templates.subtitle")}</p>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("templates.stylesTitle")}</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className={`text-sm ${alignClass}`}>
@@ -347,7 +347,7 @@ export default function DocumentTemplatesPage() {
               <SkeletonBlock className="h-10 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={config.invoiceTemplate}
                 onChange={(event) =>
                   setConfig((prev) => ({
@@ -370,7 +370,7 @@ export default function DocumentTemplatesPage() {
               <SkeletonBlock className="h-10 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={config.billTemplate}
                 onChange={(event) =>
                   setConfig((prev) => ({
@@ -389,7 +389,7 @@ export default function DocumentTemplatesPage() {
         <p className="mt-3 text-xs text-muted">{t("templates.brandingHint")}</p>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t("templates.signatureTitle")}</h2>
           <label className="flex items-center gap-2 text-xs text-muted">
@@ -419,7 +419,7 @@ export default function DocumentTemplatesPage() {
               <SkeletonBlock className="h-10 w-full" />
             ) : (
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={config.signatureName}
                 onChange={(event) =>
                   setConfig((prev) => ({ ...prev, signatureName: event.target.value }))
@@ -435,7 +435,7 @@ export default function DocumentTemplatesPage() {
               <SkeletonBlock className="h-10 w-full" />
             ) : (
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={config.signatureTitle}
                 onChange={(event) =>
                   setConfig((prev) => ({ ...prev, signatureTitle: event.target.value }))
@@ -494,7 +494,7 @@ export default function DocumentTemplatesPage() {
         </div>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("templates.previewTitle")}</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <label className={`text-sm ${alignClass}`}>
@@ -505,7 +505,7 @@ export default function DocumentTemplatesPage() {
               <SkeletonBlock className="h-10 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={selectedInvoiceId}
                 onChange={(event) => setSelectedInvoiceId(event.target.value)}
               >
@@ -526,7 +526,7 @@ export default function DocumentTemplatesPage() {
               <SkeletonBlock className="h-10 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={selectedBillId}
                 onChange={(event) => setSelectedBillId(event.target.value)}
               >
@@ -547,7 +547,7 @@ export default function DocumentTemplatesPage() {
               <SkeletonBlock className="h-10 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={previewLocale}
                 onChange={(event) =>
                   setPreviewLocale(event.target.value as "ar" | "en")
@@ -562,14 +562,14 @@ export default function DocumentTemplatesPage() {
         <div className="mt-4 flex flex-wrap gap-3">
           <button
             type="button"
-            className="rounded-xl border border-border px-4 py-2 text-xs font-semibold"
+            className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold"
             onClick={() => openPreview("invoice")}
           >
             {t("templates.openInvoicePreview")}
           </button>
           <button
             type="button"
-            className="rounded-xl border border-border px-4 py-2 text-xs font-semibold"
+            className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold"
             onClick={() => openPreview("bill")}
           >
             {t("templates.openBillPreview")}
@@ -605,7 +605,7 @@ export default function DocumentTemplatesPage() {
           </div>
           {invoicePreview ? (
             <>
-              <div className="mt-4 rounded-xl border border-border bg-white p-3 text-sm">
+              <div className="mt-4 rounded-2xl border border-border bg-white p-3 text-sm">
                 <p className="text-xs text-muted">{t("invoice.customer")}</p>
                 <p className="font-semibold">{invoicePreview.customerName}</p>
                 {invoicePreview.customerVatNumber ? (
@@ -613,8 +613,8 @@ export default function DocumentTemplatesPage() {
                 ) : null}
               </div>
               <div className="mt-4 overflow-x-auto">
-                <table className="min-w-full text-xs">
-                  <thead className="bg-surface-muted text-muted">
+                <table className="min-w-full text-xs table-modern">
+                  <thead className="bg-surface-muted text-muted thead-modern">
                     <tr>
                       <th className={`px-2 py-2 ${alignClass}`}>{t("invoice.item")}</th>
                       <th className={`px-2 py-2 ${alignClass}`}>{t("invoice.quantity")}</th>
@@ -658,7 +658,7 @@ export default function DocumentTemplatesPage() {
               </div>
             </>
           ) : (
-            <p className="mt-4 text-sm text-muted">{t("templates.noInvoicePreview")}</p>
+            <p className="mt-4 text-sm text-muted page-subtitle">{t("templates.noInvoicePreview")}</p>
           )}
           {config.signatureEnabled ? (
             <div className="mt-6 border-t border-border pt-4 text-sm">
@@ -708,7 +708,7 @@ export default function DocumentTemplatesPage() {
           </div>
           {billPreview ? (
             <>
-              <div className="mt-4 rounded-xl border border-border bg-white p-3 text-sm">
+              <div className="mt-4 rounded-2xl border border-border bg-white p-3 text-sm">
                 <p className="text-xs text-muted">{t("bill.vendor")}</p>
                 <p className="font-semibold">{billPreview.vendorName}</p>
                 {billPreview.vendorVatNumber ? (
@@ -716,8 +716,8 @@ export default function DocumentTemplatesPage() {
                 ) : null}
               </div>
               <div className="mt-4 overflow-x-auto">
-                <table className="min-w-full text-xs">
-                  <thead className="bg-surface-muted text-muted">
+                <table className="min-w-full text-xs table-modern">
+                  <thead className="bg-surface-muted text-muted thead-modern">
                     <tr>
                       <th className={`px-2 py-2 ${alignClass}`}>{t("bill.item")}</th>
                       <th className={`px-2 py-2 ${alignClass}`}>{t("bill.quantity")}</th>
@@ -761,7 +761,7 @@ export default function DocumentTemplatesPage() {
               </div>
             </>
           ) : (
-            <p className="mt-4 text-sm text-muted">{t("templates.noBillPreview")}</p>
+            <p className="mt-4 text-sm text-muted page-subtitle">{t("templates.noBillPreview")}</p>
           )}
           {config.signatureEnabled ? (
             <div className="mt-6 border-t border-border pt-4 text-sm">
@@ -787,13 +787,13 @@ export default function DocumentTemplatesPage() {
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
       <button
         type="button"
-        className="w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+        className="w-fit rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
         onClick={handleSave}
         disabled={isPending}
       >

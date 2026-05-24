@@ -135,13 +135,13 @@ export default function PreferencesPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("preferences.title")}</h1>
-        <p className="text-sm text-muted">{t("preferences.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("preferences.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("preferences.subtitle")}</p>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-2">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
@@ -151,7 +151,7 @@ export default function PreferencesPage() {
               <SkeletonBlock className="h-9 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={config.dateFormat}
                 onChange={(event) =>
                   setConfig((prev) => ({
@@ -177,7 +177,7 @@ export default function PreferencesPage() {
               <SkeletonBlock className="h-9 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={config.timeFormat}
                 onChange={(event) =>
                   setConfig((prev) => ({
@@ -205,7 +205,7 @@ export default function PreferencesPage() {
                 type="number"
                 min={0}
                 max={6}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={config.roundingPrecision}
                 onChange={(event) =>
                   setConfig((prev) => ({
@@ -224,7 +224,7 @@ export default function PreferencesPage() {
               <SkeletonBlock className="h-9 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={config.roundingMode}
                 onChange={(event) =>
                   setConfig((prev) => ({
@@ -246,13 +246,13 @@ export default function PreferencesPage() {
           })}
         </p>
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
         <button
           type="button"
-          className="mt-4 w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+          className="mt-4 w-fit rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           onClick={handleSave}
           disabled={isPending}
         >

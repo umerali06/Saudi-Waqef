@@ -512,13 +512,13 @@ export default function CreditNoteDetailPage() {
 
   if (loadingNote && !note && !errorKey) {
     return (
-      <section className="space-y-6">
+      <section className="space-y-6 page-shell">
         <div className="space-y-3">
           <SkeletonBlock className="h-4 w-40" />
           <SkeletonBlock className="h-8 w-56" />
           <SkeletonBlock className="h-4 w-32" />
         </div>
-        <div className="app-card space-y-4 p-5">
+        <div className="app-card space-y-4 p-5 card-modern">
           <SkeletonBlock className="h-5 w-36" />
           <div className="grid gap-4 md:grid-cols-3">
             {Array.from({ length: 3 }).map((_, idx) => (
@@ -537,13 +537,13 @@ export default function CreditNoteDetailPage() {
             ))}
           </div>
         </div>
-        <div className="app-card space-y-3 p-5">
+        <div className="app-card space-y-3 p-5 card-modern">
           <SkeletonBlock className="h-5 w-40" />
           {Array.from({ length: 4 }).map((_, idx) => (
             <SkeletonBlock key={idx} className="h-10 w-full" />
           ))}
         </div>
-        <div className="app-card space-y-3 p-5">
+        <div className="app-card space-y-3 p-5 card-modern">
           <SkeletonBlock className="h-5 w-32" />
           {Array.from({ length: 4 }).map((_, idx) => (
             <SkeletonBlock key={idx} className="h-4 w-full" />
@@ -555,8 +555,8 @@ export default function CreditNoteDetailPage() {
 
   if (!note) {
     return (
-      <section className="space-y-6">
-        <div className="app-card p-5 text-sm text-muted">{t("common.loading")}</div>
+      <section className="space-y-6 page-shell">
+        <div className="app-card p-6 text-sm text-muted card-modern">{t("common.loading")}</div>
       </section>
     );
   }
@@ -572,19 +572,19 @@ export default function CreditNoteDetailPage() {
       };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs text-muted">{t("creditNote.detailsTitle")}</p>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold">{note.creditNumber}</h1>
+            <h1 className="text-2xl font-semibold page-title">{note.creditNumber}</h1>
             <span
               className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLES[note.status]}`}
             >
               {t(`creditNote.status.${note.status ?? "draft"}`)}
             </span>
           </div>
-          <p className="text-sm text-muted">{note.customerName}</p>
+          <p className="text-sm text-muted page-subtitle">{note.customerName}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link
@@ -597,7 +597,7 @@ export default function CreditNoteDetailPage() {
             <button
               type="button"
               onClick={handleSend}
-              className="rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+              className="rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
               disabled={isPending}
             >
               {t("creditNote.send")}
@@ -608,7 +608,7 @@ export default function CreditNoteDetailPage() {
               <button
                 type="button"
                 onClick={handleIssue}
-                className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-contrast"
+                className="rounded-2xl bg-primary px-3 py-2 text-xs font-semibold text-primary-contrast"
                 disabled={isPending}
               >
                 {t("creditNote.issue")}
@@ -616,7 +616,7 @@ export default function CreditNoteDetailPage() {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+                className="rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
                 disabled={isPending}
               >
                 {t("creditNote.cancel")}
@@ -627,17 +627,17 @@ export default function CreditNoteDetailPage() {
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
       {noticeKey ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
           {t(noticeKey)}
         </div>
       ) : null}
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-3">
           <div>
             <p className="text-xs text-muted">{t("creditNote.invoice")}</p>
@@ -653,7 +653,7 @@ export default function CreditNoteDetailPage() {
             {isDraft ? (
               <input
                 type="date"
-                className="mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={issueDate}
                 onChange={(event) => setIssueDate(event.target.value)}
               />
@@ -671,7 +671,7 @@ export default function CreditNoteDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("creditNote.reason")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
               />
@@ -679,7 +679,7 @@ export default function CreditNoteDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("common.notes")}</span>
               <textarea
-                className="min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
               />
@@ -688,12 +688,12 @@ export default function CreditNoteDetailPage() {
         ) : (
           <>
             {note.reason ? (
-              <p className="mt-4 text-sm text-muted">
+              <p className="mt-4 text-sm text-muted page-subtitle">
                 {t("creditNote.reason")}: {note.reason}
               </p>
             ) : null}
             {note.notes ? (
-              <p className="mt-2 text-sm text-muted">
+              <p className="mt-2 text-sm text-muted page-subtitle">
                 {t("common.notes")}: {note.notes}
               </p>
             ) : null}
@@ -702,7 +702,7 @@ export default function CreditNoteDetailPage() {
       </div>
 
       {!isDraft ? (
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">{t("creditNote.refundTitle")}</h2>
             <span className="text-xs text-muted">
@@ -718,7 +718,7 @@ export default function CreditNoteDetailPage() {
               <span className="mb-1 block text-xs text-muted">{t("creditNote.refundDate")}</span>
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={refundDate}
                 onChange={(event) => setRefundDate(event.target.value)}
               />
@@ -729,7 +729,7 @@ export default function CreditNoteDetailPage() {
                 type="number"
                 min="0"
                 step="0.01"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={refundAmount}
                 onChange={(event) => setRefundAmount(event.target.value)}
               />
@@ -737,7 +737,7 @@ export default function CreditNoteDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("creditNote.refundAccount")}</span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={refundAccountId}
                 onChange={(event) => setRefundAccountId(event.target.value)}
               >
@@ -752,7 +752,7 @@ export default function CreditNoteDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("common.reference")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={refundReference}
                 onChange={(event) => setRefundReference(event.target.value)}
               />
@@ -761,7 +761,7 @@ export default function CreditNoteDetailPage() {
           <button
             type="button"
             onClick={handleRefund}
-            className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
+            className="mt-4 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
             disabled={isPending}
           >
             {t("creditNote.refund")}
@@ -778,9 +778,9 @@ export default function CreditNoteDetailPage() {
                 ))}
               </div>
             ) : refunds.length ? (
-              <div className="overflow-hidden rounded-xl border border-border/60">
+              <div className="overflow-hidden rounded-2xl border border-border/60">
                 <table className="w-full text-sm">
-                  <thead className="bg-surface-muted text-xs text-muted">
+                  <thead className="bg-surface-muted text-xs text-muted thead-modern">
                     <tr>
                       <th className={`px-3 py-2 ${alignClass}`}>{t("creditNote.refundDate")}</th>
                       <th className={`px-3 py-2 ${alignClass}`}>{t("creditNote.refundAmount")}</th>
@@ -806,19 +806,19 @@ export default function CreditNoteDetailPage() {
                 </table>
               </div>
             ) : (
-              <p className="text-sm text-muted">{t("creditNote.refundHistoryEmpty")}</p>
+              <p className="text-sm text-muted page-subtitle">{t("creditNote.refundHistoryEmpty")}</p>
             )}
           </div>
         </div>
       ) : null}
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t("creditNote.linesTitle")}</h2>
           <span className="text-xs text-muted">{lines.length}</span>
         </div>
         {lines.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">{t("creditNote.linesEmpty")}</p>
+          <p className="mt-4 text-sm text-muted page-subtitle">{t("creditNote.linesEmpty")}</p>
         ) : isDraft ? (
           <div className="mt-4 space-y-3">
             {lines.map((line, index) => {
@@ -845,7 +845,7 @@ export default function CreditNoteDetailPage() {
                 taxInclusive: Boolean(config?.taxInclusive),
               });
               return (
-                <div key={line.id} className="grid gap-3 rounded-xl border border-border p-3 md:grid-cols-7">
+                <div key={line.id} className="grid gap-3 rounded-2xl border border-border p-3 md:grid-cols-7">
                   <div className={`text-sm ${alignClass} md:col-span-2`}>
                     <p className="text-xs text-muted">{t("invoice.item")}</p>
                     <p className="font-semibold">{line.description}</p>
@@ -860,7 +860,7 @@ export default function CreditNoteDetailPage() {
                       min="0"
                       max={line.maxQuantity}
                       step="0.01"
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                       value={line.quantity}
                       onChange={(event) =>
                         handleLineChange(index, "quantity", event.target.value)
@@ -870,7 +870,7 @@ export default function CreditNoteDetailPage() {
                   <label className={`text-sm ${alignClass}`}>
                     <span className="mb-1 block text-xs text-muted">{t("invoice.unit")}</span>
                     <select
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                       value={line.unit}
                       onChange={(event) => handleLineChange(index, "unit", event.target.value)}
                     >
@@ -887,7 +887,7 @@ export default function CreditNoteDetailPage() {
                       type="number"
                       min="0"
                       step="0.01"
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                       value={line.unitPrice}
                       onChange={(event) =>
                         handleLineChange(index, "unitPrice", event.target.value)
@@ -900,7 +900,7 @@ export default function CreditNoteDetailPage() {
                       type="number"
                       min="0"
                       step="0.1"
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                       value={line.discountRate}
                       onChange={(event) =>
                         handleLineChange(index, "discountRate", event.target.value)
@@ -910,7 +910,7 @@ export default function CreditNoteDetailPage() {
                   <label className={`text-sm ${alignClass}`}>
                     <span className="mb-1 block text-xs text-muted">{t("invoice.taxCategory")}</span>
                     <select
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                       value={line.taxCategoryId}
                       onChange={(event) =>
                         handleLineChange(index, "taxCategoryId", event.target.value)
@@ -942,8 +942,8 @@ export default function CreditNoteDetailPage() {
           </div>
         ) : (
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-3 py-2 ${alignClass}`}>{t("invoice.item")}</th>
                   <th className={`px-3 py-2 ${alignClass}`}>{t("invoice.quantity")}</th>
@@ -970,7 +970,7 @@ export default function CreditNoteDetailPage() {
         )}
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex items-center justify-between text-sm">
           <span>{t("invoice.subtotal")}</span>
           <span>{displayTotals.subtotal.toFixed(2)}</span>
@@ -991,7 +991,7 @@ export default function CreditNoteDetailPage() {
           <button
             type="button"
             onClick={handleSave}
-            className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
+            className="mt-4 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
             disabled={isPending}
           >
             {t("creditNote.updateDraft")}

@@ -186,34 +186,34 @@ export default function DeveloperPortalPage() {
 
   if (!isPrivileged) {
     return (
-      <div className="app-card p-5 text-sm text-muted">
+      <div className="app-card p-6 text-sm text-muted card-modern">
         {t("developers.restricted")}
       </div>
     );
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("developers.title")}</h1>
-        <p className="text-sm text-muted">{t("developers.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("developers.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("developers.subtitle")}</p>
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
           {error}
         </div>
       ) : null}
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("developers.overviewTitle")}</h2>
-        <p className="text-sm text-muted">{t("developers.overviewSubtitle")}</p>
+        <p className="text-sm text-muted page-subtitle">{t("developers.overviewSubtitle")}</p>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-xl border border-border bg-surface px-4 py-3 text-xs">
+          <div className="rounded-2xl border border-border bg-surface px-4 py-3 text-xs">
             <p className="font-semibold">{t("developers.baseUrl")}</p>
             <p className="mt-1 text-foreground">{baseUrl || "--"}</p>
           </div>
-          <div className="rounded-xl border border-border bg-surface px-4 py-3 text-xs">
+          <div className="rounded-2xl border border-border bg-surface px-4 py-3 text-xs">
             <p className="font-semibold">{t("developers.authHeader")}</p>
             <p className="mt-1 text-foreground">Authorization: Bearer {"<API_KEY>"}</p>
           </div>
@@ -221,7 +221,7 @@ export default function DeveloperPortalPage() {
         <div className="mt-4 flex flex-wrap items-center gap-3 text-xs">
           <a
             href="/openapi.json"
-            className="rounded-xl border border-border px-4 py-2 font-semibold text-foreground transition hover:bg-surface-muted"
+            className="rounded-2xl border border-border px-4 py-2 font-semibold text-foreground transition hover:bg-surface-muted"
           >
             {t("developers.downloadOpenApi")}
           </a>
@@ -231,7 +231,7 @@ export default function DeveloperPortalPage() {
         </div>
       </div>
 
-      <div className="app-card space-y-4 p-5">
+      <div className="app-card space-y-4 p-5 card-modern">
         <div>
           <h2 className="text-lg font-semibold">{t("developers.keysTitle")}</h2>
           <p className="text-xs text-muted">{t("developers.keysSubtitle")}</p>
@@ -242,7 +242,7 @@ export default function DeveloperPortalPage() {
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               placeholder={t("developers.keyNamePlaceholder")}
             />
           </label>
@@ -273,12 +273,12 @@ export default function DeveloperPortalPage() {
           type="button"
           onClick={handleCreateKey}
           disabled={loading || name.trim().length < 2}
-          className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {t("developers.createKey")}
         </button>
         {token ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
             <p className="font-semibold">{t("developers.keyTokenTitle")}</p>
             <p className="mt-1 break-all text-foreground">{token}</p>
             <p className="mt-2">{t("developers.keyTokenHint")}</p>
@@ -287,7 +287,7 @@ export default function DeveloperPortalPage() {
                 type="button"
                 onClick={handlePing}
                 disabled={testing}
-                className="rounded-xl border border-amber-300 px-3 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 disabled:opacity-60"
+                className="rounded-2xl border border-amber-300 px-3 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 disabled:opacity-60"
               >
                 {testing ? t("common.loading") : t("developers.test.button")}
               </button>
@@ -297,14 +297,14 @@ export default function DeveloperPortalPage() {
         ) : null}
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 text-sm font-semibold">
           <span>{t("developers.keysListTitle")}</span>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted">{keys.length}</span>
             <a
               href={activeCompanyId ? `/api/developer/keys/export?companyId=${activeCompanyId}` : "#"}
-              className={`rounded-xl border border-border px-3 py-2 text-xs font-semibold ${
+              className={`rounded-2xl border border-border px-3 py-2 text-xs font-semibold ${
                 activeCompanyId ? "" : "pointer-events-none opacity-60"
               }`}
             >
@@ -325,8 +325,8 @@ export default function DeveloperPortalPage() {
           <div className="p-4 text-sm text-muted">{t("developers.keysEmpty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className="px-4 py-2 text-left">{t("developers.table.name")}</th>
                   <th className="px-4 py-2 text-left">{t("developers.table.prefix")}</th>
@@ -378,12 +378,12 @@ export default function DeveloperPortalPage() {
         )}
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 text-sm font-semibold">
           <span>{t("developers.usageTitle")}</span>
           <a
             href={activeCompanyId ? `/api/developer/usage/export?companyId=${activeCompanyId}` : "#"}
-            className={`rounded-xl border border-border px-3 py-2 text-xs font-semibold ${
+            className={`rounded-2xl border border-border px-3 py-2 text-xs font-semibold ${
               activeCompanyId ? "" : "pointer-events-none opacity-60"
             }`}
           >
@@ -403,8 +403,8 @@ export default function DeveloperPortalPage() {
           <div className="p-4 text-sm text-muted">{t("developers.usageEmpty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className="px-4 py-2 text-left">{t("developers.usage.endpoint")}</th>
                   <th className="px-4 py-2 text-left">{t("developers.usage.method")}</th>
@@ -427,10 +427,10 @@ export default function DeveloperPortalPage() {
         )}
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("developers.examplesTitle")}</h2>
         <p className="text-xs text-muted">{t("developers.examplesSubtitle")}</p>
-        <div className="mt-3 rounded-xl border border-border bg-surface px-4 py-3 text-xs">
+        <div className="mt-3 rounded-2xl border border-border bg-surface px-4 py-3 text-xs">
           <pre className="whitespace-pre-wrap">
 {`curl -H "Authorization: Bearer <API_KEY>" \\
   ${baseUrl || "https://your-domain.com"}/api/developer/ping`}

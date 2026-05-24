@@ -379,19 +379,19 @@ export default function DocumentsPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("documents.title")}</h1>
-        <p className="text-sm text-muted">{t("documents.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("documents.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("documents.subtitle")}</p>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t("documents.filtersTitle")}</h2>
           <button
             type="button"
             onClick={loadDocuments}
-            className="rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+            className="rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
             disabled={isPending}
           >
             {t("documents.applyFilters")}
@@ -401,7 +401,7 @@ export default function DocumentsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("documents.search")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={filters.q}
               onChange={(event) => setFilters((prev) => ({ ...prev, q: event.target.value }))}
               placeholder={t("documents.searchPlaceholder")}
@@ -410,7 +410,7 @@ export default function DocumentsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("documents.type")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={filters.docType}
               onChange={(event) =>
                 setFilters((prev) => ({ ...prev, docType: event.target.value }))
@@ -427,7 +427,7 @@ export default function DocumentsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("documents.entityType")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={filters.entityType === "all" ? "" : filters.entityType}
               onChange={(event) =>
                 setFilters((prev) => ({
@@ -441,7 +441,7 @@ export default function DocumentsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("documents.tag")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={filters.tag}
               onChange={(event) => setFilters((prev) => ({ ...prev, tag: event.target.value }))}
               placeholder={t("documents.tagPlaceholder")}
@@ -450,7 +450,7 @@ export default function DocumentsPage() {
         </div>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t("documents.uploadTitle")}</h2>
           <p className="text-xs text-muted">{t("documents.attachmentHint")}</p>
@@ -459,7 +459,7 @@ export default function DocumentsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("documents.name")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
               required
@@ -468,7 +468,7 @@ export default function DocumentsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("documents.type")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={form.docType}
               onChange={(event) =>
                 setForm((prev) => ({
@@ -487,7 +487,7 @@ export default function DocumentsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("documents.tags")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={form.tags}
               onChange={(event) => setForm((prev) => ({ ...prev, tags: event.target.value }))}
               placeholder={t("documents.tagsHint")}
@@ -496,7 +496,7 @@ export default function DocumentsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("documents.entityType")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={form.entityType}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, entityType: event.target.value }))
@@ -507,7 +507,7 @@ export default function DocumentsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("documents.entityId")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={form.entityId}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, entityId: event.target.value }))
@@ -525,26 +525,26 @@ export default function DocumentsPage() {
           </label>
         </div>
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
         {noticeKey ? (
-          <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+          <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
             {t(noticeKey)}
           </div>
         ) : null}
         <button
           type="button"
           onClick={handleUpload}
-          className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
+          className="mt-4 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
           disabled={isPending || isUploading || !uploadFile || !form.name.trim()}
         >
           {isUploading ? t("documents.uploading") : t("documents.upload")}
         </button>
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
           <h2 className="text-lg font-semibold">{t("documents.listTitle")}</h2>
           <div className="flex items-center gap-2">
@@ -557,7 +557,7 @@ export default function DocumentsPage() {
                   ? `/api/documents/export?companyId=${activeCompanyId}`
                   : "#"
               }
-              className={`rounded-xl border border-border px-3 py-2 text-xs font-semibold ${
+              className={`rounded-2xl border border-border px-3 py-2 text-xs font-semibold ${
                 activeCompanyId ? "" : "pointer-events-none opacity-60"
               }`}
             >
@@ -576,8 +576,8 @@ export default function DocumentsPage() {
           <div className="px-4 py-6 text-sm text-muted">{t("documents.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-xs text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-xs text-muted thead-modern">
                 <tr>
                   <th className={`px-3 py-2 ${alignClass}`}>{t("documents.name")}</th>
                   <th className={`px-3 py-2 ${alignClass}`}>{t("documents.type")}</th>
@@ -652,7 +652,7 @@ export default function DocumentsPage() {
                         </button>
                       </div>
                       {editingId === document.id && editForm ? (
-                        <div className="mt-4 rounded-xl border border-border bg-surface px-3 py-3 text-xs">
+                        <div className="mt-4 rounded-2xl border border-border bg-surface px-3 py-3 text-xs">
                           <div className="grid gap-3 md:grid-cols-4">
                             <label className={`text-xs ${alignClass}`}>
                               <span className="mb-1 block text-[11px] text-muted">

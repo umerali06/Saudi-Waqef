@@ -135,6 +135,7 @@ export async function PUT(request: Request, context: RouteContext) {
 
   if (merged.status !== "terminated") {
     updates.terminationDate = null;
+    updates.terminationCategory = null;
     updates.terminationReason = null;
   }
 

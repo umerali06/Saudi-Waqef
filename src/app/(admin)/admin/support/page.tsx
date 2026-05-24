@@ -33,20 +33,20 @@ export default function AdminSupportPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("admin.support.title")}</h1>
-        <p className="text-sm text-muted">{t("admin.support.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("admin.support.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("admin.support.subtitle")}</p>
       </div>
 
-      <form onSubmit={handleReset} className={`app-card p-4 ${alignClass}`}>
+      <form onSubmit={handleReset} className={`app-card p-6 ${alignClass}`}>
         <div className="grid gap-4 md:grid-cols-3">
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">{t("admin.support.userId")}</span>
             <input
               value={userId}
               onChange={(event) => setUserId(event.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               placeholder={t("admin.support.userIdPlaceholder")}
             />
           </label>
@@ -56,7 +56,7 @@ export default function AdminSupportPage() {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               placeholder={t("admin.support.emailPlaceholder")}
             />
           </label>
@@ -66,7 +66,7 @@ export default function AdminSupportPage() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               required
             />
           </label>
@@ -74,7 +74,7 @@ export default function AdminSupportPage() {
         <div className="mt-4 flex items-center gap-3">
           <button
             type="submit"
-            className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
             disabled={isPending}
           >
             {t("admin.support.resetPassword")}

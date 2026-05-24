@@ -448,7 +448,7 @@ export default function BillDetailPage() {
 
   if (!bill) {
     return (
-      <section className="space-y-6">
+      <section className="space-y-6 page-shell">
         <div className="space-y-3">
           <SkeletonBlock className="h-4 w-32" />
           <SkeletonBlock className="h-8 w-48" />
@@ -466,7 +466,7 @@ export default function BillDetailPage() {
             <SkeletonBlock className="h-3 w-full" />
           </div>
         </div>
-        <div className="app-card space-y-3 p-4">
+        <div className="app-card space-y-3 p-4 card-modern">
           <SkeletonBlock className="h-4 w-32" />
           <SkeletonBlock className="h-10 w-full" />
           <SkeletonBlock className="h-10 w-full" />
@@ -722,13 +722,13 @@ export default function BillDetailPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs text-muted">{t("bill.detailsTitle")}</p>
-          <h1 className="text-2xl font-semibold">{bill?.billNumber ?? "-"}</h1>
+          <h1 className="text-2xl font-semibold page-title">{bill?.billNumber ?? "-"}</h1>
           {bill ? (
-            <p className="text-sm text-muted">
+            <p className="text-sm text-muted page-subtitle">
               {bill.vendorName} • {t(`bill.status.${bill.status ?? "draft"}`)}
             </p>
           ) : null}
@@ -741,7 +741,7 @@ export default function BillDetailPage() {
         </Link>
       </div>
 
-      <form onSubmit={handleUpdate} className="app-card p-5">
+      <form onSubmit={handleUpdate} className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t("bill.detailsSubtitle")}</h2>
           <div className="flex flex-wrap gap-2">
@@ -749,7 +749,7 @@ export default function BillDetailPage() {
               <button
                 type="button"
                 onClick={handleApprove}
-                className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+                className="rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
                 disabled={isPending}
               >
                 {t("bill.approve")}
@@ -759,7 +759,7 @@ export default function BillDetailPage() {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-muted"
+                className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold text-muted"
                 disabled={isPending}
               >
                 {t("bill.cancel")}
@@ -772,7 +772,7 @@ export default function BillDetailPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("bill.vendor")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={vendorId}
               onChange={(event) => setVendorId(event.target.value)}
               disabled={isLocked}
@@ -788,7 +788,7 @@ export default function BillDetailPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("bill.vendorBill")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={vendorBillNumber}
               onChange={(event) => setVendorBillNumber(event.target.value)}
               disabled={isLocked}
@@ -798,7 +798,7 @@ export default function BillDetailPage() {
             <span className="mb-1 block text-xs text-muted">{t("common.issueDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={billDate}
               onChange={(event) => setBillDate(event.target.value)}
               disabled={isLocked}
@@ -808,7 +808,7 @@ export default function BillDetailPage() {
             <span className="mb-1 block text-xs text-muted">{t("common.dueDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={dueDate}
               onChange={(event) => setDueDate(event.target.value)}
               disabled={isLocked}
@@ -817,7 +817,7 @@ export default function BillDetailPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("bill.paymentTerm")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={paymentTermId}
               onChange={(event) => setPaymentTermId(event.target.value)}
               disabled={isLocked}
@@ -858,11 +858,11 @@ export default function BillDetailPage() {
               taxInclusive: Boolean(config?.taxInclusive),
             });
             return (
-              <div key={line.id} className="grid gap-3 rounded-xl border border-border p-3 md:grid-cols-6">
+              <div key={line.id} className="grid gap-3 rounded-2xl border border-border p-3 md:grid-cols-6">
                 <label className={`text-sm ${alignClass} md:col-span-2`}>
                   <span className="mb-1 block text-xs text-muted">{t("bill.item")}</span>
                   <select
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.itemId}
                     onChange={(event) => handleItemSelect(index, event.target.value)}
                     disabled={isLocked}
@@ -881,7 +881,7 @@ export default function BillDetailPage() {
                     type="number"
                     min="0"
                     step="0.01"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.quantity}
                     onChange={(event) =>
                       handleLineChange(index, "quantity", event.target.value)
@@ -892,7 +892,7 @@ export default function BillDetailPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("bill.unit")}</span>
                   <select
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.unit}
                     onChange={(event) => handleLineChange(index, "unit", event.target.value)}
                     disabled={isLocked || !item}
@@ -911,7 +911,7 @@ export default function BillDetailPage() {
                     type="number"
                     min="0"
                     step="0.01"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.unitPrice}
                     onChange={(event) =>
                       handleLineChange(index, "unitPrice", event.target.value)
@@ -925,7 +925,7 @@ export default function BillDetailPage() {
                     type="number"
                     min="0"
                     step="0.1"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.discountRate}
                     onChange={(event) =>
                       handleLineChange(index, "discountRate", event.target.value)
@@ -936,7 +936,7 @@ export default function BillDetailPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("bill.taxCategory")}</span>
                   <select
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.taxCategoryId}
                     onChange={(event) =>
                       handleLineChange(index, "taxCategoryId", event.target.value)
@@ -974,7 +974,7 @@ export default function BillDetailPage() {
           <button
             type="button"
             onClick={handleAddLine}
-            className="mt-4 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-foreground"
+            className="mt-4 rounded-2xl border border-border px-3 py-2 text-xs font-semibold text-foreground"
           >
             {t("bill.addLine")}
           </button>
@@ -984,13 +984,13 @@ export default function BillDetailPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.notes")}</span>
             <textarea
-              className="min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               disabled={isLocked}
             />
           </label>
-          <div className="rounded-xl border border-border bg-surface-muted p-4 text-sm">
+          <div className="rounded-2xl border border-border bg-surface-muted p-4 text-sm">
             <div className="flex items-center justify-between">
               <span>{t("bill.subtotal")}</span>
               <span>{totals.subtotal.toFixed(2)}</span>
@@ -1027,14 +1027,14 @@ export default function BillDetailPage() {
         </div>
 
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
         {!isLocked ? (
           <button
             type="submit"
-            className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="mt-4 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
             disabled={isPending}
           >
             {t("bill.updateDraft")}
@@ -1042,7 +1042,7 @@ export default function BillDetailPage() {
         ) : null}
       </form>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t("bill.paymentsTitle")}</h2>
           <span className="text-xs text-muted">{payments.length}</span>
@@ -1054,7 +1054,7 @@ export default function BillDetailPage() {
               <span className="mb-1 block text-xs text-muted">{t("bill.paymentDate")}</span>
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={paymentDate}
                 onChange={(event) => setPaymentDate(event.target.value)}
               />
@@ -1065,7 +1065,7 @@ export default function BillDetailPage() {
                 type="number"
                 min="0"
                 step="0.01"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={paymentAmount}
                 onChange={(event) => setPaymentAmount(event.target.value)}
               />
@@ -1073,7 +1073,7 @@ export default function BillDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("bill.paymentMethod")}</span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={paymentMethod}
                 onChange={(event) => setPaymentMethod(event.target.value)}
               >
@@ -1087,7 +1087,7 @@ export default function BillDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("bill.paymentAccount")}</span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={paymentAccountId}
                 onChange={(event) => setPaymentAccountId(event.target.value)}
               >
@@ -1102,26 +1102,26 @@ export default function BillDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("bill.paymentReference")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={paymentReference}
                 onChange={(event) => setPaymentReference(event.target.value)}
               />
             </label>
             <button
               type="submit"
-              className="w-fit rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast"
+              className="w-fit rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast"
               disabled={isPending}
             >
               {t("bill.paymentRecord")}
             </button>
           </form>
         ) : (
-          <p className="mt-4 text-sm text-muted">{t("bill.paymentLocked")}</p>
+          <p className="mt-4 text-sm text-muted page-subtitle">{t("bill.paymentLocked")}</p>
         )}
 
         {payments.length > 0 ? (
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-sm">
+            <table className="min-w-full text-sm table-modern">
               <thead className="text-xs text-muted">
                 <tr>
                   <th className={`px-3 py-2 ${alignClass}`}>{t("bill.paymentDate")}</th>
@@ -1143,11 +1143,11 @@ export default function BillDetailPage() {
             </table>
           </div>
         ) : (
-          <p className="mt-4 text-sm text-muted">{t("bill.paymentsEmpty")}</p>
+          <p className="mt-4 text-sm text-muted page-subtitle">{t("bill.paymentsEmpty")}</p>
         )}
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t("bill.creditNotesTitle")}</h2>
           <Link
@@ -1159,7 +1159,7 @@ export default function BillDetailPage() {
         </div>
         {creditNotes.length > 0 ? (
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-sm">
+            <table className="min-w-full text-sm table-modern">
               <thead className="text-xs text-muted">
                 <tr>
                   <th className={`px-3 py-2 ${alignClass}`}>{t("vendorCreditNote.number")}</th>
@@ -1199,11 +1199,11 @@ export default function BillDetailPage() {
             </table>
           </div>
         ) : (
-          <p className="mt-4 text-sm text-muted">{t("bill.creditNotesEmpty")}</p>
+          <p className="mt-4 text-sm text-muted page-subtitle">{t("bill.creditNotesEmpty")}</p>
         )}
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t("bill.attachmentsTitle")}</h2>
           <span className="text-xs text-muted">{attachments.length}</span>
@@ -1219,7 +1219,7 @@ export default function BillDetailPage() {
           <button
             type="button"
             onClick={handleUploadAttachment}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-xs font-semibold"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-xs font-semibold"
             disabled={isPending || isUploading || !attachmentFile}
           >
             {isUploading ? t("bill.uploading") : t("bill.uploadAttachment")}
@@ -1229,7 +1229,7 @@ export default function BillDetailPage() {
 
         {attachments.length ? (
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-sm">
+            <table className="min-w-full text-sm table-modern">
               <thead className="text-xs text-muted">
                 <tr>
                   <th className={`px-2 py-2 ${alignClass}`}>{t("bill.attachmentName")}</th>
@@ -1293,7 +1293,7 @@ export default function BillDetailPage() {
             </table>
           </div>
         ) : (
-          <p className="mt-4 text-sm text-muted">{t("bill.attachmentsEmpty")}</p>
+          <p className="mt-4 text-sm text-muted page-subtitle">{t("bill.attachmentsEmpty")}</p>
         )}
       </div>
     </section>

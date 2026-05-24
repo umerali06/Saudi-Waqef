@@ -117,7 +117,7 @@ export default function ReceiptDetailPage() {
 
   if (errorKey) {
     return (
-      <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
         {t(errorKey)}
       </div>
     );
@@ -125,12 +125,12 @@ export default function ReceiptDetailPage() {
 
   if (loadingReceipt && !receipt) {
     return (
-      <section className="space-y-6">
+      <section className="space-y-6 page-shell">
         <div className="space-y-3">
           <SkeletonBlock className="h-5 w-44" />
           <SkeletonBlock className="h-4 w-64" />
         </div>
-        <div className="app-card space-y-4 p-5">
+        <div className="app-card space-y-4 p-5 card-modern">
           <div className="grid gap-4 md:grid-cols-3">
             {Array.from({ length: 6 }).map((_, idx) => (
               <div key={idx} className="space-y-2">
@@ -145,7 +145,7 @@ export default function ReceiptDetailPage() {
             ))}
           </div>
         </div>
-        <div className="app-card space-y-3 p-5">
+        <div className="app-card space-y-3 p-5 card-modern">
           <SkeletonBlock className="h-4 w-40" />
           {Array.from({ length: 3 }).map((_, idx) => (
             <SkeletonBlock key={idx} className="h-8 w-full" />
@@ -156,33 +156,33 @@ export default function ReceiptDetailPage() {
   }
 
   if (!receipt) {
-    return <p className="text-sm text-muted">{t("common.loading")}</p>;
+    return <p className="text-sm text-muted page-subtitle">{t("common.loading")}</p>;
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">{t("receipt.detailsTitle")}</h1>
-          <p className="text-sm text-muted">{t("receipt.detailsSubtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("receipt.detailsTitle")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("receipt.detailsSubtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/payments/receipts/${receipt.id}/print`}
-            className="rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+            className="rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
           >
             {t("receipt.print")}
           </Link>
           <Link
             href={`/payments/receipts/${receipt.id}/print?print=1`}
-            className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="rounded-2xl bg-primary px-3 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           >
             {t("receipt.quickPrint")}
           </Link>
         </div>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-3">
           <div>
             <p className="text-xs text-muted">{t("receipt.number")}</p>
@@ -212,19 +212,19 @@ export default function ReceiptDetailPage() {
           </div>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-border bg-surface-muted p-3 text-sm">
+          <div className="rounded-2xl border border-border bg-surface-muted p-3 text-sm">
             <p className="text-xs text-muted">{t("receipt.total")}</p>
             <p className="mt-1 font-semibold">
               {formatCurrency(receipt.totalAmount, receipt.currency)}
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-surface-muted p-3 text-sm">
+          <div className="rounded-2xl border border-border bg-surface-muted p-3 text-sm">
             <p className="text-xs text-muted">{t("receipt.applied")}</p>
             <p className="mt-1 font-semibold">
               {formatCurrency(receipt.appliedAmount, receipt.currency)}
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-surface-muted p-3 text-sm">
+          <div className="rounded-2xl border border-border bg-surface-muted p-3 text-sm">
             <p className="text-xs text-muted">{t("receipt.unapplied")}</p>
             <p className="mt-1 font-semibold">
               {formatCurrency(receipt.unappliedAmount, receipt.currency)}
@@ -233,7 +233,7 @@ export default function ReceiptDetailPage() {
         </div>
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="border-b border-border px-4 py-2 text-sm font-semibold">
           {t("receipt.allocations")}
         </div>
@@ -241,8 +241,8 @@ export default function ReceiptDetailPage() {
           <div className="p-4 text-sm text-muted">{t("receipt.noAllocations")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("receipt.invoice")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("receipt.applyAmount")}</th>

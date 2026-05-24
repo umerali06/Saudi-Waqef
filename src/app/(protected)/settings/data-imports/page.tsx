@@ -369,13 +369,13 @@ export default function DataImportsPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("imports.title")}</h1>
-        <p className="text-sm text-muted">{t("imports.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("imports.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("imports.subtitle")}</p>
       </div>
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
@@ -385,11 +385,11 @@ export default function DataImportsPage() {
           const config = ENTITY_CONFIG[entity];
           const summary = summaries[entity];
           return (
-            <div key={entity} className="app-card p-5">
+            <div key={entity} className="app-card p-6 card-modern">
               <h2 className="text-lg font-semibold">{t(config.labelKey)}</h2>
               <p className="mt-1 text-xs text-muted">{t("imports.templateHint")}</p>
               <a
-                className="mt-3 inline-flex items-center rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+                className="mt-3 inline-flex items-center rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
                 href={`${config.templateEndpoint}?companyId=${activeCompanyId}&lang=${locale}`}
               >
                 {t("common.downloadTemplate")}
@@ -413,7 +413,7 @@ export default function DataImportsPage() {
                   <button
                     type="button"
                     onClick={() => handleImport(entity, "validate")}
-                    className="w-full rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground"
+                    className="w-full rounded-2xl border border-border px-4 py-2 text-sm font-semibold text-foreground"
                     disabled={isPending || loading[entity] || !files[entity]}
                   >
                     {t("imports.validate")}
@@ -421,7 +421,7 @@ export default function DataImportsPage() {
                   <button
                     type="button"
                     onClick={() => handleImport(entity, "import")}
-                    className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
+                    className="w-full rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
                     disabled={isPending || loading[entity] || !files[entity]}
                   >
                     {t("common.import")}
@@ -429,7 +429,7 @@ export default function DataImportsPage() {
                 </div>
               </div>
               {summary ? (
-                <div className="mt-4 rounded-xl border border-border bg-surface-muted px-3 py-3 text-xs">
+                <div className="mt-4 rounded-2xl border border-border bg-surface-muted px-3 py-3 text-xs">
                   {summary.mode === "validate" ? (
                     <div className="space-y-1">
                       <p className="font-semibold">{t("imports.validationOnly")}</p>
@@ -463,7 +463,7 @@ export default function DataImportsPage() {
         })}
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="border-b border-border px-4 py-3 text-sm font-semibold">
           {t("imports.historyTitle")}
         </div>
@@ -477,8 +477,8 @@ export default function DataImportsPage() {
           <div className="px-4 py-6 text-sm text-muted">{t("imports.historyEmpty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-xs text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-xs text-muted thead-modern">
                 <tr>
                   <th className={`px-3 py-2 ${alignClass}`}>{t("imports.entity")}</th>
                   <th className={`px-3 py-2 ${alignClass}`}>{t("imports.status")}</th>

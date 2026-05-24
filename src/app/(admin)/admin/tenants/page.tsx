@@ -99,17 +99,17 @@ export default function AdminTenantsPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">{t("admin.tenants.title")}</h1>
-          <p className="text-sm text-muted">{t("admin.tenants.subtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("admin.tenants.title")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("admin.tenants.subtitle")}</p>
         </div>
         <a
           href={`/api/admin/tenants/export?status=${statusFilter}&q=${encodeURIComponent(
             query.trim()
           )}`}
-          className="rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+          className="rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
         >
           {t("admin.tenants.exportCsv")}
         </a>
@@ -117,14 +117,14 @@ export default function AdminTenantsPage() {
 
       {error ? <p className="text-sm text-red-500">{error}</p> : null}
 
-      <div className={`app-card p-4 ${alignClass}`}>
+      <div className={`app-card p-6 ${alignClass}`}>
         <div className="grid gap-3 md:grid-cols-3">
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">{t("admin.tenants.search")}</span>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
             />
           </label>
           <label className="text-sm">
@@ -132,7 +132,7 @@ export default function AdminTenantsPage() {
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
             >
               <option value="all">{t("common.all")}</option>
               <option value="active">{t("admin.status.active")}</option>
@@ -142,14 +142,14 @@ export default function AdminTenantsPage() {
         </div>
       </div>
 
-      <div className="app-card">
+      <div className="app-card card-modern">
         <div className="border-b border-border px-4 py-3 text-sm font-semibold">
           {t("admin.tenants.listTitle")}
         </div>
         {loading ? (
-          <p className="px-4 py-4 text-sm text-muted">{t("common.loading")}</p>
+          <p className="px-4 py-4 text-sm text-muted page-subtitle">{t("common.loading")}</p>
         ) : filtered.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-muted">{t("admin.tenants.empty")}</p>
+          <p className="px-4 py-4 text-sm text-muted page-subtitle">{t("admin.tenants.empty")}</p>
         ) : (
           <div className="divide-y divide-border">
             {filtered.map((tenant) => (

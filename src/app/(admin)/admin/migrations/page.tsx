@@ -120,22 +120,22 @@ export default function AdminMigrationsPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("admin.migrations.title")}</h1>
-        <p className="text-sm text-muted">{t("admin.migrations.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("admin.migrations.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("admin.migrations.subtitle")}</p>
       </div>
 
       {error ? <p className="text-sm text-red-500">{error}</p> : null}
 
-      <div className="app-card">
+      <div className="app-card card-modern">
         <div className={`border-b border-border px-4 py-3 text-sm font-semibold ${alignClass}`}>
           {t("admin.migrations.listTitle")}
         </div>
         {isLoading ? (
-          <p className="px-4 py-4 text-sm text-muted">{t("common.loading")}</p>
+          <p className="px-4 py-4 text-sm text-muted page-subtitle">{t("common.loading")}</p>
         ) : migrations.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-muted">{t("admin.migrations.noRuns")}</p>
+          <p className="px-4 py-4 text-sm text-muted page-subtitle">{t("admin.migrations.noRuns")}</p>
         ) : (
           <div className="divide-y divide-border">
             {migrations.map((migration) => (
@@ -167,7 +167,7 @@ export default function AdminMigrationsPage() {
                       </p>
                     </div>
                     {migration.lastResult ? (
-                      <div className="mt-2 rounded-xl border border-border bg-surface px-3 py-2 text-xs">
+                      <div className="mt-2 rounded-2xl border border-border bg-surface px-3 py-2 text-xs">
                         <p className="font-semibold">{t("admin.migrations.lastResult")}</p>
                         <p>
                           {t("admin.migrations.scanned")}:{" "}
@@ -190,7 +190,7 @@ export default function AdminMigrationsPage() {
                       type="button"
                       onClick={() => handleRun(migration.id, true)}
                       disabled={runningId === migration.id}
-                      className="rounded-xl border border-border bg-surface px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-2xl border border-border bg-surface px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {t("admin.migrations.dryRun")}
                     </button>
@@ -198,7 +198,7 @@ export default function AdminMigrationsPage() {
                       type="button"
                       onClick={() => handleRun(migration.id, false)}
                       disabled={runningId === migration.id}
-                      className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {runningId === migration.id
                         ? t("admin.migrations.running")
@@ -212,12 +212,12 @@ export default function AdminMigrationsPage() {
         )}
       </div>
 
-      <div className="app-card">
+      <div className="app-card card-modern">
         <div className={`border-b border-border px-4 py-3 text-sm font-semibold ${alignClass}`}>
           {t("admin.migrations.historyTitle")}
         </div>
         {runs.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-muted">{t("admin.migrations.history.empty")}</p>
+          <p className="px-4 py-4 text-sm text-muted page-subtitle">{t("admin.migrations.history.empty")}</p>
         ) : (
           <div className="divide-y divide-border">
             {runs.map((run) => (
@@ -245,7 +245,7 @@ export default function AdminMigrationsPage() {
                     <p className="text-rose-600">{run.error}</p>
                   ) : null}
                   {run.logs?.length ? (
-                    <div className="rounded-xl border border-border bg-surface px-3 py-2 text-[11px] leading-relaxed text-foreground">
+                    <div className="rounded-2xl border border-border bg-surface px-3 py-2 text-[11px] leading-relaxed text-foreground">
                       <p className="mb-2 text-xs font-semibold">
                         {t("admin.migrations.history.logs")}
                       </p>

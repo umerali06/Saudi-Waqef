@@ -432,13 +432,13 @@ export default function ExpenseDetailPage() {
 
   if (loadingExpense && !expense && !errorKey) {
     return (
-      <section className="space-y-6">
+      <section className="space-y-6 page-shell">
         <div className="space-y-3">
           <SkeletonBlock className="h-4 w-40" />
           <SkeletonBlock className="h-8 w-56" />
           <SkeletonBlock className="h-4 w-48" />
         </div>
-        <div className="app-card space-y-4 p-4">
+        <div className="app-card space-y-4 p-4 card-modern">
           <SkeletonBlock className="h-5 w-40" />
           <div className="grid gap-4 md:grid-cols-3">
             {Array.from({ length: 6 }).map((_, idx) => (
@@ -449,12 +449,12 @@ export default function ExpenseDetailPage() {
             ))}
           </div>
         </div>
-        <div className="app-card space-y-3 p-4">
+        <div className="app-card space-y-3 p-4 card-modern">
           {Array.from({ length: 3 }).map((_, idx) => (
             <SkeletonBlock key={idx} className="h-4 w-full" />
           ))}
         </div>
-        <div className="app-card space-y-3 p-4">
+        <div className="app-card space-y-3 p-4 card-modern">
           <SkeletonBlock className="h-5 w-40" />
           {Array.from({ length: 4 }).map((_, idx) => (
             <SkeletonBlock key={idx} className="h-8 w-full" />
@@ -470,19 +470,19 @@ export default function ExpenseDetailPage() {
 
   const isLocked = expense.status !== "draft";
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs text-muted">{t("expense.detailsTitle")}</p>
-          <h1 className="text-2xl font-semibold">{expense.expenseNumber}</h1>
-          <p className="text-sm text-muted">
+          <h1 className="text-2xl font-semibold page-title">{expense.expenseNumber}</h1>
+          <p className="text-sm text-muted page-subtitle">
             {expense.categoryName} • {t(`expense.status.${expense.status ?? "draft"}`)}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/purchases/expenses"
-            className="rounded-xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary"
+            className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary"
           >
             {t("expense.title")}
           </Link>
@@ -490,7 +490,7 @@ export default function ExpenseDetailPage() {
             <button
               type="button"
               onClick={handleApprove}
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+              className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
             >
               {t("expense.approve")}
             </button>
@@ -499,24 +499,24 @@ export default function ExpenseDetailPage() {
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
       {noticeKey ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
           {t(noticeKey)}
         </div>
       ) : null}
 
-      <div className="app-card p-4">
+      <div className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("expense.detailsSubtitle")}</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.date")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={expenseDate}
               onChange={(event) => setExpenseDate(event.target.value)}
               disabled={isLocked}
@@ -525,7 +525,7 @@ export default function ExpenseDetailPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.category")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={categoryId}
               onChange={(event) => setCategoryId(event.target.value)}
               disabled={isLocked}
@@ -541,7 +541,7 @@ export default function ExpenseDetailPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.vendor")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={vendorId}
               onChange={(event) => setVendorId(event.target.value)}
               disabled={isLocked}
@@ -557,7 +557,7 @@ export default function ExpenseDetailPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.paymentMethod")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={paymentMethod}
               onChange={(event) => setPaymentMethod(event.target.value)}
               disabled={isLocked}
@@ -573,7 +573,7 @@ export default function ExpenseDetailPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.paymentAccount")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={paymentAccountId}
               onChange={(event) => setPaymentAccountId(event.target.value)}
               disabled={isLocked || reimbursable}
@@ -589,7 +589,7 @@ export default function ExpenseDetailPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.taxCategory")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={taxCategoryId}
               onChange={(event) => setTaxCategoryId(event.target.value)}
               disabled={isLocked}
@@ -608,7 +608,7 @@ export default function ExpenseDetailPage() {
               type="number"
               min="0"
               step="0.01"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               disabled={isLocked}
@@ -617,7 +617,7 @@ export default function ExpenseDetailPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.description")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               disabled={isLocked}
@@ -626,7 +626,7 @@ export default function ExpenseDetailPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.notes")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               disabled={isLocked}
@@ -645,7 +645,7 @@ export default function ExpenseDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("expense.reimburseTo")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={reimburseTo}
                 onChange={(event) => setReimburseTo(event.target.value)}
                 disabled={isLocked}
@@ -659,7 +659,7 @@ export default function ExpenseDetailPage() {
               type="button"
               onClick={handleSave}
               disabled={isPending}
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {t("expense.updateDraft")}
             </button>
@@ -667,7 +667,7 @@ export default function ExpenseDetailPage() {
         ) : null}
       </div>
 
-      <div className="app-card p-4">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap justify-between gap-4 text-sm">
           <div className="space-y-1">
             <p className="text-muted">{t("expense.subtotal")}</p>
@@ -685,7 +685,7 @@ export default function ExpenseDetailPage() {
       </div>
 
       {expense.reimbursable ? (
-        <div className="app-card p-4">
+        <div className="app-card p-6 card-modern">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold">{t("expense.reimbursementTitle")}</h2>
             <span className="text-sm text-muted">
@@ -694,7 +694,7 @@ export default function ExpenseDetailPage() {
               )}
             </span>
           </div>
-          <p className="mt-2 text-sm text-muted">
+          <p className="mt-2 text-sm text-muted page-subtitle">
             {t("expense.reimbursementHint")}
           </p>
           {expense.status !== "approved" ? (
@@ -713,7 +713,7 @@ export default function ExpenseDetailPage() {
                 </span>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={reimburseDate}
                   onChange={(event) => setReimburseDate(event.target.value)}
                 />
@@ -723,7 +723,7 @@ export default function ExpenseDetailPage() {
                   {t("expense.reimburseMethod")}
                 </span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={reimburseMethod}
                   onChange={(event) => setReimburseMethod(event.target.value)}
                 >
@@ -740,7 +740,7 @@ export default function ExpenseDetailPage() {
                   {t("expense.reimburseAccount")}
                 </span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={reimburseAccountId}
                   onChange={(event) => setReimburseAccountId(event.target.value)}
                 >
@@ -757,7 +757,7 @@ export default function ExpenseDetailPage() {
                   {t("expense.reimburseReference")}
                 </span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={reimburseReference}
                   onChange={(event) => setReimburseReference(event.target.value)}
                 />
@@ -767,7 +767,7 @@ export default function ExpenseDetailPage() {
                   type="button"
                   onClick={handleReimburse}
                   disabled={isPending}
-                  className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {t("expense.reimburse")}
                 </button>
@@ -777,7 +777,7 @@ export default function ExpenseDetailPage() {
         </div>
       ) : null}
 
-      <div className="app-card p-4">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">{t("expense.attachmentsTitle")}</h2>
           <div className="flex items-center gap-2">
@@ -789,7 +789,7 @@ export default function ExpenseDetailPage() {
               type="button"
               onClick={handleUpload}
               disabled={!attachmentFile || isUploading}
-              className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-contrast transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-2xl bg-primary px-3 py-2 text-xs font-semibold text-primary-contrast transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isUploading ? t("expense.uploading") : t("expense.uploadAttachment")}
             </button>
@@ -857,7 +857,7 @@ export default function ExpenseDetailPage() {
             </table>
           </div>
         ) : (
-          <p className="mt-4 text-sm text-muted">{t("expense.attachmentsEmpty")}</p>
+          <p className="mt-4 text-sm text-muted page-subtitle">{t("expense.attachmentsEmpty")}</p>
         )}
       </div>
     </section>

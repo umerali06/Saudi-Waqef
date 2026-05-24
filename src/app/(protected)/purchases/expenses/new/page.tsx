@@ -216,25 +216,25 @@ export default function NewExpensePage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("expense.createTitle")}</h1>
-        <p className="text-sm text-muted">{t("expense.createSubtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("expense.createTitle")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("expense.createSubtitle")}</p>
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
 
-      <div className="app-card p-4">
+      <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-3">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.date")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={expenseDate}
               onChange={(event) => setExpenseDate(event.target.value)}
             />
@@ -242,7 +242,7 @@ export default function NewExpensePage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.category")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={categoryId}
               onChange={(event) => setCategoryId(event.target.value)}
             >
@@ -257,7 +257,7 @@ export default function NewExpensePage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.vendor")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={vendorId}
               onChange={(event) => setVendorId(event.target.value)}
             >
@@ -272,7 +272,7 @@ export default function NewExpensePage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.paymentMethod")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={paymentMethod}
               onChange={(event) => setPaymentMethod(event.target.value)}
             >
@@ -287,7 +287,7 @@ export default function NewExpensePage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.paymentAccount")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={paymentAccountId}
               onChange={(event) => setPaymentAccountId(event.target.value)}
               disabled={reimbursable}
@@ -306,7 +306,7 @@ export default function NewExpensePage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.taxCategory")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={taxCategoryId}
               onChange={(event) => setTaxCategoryId(event.target.value)}
             >
@@ -327,7 +327,7 @@ export default function NewExpensePage() {
               type="number"
               min="0"
               step="0.01"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
             />
@@ -335,7 +335,7 @@ export default function NewExpensePage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.description")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
             />
@@ -343,7 +343,7 @@ export default function NewExpensePage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.notes")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
             />
@@ -360,7 +360,7 @@ export default function NewExpensePage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("expense.reimburseTo")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={reimburseTo}
                 onChange={(event) => setReimburseTo(event.target.value)}
               />
@@ -369,7 +369,7 @@ export default function NewExpensePage() {
         </div>
       </div>
 
-      <div className="app-card p-4">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap justify-between gap-4 text-sm">
           <div className="space-y-1">
             <p className="text-muted">{t("expense.subtotal")}</p>
@@ -391,7 +391,7 @@ export default function NewExpensePage() {
           type="button"
           onClick={handleSave}
           disabled={isPending}
-          className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {t("expense.saveDraft")}
         </button>

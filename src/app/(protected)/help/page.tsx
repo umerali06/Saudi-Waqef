@@ -93,21 +93,21 @@ export default function HelpCenterPage() {
   );
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">{t("help.title")}</h1>
-          <p className="text-sm text-muted">{t("help.subtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("help.title")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("help.subtitle")}</p>
         </div>
         <Link
           href="/help/glossary"
-          className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+          className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
         >
           {t("help.glossary.link")}
         </Link>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-3">
           <label className="text-sm md:col-span-2">
             <span className="mb-1 block text-xs text-muted">{t("help.searchLabel")}</span>
@@ -115,7 +115,7 @@ export default function HelpCenterPage() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("help.searchPlaceholder")}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             />
           </label>
           <label className="text-sm">
@@ -123,7 +123,7 @@ export default function HelpCenterPage() {
             <select
               value={categoryId}
               onChange={(event) => setCategoryId(event.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             >
               <option value="">{t("common.all")}</option>
               {filteredCategories.map((category) => (
@@ -196,7 +196,7 @@ export default function HelpCenterPage() {
                 <Link
                   key={article.id}
                   href={`/help/${article.id}`}
-                  className="block rounded-xl border border-border bg-surface px-4 py-3 text-sm transition hover:border-primary"
+                  className="block rounded-2xl border border-border bg-surface px-4 py-3 text-sm transition hover:border-primary"
                 >
                   <h3 className="font-semibold">
                     {locale === "ar" ? article.titleAr : article.titleEn}

@@ -168,16 +168,16 @@ export default function UsersSettingsPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">{t("settings.users.title")}</h1>
-          <p className="text-sm text-muted">{t("settings.users.subtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("settings.users.title")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("settings.users.subtitle")}</p>
         </div>
         {canManageRoles ? (
           <a
             href={activeCompanyId ? `/api/users/export?companyId=${activeCompanyId}` : "#"}
-            className={`rounded-xl border border-border px-3 py-2 text-xs font-semibold ${
+            className={`rounded-2xl border border-border px-3 py-2 text-xs font-semibold ${
               activeCompanyId ? "" : "pointer-events-none opacity-60"
             }`}
           >
@@ -188,7 +188,7 @@ export default function UsersSettingsPage() {
 
       <form
         onSubmit={handleInvite}
-        className="app-card p-4"
+        className="app-card p-6 card-modern"
       >
         <div className="grid gap-4 md:grid-cols-3">
           <label className="text-sm">
@@ -197,7 +197,7 @@ export default function UsersSettingsPage() {
             </span>
             <input
               type="email"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
@@ -208,7 +208,7 @@ export default function UsersSettingsPage() {
               {t("common.role")}
             </span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={role}
               onChange={(event) => setRole(event.target.value as Role)}
             >
@@ -222,7 +222,7 @@ export default function UsersSettingsPage() {
           <div className="flex items-end">
             <button
               type="submit"
-              className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+              className="w-full rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
               disabled={isPending}
             >
               {t("common.createInvite")}
@@ -230,19 +230,19 @@ export default function UsersSettingsPage() {
           </div>
         </div>
         {errorKey ? (
-          <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
         {inviteLink ? (
-          <div className="mt-3 rounded-xl border border-border bg-surface-muted p-3 text-xs text-muted">
+          <div className="mt-3 rounded-2xl border border-border bg-surface-muted p-3 text-xs text-muted">
             {t("common.shareInvite")}{" "}
             <span className="font-semibold">{inviteLink}</span>
           </div>
         ) : null}
       </form>
 
-      <div className="app-card">
+      <div className="app-card card-modern">
         <div className="border-b border-border px-4 py-2 text-sm font-semibold">
           {t("settings.users.teamTitle")}
         </div>
@@ -314,7 +314,7 @@ export default function UsersSettingsPage() {
           )}
         </div>
         {roleErrorKey ? (
-          <div className="mx-4 my-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mx-4 my-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(roleErrorKey)}
           </div>
         ) : null}

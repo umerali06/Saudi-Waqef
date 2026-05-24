@@ -160,15 +160,15 @@ export default function PositionsPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">{t("hr.positions.title")}</h1>
-          <p className="text-sm text-muted">{t("hr.positions.subtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("hr.positions.title")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("hr.positions.subtitle")}</p>
         </div>
         <a
           href={exportUrl || "#"}
-          className={`rounded-xl border border-border px-3 py-2 text-xs font-semibold ${
+          className={`rounded-2xl border border-border px-3 py-2 text-xs font-semibold ${
             activeCompanyId ? "" : "pointer-events-none opacity-60"
           }`}
         >
@@ -177,17 +177,17 @@ export default function PositionsPage() {
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
 
-      <div className="app-card p-4">
+      <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-3">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("hr.positions.nameAr")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={nameAr}
               onChange={(event) => setNameAr(event.target.value)}
               required
@@ -196,7 +196,7 @@ export default function PositionsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("hr.positions.nameEn")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={nameEn}
               onChange={(event) => setNameEn(event.target.value)}
               required
@@ -205,7 +205,7 @@ export default function PositionsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("hr.positions.code")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={code}
               onChange={(event) => setCode(event.target.value)}
             />
@@ -215,7 +215,7 @@ export default function PositionsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("hr.positions.department")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={departmentId}
               onChange={(event) => setDepartmentId(event.target.value)}
               disabled={loading}
@@ -231,7 +231,7 @@ export default function PositionsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.status")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={status}
               onChange={(event) => setStatus(event.target.value as "active" | "inactive")}
               disabled={loading}
@@ -246,7 +246,7 @@ export default function PositionsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("hr.positions.notes")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
             />
@@ -257,7 +257,7 @@ export default function PositionsPage() {
             type="button"
             onClick={handleSubmit}
             disabled={isPending}
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           >
             {editingId ? t("hr.positions.update") : t("hr.positions.create")}
           </button>
@@ -265,7 +265,7 @@ export default function PositionsPage() {
             <button
               type="button"
               onClick={resetForm}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary"
+              className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary"
             >
               {t("common.cancel")}
             </button>
@@ -273,7 +273,7 @@ export default function PositionsPage() {
         </div>
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="flex items-center justify-between border-b border-border px-4 py-2 text-sm font-semibold">
           <span>{t("hr.positions.listTitle")}</span>
           <span className="text-xs text-muted">{positions.length}</span>
@@ -289,8 +289,8 @@ export default function PositionsPage() {
           <div className="p-4 text-sm text-muted">{t("hr.positions.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("hr.positions.nameAr")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("hr.positions.nameEn")}</th>

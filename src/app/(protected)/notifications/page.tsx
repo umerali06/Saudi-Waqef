@@ -46,18 +46,18 @@ export default function NotificationsPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">{t("notifications.title")}</h1>
-          <p className="text-sm text-muted">{t("notifications.subtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("notifications.title")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("notifications.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted">
           {t("notifications.unread", { count: String(unreadCount) })}
         </div>
       </div>
 
-      <div className={`app-card p-4 ${alignClass}`}>
+      <div className={`app-card p-6 ${alignClass}`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">
@@ -66,7 +66,7 @@ export default function NotificationsPage() {
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
             >
               <option value="all">{t("common.all")}</option>
               <option value="unread">{t("notifications.status.unread")}</option>
@@ -80,7 +80,7 @@ export default function NotificationsPage() {
                   ? `/api/notifications/export?companyId=${activeCompanyId}&status=${statusFilter}`
                   : "#"
               }
-              className={`rounded-xl border border-border px-3 py-2 text-xs font-semibold ${
+              className={`rounded-2xl border border-border px-3 py-2 text-xs font-semibold ${
                 activeCompanyId ? "" : "pointer-events-none opacity-60"
               }`}
             >
@@ -88,7 +88,7 @@ export default function NotificationsPage() {
             </a>
             <button
               type="button"
-              className="cursor-pointer rounded-xl border border-border bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20"
+              className="cursor-pointer rounded-2xl border border-border bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20"
               onClick={async () => {
                 if (!activeCompanyId) return;
                 try {
@@ -113,7 +113,7 @@ export default function NotificationsPage() {
             </button>
             <button
               type="button"
-              className="cursor-pointer rounded-xl border border-border px-3 py-2 text-xs font-semibold text-foreground"
+              className="cursor-pointer rounded-2xl border border-border px-3 py-2 text-xs font-semibold text-foreground"
               onClick={() => markAllAsRead()}
               disabled={unreadCount === 0}
             >
@@ -123,7 +123,7 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      <div className="app-card">
+      <div className="app-card card-modern">
         <div className="border-b border-border px-4 py-3 text-sm font-semibold">
           {t("notifications.listTitle")}
         </div>
@@ -138,7 +138,7 @@ export default function NotificationsPage() {
             ))}
           </div>
         ) : notifications.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-muted">{t("notifications.empty")}</p>
+          <p className="px-4 py-4 text-sm text-muted page-subtitle">{t("notifications.empty")}</p>
         ) : (
           <div className="divide-y divide-border">
             {notifications.map((item) => (

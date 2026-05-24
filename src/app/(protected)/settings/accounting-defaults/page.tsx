@@ -351,13 +351,13 @@ export default function AccountingDefaultsPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("defaults.title")}</h1>
-        <p className="text-sm text-muted">{t("defaults.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("defaults.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("defaults.subtitle")}</p>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("defaults.accountsTitle")}</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <label className={`text-sm ${alignClass}`}>
@@ -368,7 +368,7 @@ export default function AccountingDefaultsPage() {
               <SkeletonBlock className="h-9 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={defaults.salesAccountId ?? ""}
                 onChange={(event) =>
                   setDefaults((prev) => ({
@@ -394,7 +394,7 @@ export default function AccountingDefaultsPage() {
               <SkeletonBlock className="h-9 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={defaults.purchasesAccountId ?? ""}
                 onChange={(event) =>
                   setDefaults((prev) => ({
@@ -420,7 +420,7 @@ export default function AccountingDefaultsPage() {
               <SkeletonBlock className="h-9 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={defaults.receivableAccountId ?? ""}
                 onChange={(event) =>
                   setDefaults((prev) => ({
@@ -446,7 +446,7 @@ export default function AccountingDefaultsPage() {
               <SkeletonBlock className="h-9 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={defaults.payableAccountId ?? ""}
                 onChange={(event) =>
                   setDefaults((prev) => ({
@@ -472,7 +472,7 @@ export default function AccountingDefaultsPage() {
               <SkeletonBlock className="h-9 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={defaults.vatOutputAccountId ?? ""}
                 onChange={(event) =>
                   setDefaults((prev) => ({
@@ -498,7 +498,7 @@ export default function AccountingDefaultsPage() {
               <SkeletonBlock className="h-9 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={defaults.vatInputAccountId ?? ""}
                 onChange={(event) =>
                   setDefaults((prev) => ({
@@ -524,7 +524,7 @@ export default function AccountingDefaultsPage() {
               <SkeletonBlock className="h-9 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={defaults.discountAccountId ?? ""}
                 onChange={(event) =>
                   setDefaults((prev) => ({
@@ -554,7 +554,7 @@ export default function AccountingDefaultsPage() {
               <SkeletonBlock className="h-9 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={defaults.defaultSalesTaxCategoryId ?? ""}
                 onChange={(event) =>
                   setDefaults((prev) => ({
@@ -580,7 +580,7 @@ export default function AccountingDefaultsPage() {
               <SkeletonBlock className="h-9 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={defaults.defaultPurchaseTaxCategoryId ?? ""}
                 onChange={(event) =>
                   setDefaults((prev) => ({
@@ -610,7 +610,7 @@ export default function AccountingDefaultsPage() {
               <SkeletonBlock className="h-9 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={defaults.defaultSalesPaymentTermId ?? ""}
                 onChange={(event) =>
                   setDefaults((prev) => ({
@@ -636,7 +636,7 @@ export default function AccountingDefaultsPage() {
               <SkeletonBlock className="h-9 w-full" />
             ) : (
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={defaults.defaultPurchasePaymentTermId ?? ""}
                 onChange={(event) =>
                   setDefaults((prev) => ({
@@ -656,13 +656,13 @@ export default function AccountingDefaultsPage() {
           </label>
         </div>
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
         <button
           type="button"
-          className="mt-4 w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+          className="mt-4 w-fit rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           onClick={handleDefaultsSave}
           disabled={isPending || isLoading}
         >
@@ -670,13 +670,13 @@ export default function AccountingDefaultsPage() {
         </button>
       </div>
 
-      <form onSubmit={handleCreateTax} className="app-card p-5">
+      <form onSubmit={handleCreateTax} className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("tax.title")}</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("tax.name")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={newTax.name}
               onChange={(event) =>
                 setNewTax((prev) => ({ ...prev, name: event.target.value }))
@@ -688,7 +688,7 @@ export default function AccountingDefaultsPage() {
             <span className="mb-1 block text-xs text-muted">{t("tax.rate")}</span>
             <input
               type="number"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={newTax.rate}
               onChange={(event) =>
                 setNewTax((prev) => ({ ...prev, rate: Number(event.target.value) }))
@@ -698,7 +698,7 @@ export default function AccountingDefaultsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("tax.type")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={newTax.type}
               onChange={(event) =>
                 setNewTax((prev) => ({ ...prev, type: event.target.value }))
@@ -711,13 +711,13 @@ export default function AccountingDefaultsPage() {
           </label>
         </div>
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
         <button
           type="submit"
-          className="mt-4 w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+          className="mt-4 w-fit rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           disabled={isPending || isLoading}
         >
           {t("tax.add")}
@@ -725,7 +725,7 @@ export default function AccountingDefaultsPage() {
       </form>
 
       {editTaxId && editTax ? (
-        <form onSubmit={handleUpdateTax} className="app-card p-5">
+        <form onSubmit={handleUpdateTax} className="app-card p-6 card-modern">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">{t("tax.edit")}</h2>
             <button
@@ -743,7 +743,7 @@ export default function AccountingDefaultsPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("tax.name")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={editTax.name}
                 onChange={(event) =>
                   setEditTax((prev) =>
@@ -757,7 +757,7 @@ export default function AccountingDefaultsPage() {
               <span className="mb-1 block text-xs text-muted">{t("tax.rate")}</span>
               <input
                 type="number"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={editTax.rate}
                 onChange={(event) =>
                   setEditTax((prev) =>
@@ -769,7 +769,7 @@ export default function AccountingDefaultsPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("tax.type")}</span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={editTax.type}
                 onChange={(event) =>
                   setEditTax((prev) =>
@@ -785,7 +785,7 @@ export default function AccountingDefaultsPage() {
           </div>
           <button
             type="submit"
-            className="mt-4 w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="mt-4 w-fit rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
             disabled={isPending}
           >
             {t("common.save")}
@@ -793,7 +793,7 @@ export default function AccountingDefaultsPage() {
         </form>
       ) : null}
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="border-b border-border px-4 py-2 text-sm font-semibold">
           {t("tax.listTitle")}
         </div>
@@ -807,8 +807,8 @@ export default function AccountingDefaultsPage() {
           <div className="p-4 text-sm text-muted">{t("tax.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("tax.name")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("tax.rate")}</th>
@@ -859,13 +859,13 @@ export default function AccountingDefaultsPage() {
         )}
       </div>
 
-      <form onSubmit={handleCreateTerm} className="app-card p-5">
+      <form onSubmit={handleCreateTerm} className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("paymentTerms.title")}</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("terms.name")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={newTerm.name}
               onChange={(event) =>
                 setNewTerm((prev) => ({ ...prev, name: event.target.value }))
@@ -877,7 +877,7 @@ export default function AccountingDefaultsPage() {
             <span className="mb-1 block text-xs text-muted">{t("terms.days")}</span>
             <input
               type="number"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={newTerm.days}
               onChange={(event) =>
                 setNewTerm((prev) => ({ ...prev, days: Number(event.target.value) }))
@@ -886,13 +886,13 @@ export default function AccountingDefaultsPage() {
           </label>
         </div>
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
         <button
           type="submit"
-          className="mt-4 w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+          className="mt-4 w-fit rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           disabled={isPending || isLoading}
         >
           {t("terms.add")}
@@ -900,7 +900,7 @@ export default function AccountingDefaultsPage() {
       </form>
 
       {editTermId && editTerm ? (
-        <form onSubmit={handleUpdateTerm} className="app-card p-5">
+        <form onSubmit={handleUpdateTerm} className="app-card p-6 card-modern">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">{t("terms.edit")}</h2>
             <button
@@ -918,7 +918,7 @@ export default function AccountingDefaultsPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("terms.name")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={editTerm.name}
                 onChange={(event) =>
                   setEditTerm((prev) =>
@@ -932,7 +932,7 @@ export default function AccountingDefaultsPage() {
               <span className="mb-1 block text-xs text-muted">{t("terms.days")}</span>
               <input
                 type="number"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={editTerm.days}
                 onChange={(event) =>
                   setEditTerm((prev) =>
@@ -944,7 +944,7 @@ export default function AccountingDefaultsPage() {
           </div>
           <button
             type="submit"
-            className="mt-4 w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="mt-4 w-fit rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
             disabled={isPending}
           >
             {t("common.save")}
@@ -952,7 +952,7 @@ export default function AccountingDefaultsPage() {
         </form>
       ) : null}
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="border-b border-border px-4 py-2 text-sm font-semibold">
           {t("terms.listTitle")}
         </div>
@@ -966,8 +966,8 @@ export default function AccountingDefaultsPage() {
           <div className="p-4 text-sm text-muted">{t("terms.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("terms.name")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("terms.days")}</th>

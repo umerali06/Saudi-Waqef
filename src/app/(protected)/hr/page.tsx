@@ -72,10 +72,10 @@ export default function HrPage() {
 
   const visibleCards = cards.filter((card) => card.roles.includes(role));
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("hr.title")}</h1>
-        <p className="text-sm text-muted">
+        <h1 className="text-2xl font-semibold page-title">{t("hr.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">
           {t("labels.activeCompany", {
             company: activeCompany?.name ?? t("common.na"),
           })}
@@ -89,10 +89,10 @@ export default function HrPage() {
           <Link
             key={card.key}
             href={card.href}
-            className="app-card p-5 transition hover:-translate-y-0.5 hover:shadow-lg"
+            className="app-card p-6 transition hover:-translate-y-0.5 hover:shadow-lg card-modern"
           >
             <h2 className="text-lg font-semibold">{card.title}</h2>
-            <p className="mt-2 text-sm text-muted">{card.description}</p>
+            <p className="mt-2 text-sm text-muted page-subtitle">{card.description}</p>
           </Link>
         ))}
       </div>

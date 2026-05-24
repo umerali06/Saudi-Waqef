@@ -42,16 +42,16 @@ export default function AdminOverviewPage() {
     : [];
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("admin.overview.title")}</h1>
-        <p className="text-sm text-muted">{t("admin.overview.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("admin.overview.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("admin.overview.subtitle")}</p>
       </div>
 
       {error ? <p className="text-sm text-red-500">{error}</p> : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className={`app-card p-4 ${alignClass}`}>
+        <div className={`app-card p-6 ${alignClass}`}>
           <p className="text-xs uppercase text-muted">{t("admin.overview.companies")}</p>
           <p className="mt-2 text-2xl font-semibold">
             {overview?.companies.total ?? "--"}
@@ -61,7 +61,7 @@ export default function AdminOverviewPage() {
             {" "}{t("admin.overview.suspended")}: {overview?.companies.suspended ?? "--"}
           </div>
         </div>
-        <div className={`app-card p-4 ${alignClass}`}>
+        <div className={`app-card p-6 ${alignClass}`}>
           <p className="text-xs uppercase text-muted">{t("admin.overview.users")}</p>
           <p className="mt-2 text-2xl font-semibold">
             {overview?.users.total ?? "--"}
@@ -71,7 +71,7 @@ export default function AdminOverviewPage() {
             {" "}{t("admin.overview.invited")}: {overview?.users.invited ?? "--"}
           </div>
         </div>
-        <div className={`app-card p-4 ${alignClass}`}>
+        <div className={`app-card p-6 ${alignClass}`}>
           <p className="text-xs uppercase text-muted">{t("admin.overview.churn")}</p>
           <p className="mt-2 text-2xl font-semibold">
             {overview?.churnedLast30Days ?? "--"}
@@ -81,7 +81,7 @@ export default function AdminOverviewPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className={`app-card p-4 ${alignClass}`}>
+        <div className={`app-card p-6 ${alignClass}`}>
           <h2 className="text-sm font-semibold">{t("admin.overview.subscriptions")}</h2>
           {subscriptionEntries.length === 0 ? (
             <p className="mt-2 text-xs text-muted">{t("admin.overview.noData")}</p>
@@ -101,7 +101,7 @@ export default function AdminOverviewPage() {
             </div>
           )}
         </div>
-        <div className={`app-card p-4 ${alignClass}`}>
+        <div className={`app-card p-6 ${alignClass}`}>
           <h2 className="text-sm font-semibold">{t("admin.overview.usage")}</h2>
           <div className="mt-3 grid gap-2 text-sm">
             <div className="flex items-center justify-between">

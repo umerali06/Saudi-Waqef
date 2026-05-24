@@ -435,15 +435,15 @@ export default function NumberingSettingsPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("numbering.title")}</h1>
-        <p className="text-sm text-muted">{t("numbering.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("numbering.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("numbering.subtitle")}</p>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("numbering.tokensTitle")}</h2>
-        <p className="mt-2 text-sm text-muted">{t("numbering.tokensHint")}</p>
+        <p className="mt-2 text-sm text-muted page-subtitle">{t("numbering.tokensHint")}</p>
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
           {["{YYYY}", "{YY}", "{MM}", "{DD}"].map((token) => (
             <span
@@ -459,7 +459,7 @@ export default function NumberingSettingsPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="app-card p-5">
+            <div key={i} className="app-card p-6 card-modern">
               <div className="flex items-center justify-between gap-3">
                 <SkeletonBlock className="h-6 w-32" />
                 <SkeletonBlock className="h-6 w-24 rounded-full" />
@@ -509,7 +509,7 @@ export default function NumberingSettingsPage() {
             }).number;
 
             return (
-              <div key={section.id} className="app-card p-5">
+              <div key={section.id} className="app-card p-6 card-modern">
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-base font-semibold">{t(section.labelKey)}</h3>
                   <span className="rounded-full bg-surface-muted px-3 py-1 text-xs text-muted">
@@ -522,7 +522,7 @@ export default function NumberingSettingsPage() {
                       {t("numbering.prefix")}
                     </span>
                     <input
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                       value={prefix}
                       onChange={(event) =>
                         updateField(section.prefix as FieldKey, event.target.value)
@@ -534,7 +534,7 @@ export default function NumberingSettingsPage() {
                       {t("numbering.suffix")}
                     </span>
                     <input
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                       value={suffix}
                       onChange={(event) =>
                         updateField(section.suffix as FieldKey, event.target.value)
@@ -548,7 +548,7 @@ export default function NumberingSettingsPage() {
                     <input
                       type="number"
                       min={0}
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                       value={padding}
                       onChange={(event) =>
                         updateField(
@@ -565,7 +565,7 @@ export default function NumberingSettingsPage() {
                     <input
                       type="number"
                       min={1}
-                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                       value={nextNumber}
                       onChange={(event) =>
                         updateField(section.next as FieldKey, Number(event.target.value))
@@ -600,13 +600,13 @@ export default function NumberingSettingsPage() {
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
       <button
         type="button"
-        className="w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+        className="w-fit rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
         onClick={handleSave}
         disabled={isPending}
       >

@@ -50,28 +50,28 @@ export default function GlossaryPage() {
     locale === "ar" ? term.definitionAr : term.definitionEn;
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">{t("help.glossary.title")}</h1>
-          <p className="text-sm text-muted">{t("help.glossary.subtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("help.glossary.title")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("help.glossary.subtitle")}</p>
         </div>
         <Link
           href="/help"
-          className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+          className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
         >
           {t("help.back")}
         </Link>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <label className="text-sm">
           <span className="mb-1 block text-xs text-muted">{t("help.glossary.searchLabel")}</span>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t("help.glossary.searchPlaceholder")}
-            className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+            className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
           />
         </label>
       </div>
@@ -87,7 +87,7 @@ export default function GlossaryPage() {
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="app-card space-y-2 p-4">
+            <div key={index} className="app-card space-y-2 p-4 card-modern">
               <SkeletonBlock className="h-3 w-32" />
               <SkeletonBlock className="h-3 w-full" />
               <SkeletonBlock className="h-3 w-5/6" />
@@ -99,7 +99,7 @@ export default function GlossaryPage() {
       ) : (
         <div className="space-y-3">
           {terms.map((term) => (
-            <div key={term.id} className="app-card p-4">
+            <div key={term.id} className="app-card p-6 card-modern">
               <h3 className="text-sm font-semibold">{displayTerm(term)}</h3>
               <p className="mt-2 text-xs text-muted">{displayDefinition(term)}</p>
               {term.category ? (

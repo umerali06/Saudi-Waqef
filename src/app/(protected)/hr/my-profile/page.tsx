@@ -92,14 +92,14 @@ export default function MyProfilePage() {
     : "";
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("hr.self.title")}</h1>
-        <p className="text-sm text-muted">{t("hr.self.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("hr.self.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("hr.self.subtitle")}</p>
       </div>
 
       {loadingProfile ? (
-        <div className="app-card space-y-3 p-5">
+        <div className="app-card space-y-3 p-5 card-modern">
           <SkeletonBlock className="h-4 w-48" />
           <div className="grid gap-4 md:grid-cols-3">
             {Array.from({ length: 3 }).map((_, idx) => (
@@ -109,14 +109,14 @@ export default function MyProfilePage() {
           <SkeletonBlock className="h-9 w-24" />
         </div>
       ) : employee ? (
-        <div className="app-card p-5">
-          <p className="text-sm text-muted">{displayName}</p>
+        <div className="app-card p-6 card-modern">
+          <p className="text-sm text-muted page-subtitle">{displayName}</p>
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("common.email")}</span>
               <input
                 type="email"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
               />
@@ -124,7 +124,7 @@ export default function MyProfilePage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("common.phone")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
               />
@@ -132,19 +132,19 @@ export default function MyProfilePage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("hr.employees.address")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={address}
                 onChange={(event) => setAddress(event.target.value)}
               />
             </label>
           </div>
           {errorKey ? (
-            <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
               {t(errorKey)}
             </div>
           ) : null}
           {successKey ? (
-            <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+            <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
               {t(successKey)}
             </div>
           ) : null}
@@ -152,7 +152,7 @@ export default function MyProfilePage() {
             type="button"
             onClick={handleSave}
             disabled={isPending}
-            className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="mt-4 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           >
             {t("common.save")}
           </button>

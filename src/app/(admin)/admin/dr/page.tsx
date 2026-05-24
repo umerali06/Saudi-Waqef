@@ -204,22 +204,22 @@ export default function AdminDrPage() {
   };
 
   if (!settings) {
-    return <p className="text-sm text-muted">{t("common.loading")}</p>;
+    return <p className="text-sm text-muted page-subtitle">{t("common.loading")}</p>;
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("admin.dr.title")}</h1>
-        <p className="text-sm text-muted">{t("admin.dr.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("admin.dr.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("admin.dr.subtitle")}</p>
       </div>
 
       {error ? <p className="text-sm text-red-500">{error}</p> : null}
 
-      <div className="app-card space-y-6 p-6">
+      <div className="app-card space-y-6 p-6 card-modern">
         <div>
           <h2 className="text-lg font-semibold">{t("admin.dr.objectivesTitle")}</h2>
-          <p className="text-sm text-muted">{t("admin.dr.objectivesSubtitle")}</p>
+          <p className="text-sm text-muted page-subtitle">{t("admin.dr.objectivesSubtitle")}</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div>
@@ -228,7 +228,7 @@ export default function AdminDrPage() {
               type="number"
               value={settings.rpoMinutes}
               onChange={(event) => handleSettingsChange("rpoMinutes", event.target.value)}
-              className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -237,7 +237,7 @@ export default function AdminDrPage() {
               type="number"
               value={settings.rtoMinutes}
               onChange={(event) => handleSettingsChange("rtoMinutes", event.target.value)}
-              className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -250,7 +250,7 @@ export default function AdminDrPage() {
               onChange={(event) =>
                 handleSettingsChange("backupFrequencyHours", event.target.value)
               }
-              className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -261,7 +261,7 @@ export default function AdminDrPage() {
               onChange={(event) =>
                 handleSettingsChange("retentionDays", event.target.value)
               }
-              className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -272,7 +272,7 @@ export default function AdminDrPage() {
               onChange={(event) =>
                 handleSettingsChange("backupRegion", event.target.value)
               }
-              className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -281,7 +281,7 @@ export default function AdminDrPage() {
               type="text"
               value={settings.approvedBy ?? ""}
               onChange={(event) => handleSettingsChange("approvedBy", event.target.value)}
-              className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -292,7 +292,7 @@ export default function AdminDrPage() {
               onChange={(event) =>
                 handleSettingsChange("lastReviewedAt", event.target.value)
               }
-              className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             />
           </div>
         </div>
@@ -310,7 +310,7 @@ export default function AdminDrPage() {
                   onChange={(event) =>
                     handleSettingsChange(field.key as keyof DrSettings, event.target.value)
                   }
-                  className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 />
                 <p className="mt-1 text-xs text-muted">
                   {t("admin.dr.priorityHint")}
@@ -325,17 +325,17 @@ export default function AdminDrPage() {
             type="button"
             onClick={handleSaveSettings}
             disabled={saving}
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? t("common.loading") : t("admin.dr.save")}
           </button>
         </div>
       </div>
 
-      <div className="app-card space-y-4 p-6">
+      <div className="app-card space-y-4 p-6 card-modern">
         <div>
           <h2 className="text-lg font-semibold">{t("admin.dr.drillsTitle")}</h2>
-          <p className="text-sm text-muted">{t("admin.dr.drillsSubtitle")}</p>
+          <p className="text-sm text-muted page-subtitle">{t("admin.dr.drillsSubtitle")}</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -346,7 +346,7 @@ export default function AdminDrPage() {
               onChange={(event) =>
                 setDrillForm({ ...drillForm, type: event.target.value })
               }
-              className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             >
               <option value="backup_restore">{t("admin.dr.type.backup")}</option>
               <option value="failover">{t("admin.dr.type.failover")}</option>
@@ -361,7 +361,7 @@ export default function AdminDrPage() {
               onChange={(event) =>
                 setDrillForm({ ...drillForm, status: event.target.value })
               }
-              className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             >
               <option value="planned">{t("admin.dr.status.planned")}</option>
               <option value="in_progress">{t("admin.dr.status.inProgress")}</option>
@@ -377,7 +377,7 @@ export default function AdminDrPage() {
               onChange={(event) =>
                 setDrillForm({ ...drillForm, scope: event.target.value })
               }
-              className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -388,7 +388,7 @@ export default function AdminDrPage() {
               onChange={(event) =>
                 setDrillForm({ ...drillForm, startedAt: event.target.value })
               }
-              className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -399,7 +399,7 @@ export default function AdminDrPage() {
               onChange={(event) =>
                 setDrillForm({ ...drillForm, completedAt: event.target.value })
               }
-              className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -410,7 +410,7 @@ export default function AdminDrPage() {
               onChange={(event) =>
                 setDrillForm({ ...drillForm, runBy: event.target.value })
               }
-              className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -421,7 +421,7 @@ export default function AdminDrPage() {
               onChange={(event) =>
                 setDrillForm({ ...drillForm, rpoAchievedMinutes: event.target.value })
               }
-              className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -432,7 +432,7 @@ export default function AdminDrPage() {
               onChange={(event) =>
                 setDrillForm({ ...drillForm, rtoAchievedMinutes: event.target.value })
               }
-              className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             />
           </div>
           <div className="md:col-span-2">
@@ -442,7 +442,7 @@ export default function AdminDrPage() {
               onChange={(event) =>
                 setDrillForm({ ...drillForm, notes: event.target.value })
               }
-              className="mt-2 min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="mt-2 min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             />
           </div>
         </div>
@@ -452,19 +452,19 @@ export default function AdminDrPage() {
             type="button"
             onClick={handleCreateDrill}
             disabled={saving}
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? t("common.loading") : t("admin.dr.createDrill")}
           </button>
         </div>
       </div>
 
-      <div className="app-card">
+      <div className="app-card card-modern">
         <div className={`border-b border-border px-4 py-3 text-sm font-semibold ${alignClass}`}>
           {t("admin.dr.historyTitle")}
         </div>
         {drills.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-muted">{t("admin.dr.history.empty")}</p>
+          <p className="px-4 py-4 text-sm text-muted page-subtitle">{t("admin.dr.history.empty")}</p>
         ) : (
           <div className="divide-y divide-border">
             {drills.map((drill) => (

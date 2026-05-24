@@ -229,13 +229,13 @@ export default function OnboardingPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("onboarding.title")}</h1>
-        <p className="text-sm text-muted">{t("onboarding.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("onboarding.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("onboarding.subtitle")}</p>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">
             {t(`onboarding.step${step}.title`)}
@@ -294,7 +294,7 @@ export default function OnboardingPage() {
                 {t("common.companyName")}
               </span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={profile.name}
                 onChange={(event) =>
                   setProfile((prev) => ({ ...prev, name: event.target.value }))
@@ -307,7 +307,7 @@ export default function OnboardingPage() {
                 {t("companyProfile.legalName")}
               </span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={profile.legalName}
                 onChange={(event) =>
                   setProfile((prev) => ({ ...prev, legalName: event.target.value }))
@@ -319,7 +319,7 @@ export default function OnboardingPage() {
                 {t("companyProfile.vatNumber")}
               </span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={profile.vatNumber}
                 onChange={(event) =>
                   setProfile((prev) => ({ ...prev, vatNumber: event.target.value }))
@@ -331,7 +331,7 @@ export default function OnboardingPage() {
                 {t("companyProfile.crNumber")}
               </span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={profile.crNumber}
                 onChange={(event) =>
                   setProfile((prev) => ({ ...prev, crNumber: event.target.value }))
@@ -343,7 +343,7 @@ export default function OnboardingPage() {
                 {t("companyProfile.address")}
               </span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={profile.address}
                 onChange={(event) =>
                   setProfile((prev) => ({ ...prev, address: event.target.value }))
@@ -360,7 +360,7 @@ export default function OnboardingPage() {
                 {t("companyProfile.currency")}
               </span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={profile.currency}
                 disabled
               />
@@ -370,7 +370,7 @@ export default function OnboardingPage() {
                 {t("companyProfile.fiscalYearStart")}
               </span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={profile.fiscalYearStart}
                 onChange={(event) =>
                   setProfile((prev) => ({
@@ -386,7 +386,7 @@ export default function OnboardingPage() {
                 {t("companyProfile.timezone")}
               </span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={profile.timezone}
                 onChange={(event) =>
                   setProfile((prev) => ({ ...prev, timezone: event.target.value }))
@@ -398,7 +398,7 @@ export default function OnboardingPage() {
                 {t("companyProfile.defaultLanguage")}
               </span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={profile.defaultLanguage}
                 onChange={(event) =>
                   setProfile((prev) => ({
@@ -433,7 +433,7 @@ export default function OnboardingPage() {
               <span className="mb-1 block text-xs text-muted">{t("config.vatRate")}</span>
               <input
                 type="number"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={config.vatRate}
                 onChange={(event) =>
                   setConfig((prev) => ({
@@ -448,7 +448,7 @@ export default function OnboardingPage() {
                 {t("config.vatFiling")}
               </span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={config.vatFilingFrequency}
                 onChange={(event) =>
                   setConfig((prev) => ({
@@ -484,7 +484,7 @@ export default function OnboardingPage() {
                 {t("config.invoicePrefix")}
               </span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={config.invoicePrefix}
                 onChange={(event) =>
                   setConfig((prev) => ({
@@ -500,7 +500,7 @@ export default function OnboardingPage() {
               </span>
               <input
                 type="number"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={config.invoiceNextNumber}
                 onChange={(event) =>
                   setConfig((prev) => ({
@@ -515,7 +515,7 @@ export default function OnboardingPage() {
                 {t("config.billPrefix")}
               </span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={config.billPrefix}
                 onChange={(event) =>
                   setConfig((prev) => ({ ...prev, billPrefix: event.target.value }))
@@ -528,7 +528,7 @@ export default function OnboardingPage() {
               </span>
               <input
                 type="number"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={config.billNextNumber}
                 onChange={(event) =>
                   setConfig((prev) => ({
@@ -543,7 +543,7 @@ export default function OnboardingPage() {
                 {t("config.creditPrefix")}
               </span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={config.creditPrefix}
                 onChange={(event) =>
                   setConfig((prev) => ({
@@ -559,7 +559,7 @@ export default function OnboardingPage() {
               </span>
               <input
                 type="number"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={config.creditNextNumber}
                 onChange={(event) =>
                   setConfig((prev) => ({
@@ -600,7 +600,7 @@ export default function OnboardingPage() {
           {step > 1 ? (
             <button
               type="button"
-              className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+              className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
               onClick={handleBack}
               disabled={isPending}
             >
@@ -610,7 +610,7 @@ export default function OnboardingPage() {
           {step < 5 ? (
             <button
               type="button"
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+              className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
               onClick={handleNext}
               disabled={isPending}
             >
@@ -619,7 +619,7 @@ export default function OnboardingPage() {
           ) : (
             <button
               type="button"
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+              className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
               onClick={handleFinish}
               disabled={isPending}
             >

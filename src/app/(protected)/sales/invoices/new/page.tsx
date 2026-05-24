@@ -290,19 +290,19 @@ export default function NewInvoicePage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("invoice.createTitle")}</h1>
-        <p className="text-sm text-muted">{t("invoice.createSubtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("invoice.createTitle")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("invoice.createSubtitle")}</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="app-card p-5">
+      <form onSubmit={handleSubmit} className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("invoice.customerSection")}</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("invoice.customer")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={customerId}
               onChange={(event) => setCustomerId(event.target.value)}
               required
@@ -319,7 +319,7 @@ export default function NewInvoicePage() {
             <span className="mb-1 block text-xs text-muted">{t("common.issueDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={invoiceDate}
               onChange={(event) => setInvoiceDate(event.target.value)}
             />
@@ -328,7 +328,7 @@ export default function NewInvoicePage() {
             <span className="mb-1 block text-xs text-muted">{t("common.dueDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={dueDate}
               onChange={(event) => setDueDate(event.target.value)}
             />
@@ -336,7 +336,7 @@ export default function NewInvoicePage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("invoice.paymentTerm")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={paymentTermId}
               onChange={(event) => setPaymentTermId(event.target.value)}
             >
@@ -376,11 +376,11 @@ export default function NewInvoicePage() {
               taxInclusive: Boolean(config?.taxInclusive),
             });
             return (
-              <div key={line.id} className="grid gap-3 rounded-xl border border-border p-3 md:grid-cols-6">
+              <div key={line.id} className="grid gap-3 rounded-2xl border border-border p-3 md:grid-cols-6">
                 <label className={`text-sm ${alignClass} md:col-span-2`}>
                   <span className="mb-1 block text-xs text-muted">{t("invoice.item")}</span>
                   <select
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.itemId}
                     onChange={(event) => handleItemSelect(index, event.target.value)}
                   >
@@ -398,7 +398,7 @@ export default function NewInvoicePage() {
                     type="number"
                     min="0"
                     step="0.01"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.quantity}
                     onChange={(event) => handleLineChange(index, "quantity", event.target.value)}
                   />
@@ -406,7 +406,7 @@ export default function NewInvoicePage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("invoice.unit")}</span>
                   <select
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.unit}
                     onChange={(event) => handleLineChange(index, "unit", event.target.value)}
                     disabled={!item}
@@ -425,7 +425,7 @@ export default function NewInvoicePage() {
                     type="number"
                     min="0"
                     step="0.01"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.unitPrice}
                     onChange={(event) => handleLineChange(index, "unitPrice", event.target.value)}
                   />
@@ -436,7 +436,7 @@ export default function NewInvoicePage() {
                     type="number"
                     min="0"
                     step="0.1"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.discountRate}
                     onChange={(event) => handleLineChange(index, "discountRate", event.target.value)}
                   />
@@ -444,7 +444,7 @@ export default function NewInvoicePage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("invoice.taxCategory")}</span>
                   <select
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={line.taxCategoryId}
                     onChange={(event) => handleLineChange(index, "taxCategoryId", event.target.value)}
                   >
@@ -476,7 +476,7 @@ export default function NewInvoicePage() {
         <button
           type="button"
           onClick={handleAddLine}
-          className="mt-4 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-foreground"
+          className="mt-4 rounded-2xl border border-border px-3 py-2 text-xs font-semibold text-foreground"
         >
           {t("invoice.addLine")}
         </button>
@@ -485,7 +485,7 @@ export default function NewInvoicePage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.notes")}</span>
             <textarea
-              className="min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
             />
@@ -493,14 +493,14 @@ export default function NewInvoicePage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("invoice.terms")}</span>
             <textarea
-              className="min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={termsText}
               onChange={(event) => setTermsText(event.target.value)}
             />
           </label>
         </div>
 
-        <div className="mt-6 rounded-xl border border-border bg-surface-muted p-4 text-sm">
+        <div className="mt-6 rounded-2xl border border-border bg-surface-muted p-4 text-sm">
           <div className="flex items-center justify-between">
             <span>{t("invoice.subtotal")}</span>
             <span>{totals.subtotal.toFixed(2)}</span>
@@ -520,13 +520,13 @@ export default function NewInvoicePage() {
         </div>
 
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
         <button
           type="submit"
-          className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+          className="mt-4 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           disabled={isPending}
         >
           {t("invoice.saveDraft")}

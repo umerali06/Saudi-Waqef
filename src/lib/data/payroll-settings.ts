@@ -6,6 +6,9 @@ export type PayrollSettings = {
   cycle: "monthly";
   overtimeMultiplier: number;
   latenessPenaltyPerMinute: number;
+  absenceDailyRateMode: "labor_law_30" | "active_days";
+  eosbEnabled: boolean;
+  eosbWageBasis: "actual" | "basic";
   gosiEnabled: boolean;
   gosiEmployeeRate: number;
   gosiEmployerRate: number;
@@ -24,6 +27,9 @@ const DEFAULT_SETTINGS: PayrollSettings = {
   cycle: "monthly",
   overtimeMultiplier: 1.5,
   latenessPenaltyPerMinute: 0,
+  absenceDailyRateMode: "labor_law_30",
+  eosbEnabled: true,
+  eosbWageBasis: "actual",
   gosiEnabled: false,
   gosiEmployeeRate: 0,
   gosiEmployerRate: 0,
@@ -47,6 +53,10 @@ export async function getPayrollSettings(companyId: string) {
     cycle: (data.cycle ?? "monthly") as "monthly",
     overtimeMultiplier: data.overtimeMultiplier ?? 1.5,
     latenessPenaltyPerMinute: data.latenessPenaltyPerMinute ?? 0,
+    absenceDailyRateMode:
+      (data.absenceDailyRateMode ?? "labor_law_30") as "labor_law_30" | "active_days",
+    eosbEnabled: data.eosbEnabled ?? true,
+    eosbWageBasis: (data.eosbWageBasis ?? "actual") as "actual" | "basic",
     gosiEnabled: data.gosiEnabled ?? false,
     gosiEmployeeRate: data.gosiEmployeeRate ?? 0,
     gosiEmployerRate: data.gosiEmployerRate ?? 0,

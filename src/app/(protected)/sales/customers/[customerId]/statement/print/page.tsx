@@ -74,7 +74,7 @@ export default function CustomerStatementPrintPage() {
           <button
             type="button"
             onClick={() => window.print()}
-            className="rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+            className="rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
           >
             {t("common.print")}
           </button>
@@ -89,7 +89,7 @@ export default function CustomerStatementPrintPage() {
           <>
             <div className="space-y-2">
               <p className="text-xs text-muted">{t("customers.statementTitle")}</p>
-              <h1 className="text-2xl font-semibold">{data.customer.name}</h1>
+              <h1 className="text-2xl font-semibold page-title">{data.customer.name}</h1>
               {data.customer.email ? (
                 <p className="text-xs text-muted">{data.customer.email}</p>
               ) : null}
@@ -113,8 +113,8 @@ export default function CustomerStatementPrintPage() {
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-surface-muted text-muted">
+              <table className="min-w-full text-sm table-modern">
+                <thead className="bg-surface-muted text-muted thead-modern">
                   <tr>
                     <th className={`px-3 py-2 ${alignClass}`}>{t("invoice.number")}</th>
                     <th className={`px-3 py-2 ${alignClass}`}>{t("common.issueDate")}</th>
@@ -142,7 +142,7 @@ export default function CustomerStatementPrintPage() {
             </div>
           </>
         ) : (
-          <p className="text-sm text-muted">{t("customers.statementEmpty")}</p>
+          <p className="text-sm text-muted page-subtitle">{t("customers.statementEmpty")}</p>
         )}
       </div>
     </div>

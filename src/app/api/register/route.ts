@@ -3,22 +3,38 @@ import { createRegistrationRequest } from "@/lib/data/registration-requests";
 import { sendEmail } from "@/lib/email/sender";
 import { listSystemAdmins } from "@/lib/data/system-admins";
 import { createNotification } from "@/lib/data/notifications";
+import { listUserIdsByRoles } from "@/lib/data/memberships";
+import { getCompanyById } from "@/lib/data/companies";
+
+const ALLOWED_REQUEST_ROLES = new Set(["admin", "accountant", "hr", "employee", "viewer"]);
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, email, companyName, phone, requestedRole } = body;
+    const { name, email, companyId, phone, requestedRole } = body;
 
-    if (!name || !email || !companyName || !requestedRole) {
+    if (!name || !email || !companyId || !requestedRole) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+    const normalizedRequestedRole = String(requestedRole).trim().toLowerCase();
+    if (!ALLOWED_REQUEST_ROLES.has(normalizedRequestedRole)) {
+      return NextResponse.json({ error: "Invalid requested role" }, { status: 400 });
+    }
+
+    const company = await getCompanyById(String(companyId));
+    if (!company || company.status !== "active") {
+      return NextResponse.json({ error: "Invalid company selection" }, { status: 400 });
+    }
+
+    const companyName = company.name;
 
     const id = await createRegistrationRequest({
       name,
       email,
+      companyId: company.id,
       companyName,
       phone,
-      requestedRole,
+      requestedRole: normalizedRequestedRole,
     });
 
     // Send acknowledgement email
@@ -41,10 +57,18 @@ export async function POST(req: NextRequest) {
     // Notify Admins
     try {
       const admins = await listSystemAdmins();
+      const fallbackAdminUserIds = admins.length === 0 ? await listUserIdsByRoles(["owner", "admin"]) : [];
+      const recipientUserIds = Array.from(
+        new Set([
+          ...admins.map((admin) => admin.userId).filter(Boolean),
+          ...fallbackAdminUserIds,
+        ])
+      );
+
       await Promise.all(
-        admins.map((admin) =>
+        recipientUserIds.map((userId) =>
           createNotification({
-            userId: admin.userId,
+            userId,
             companyId: null,
             type: "registration_received",
             title: "New Registration Request",

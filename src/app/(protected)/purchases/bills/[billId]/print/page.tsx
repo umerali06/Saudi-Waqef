@@ -185,13 +185,13 @@ export default function BillPrintPage() {
     <div className="min-h-screen bg-white p-8 text-foreground print:p-0">
       <div className="flex items-center justify-between print:hidden">
         <div>
-          <h1 className="text-xl font-semibold">{t("bill.detailsTitle")}</h1>
-          <p className="text-sm text-muted">{bill.billNumber}</p>
+          <h1 className="text-xl font-semibold page-title">{t("bill.detailsTitle")}</h1>
+          <p className="text-sm text-muted page-subtitle">{bill.billNumber}</p>
         </div>
         <button
           type="button"
           onClick={() => window.print()}
-          className="rounded-xl border border-border px-4 py-2 text-sm font-semibold"
+          className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold"
         >
           {t("bill.print")}
         </button>
@@ -214,9 +214,9 @@ export default function BillPrintPage() {
               {activeCompany?.name ?? "-"}
             </h2>
             {branding.header ? (
-              <p className="text-sm text-muted">{branding.header}</p>
+              <p className="text-sm text-muted page-subtitle">{branding.header}</p>
             ) : null}
-            <p className="text-sm text-muted">{t("bill.title")}</p>
+            <p className="text-sm text-muted page-subtitle">{t("bill.title")}</p>
           </div>
           <div className={`space-y-1 text-sm ${alignClass}`}>
             <p>
@@ -227,7 +227,7 @@ export default function BillPrintPage() {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 rounded-xl border border-border bg-white p-4 text-sm">
+        <div className="mt-6 grid gap-4 rounded-2xl border border-border bg-white p-4 text-sm">
           <div>
             <p className="text-xs text-muted">{t("bill.vendor")}</p>
             <p className="font-semibold">{bill.vendorName}</p>
@@ -241,8 +241,8 @@ export default function BillPrintPage() {
         </div>
 
         <div className="mt-6 overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-surface-muted text-muted">
+          <table className="min-w-full text-sm table-modern">
+            <thead className="bg-surface-muted text-muted thead-modern">
               <tr>
                 <th className={`px-3 py-2 ${alignClass}`}>{t("bill.item")}</th>
                 <th className={`px-3 py-2 ${alignClass}`}>{t("bill.quantity")}</th>

@@ -8,21 +8,21 @@ export default function SuspendedPage() {
   const alignClass = locale === "ar" ? "text-right" : "text-left";
 
   return (
-    <section className="mx-auto max-w-2xl space-y-6">
+    <section className="mx-auto max-w-2xl space-y-6 page-shell">
       <div className={`app-card p-6 ${alignClass}`}>
-        <h1 className="text-2xl font-semibold">{t("suspended.title")}</h1>
-        <p className="mt-2 text-sm text-muted">{t("suspended.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("suspended.title")}</h1>
+        <p className="mt-2 text-sm text-muted page-subtitle">{t("suspended.subtitle")}</p>
         <div className="mt-6 flex flex-wrap gap-3">
           <button
             type="button"
-            className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
             onClick={() => signOut({ callbackUrl: "/login" })}
           >
             {t("suspended.signOut")}
           </button>
           <a
             href="mailto:support@saudiwaqef.com"
-            className="cursor-pointer rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+            className="cursor-pointer rounded-2xl border border-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
           >
             {t("suspended.contactSupport")}
           </a>

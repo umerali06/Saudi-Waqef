@@ -7,6 +7,13 @@ import { decryptOptional, encryptOptional } from "@/lib/security/crypto";
 export type EmployeeStatus = "active" | "suspended" | "terminated";
 export type EmployeeGender = "male" | "female";
 export type EmploymentType = "full_time" | "part_time" | "contractor" | "temporary";
+export type TerminationCategory =
+  | "employer_termination"
+  | "resignation"
+  | "contract_end"
+  | "force_majeure"
+  | "retirement"
+  | "other";
 
 export type EmployeeOnboardingTask = {
   id: string;
@@ -39,6 +46,7 @@ export type EmployeeRecord = {
   employmentType?: EmploymentType | null;
   status: EmployeeStatus;
   terminationDate?: string | null;
+  terminationCategory?: TerminationCategory | null;
   terminationReason?: string | null;
   notes?: string | null;
   onboarding?: EmployeeOnboardingTask[];
@@ -77,6 +85,7 @@ export async function listEmployees(companyId: string) {
       employmentType: data.employmentType ?? null,
       status: data.status ?? "active",
       terminationDate: data.terminationDate ?? null,
+      terminationCategory: data.terminationCategory ?? null,
       terminationReason: data.terminationReason ?? null,
       notes: data.notes ?? null,
       onboarding: data.onboarding ?? [],
@@ -121,6 +130,7 @@ export async function getEmployeeById(employeeId: string) {
     employmentType: data.employmentType ?? null,
     status: data.status ?? "active",
     terminationDate: data.terminationDate ?? null,
+    terminationCategory: data.terminationCategory ?? null,
     terminationReason: data.terminationReason ?? null,
     notes: data.notes ?? null,
     onboarding: data.onboarding ?? [],
@@ -164,6 +174,7 @@ export async function getEmployeeByUserId(companyId: string, userId: string) {
     employmentType: data.employmentType ?? null,
     status: data.status ?? "active",
     terminationDate: data.terminationDate ?? null,
+    terminationCategory: data.terminationCategory ?? null,
     terminationReason: data.terminationReason ?? null,
     notes: data.notes ?? null,
     onboarding: data.onboarding ?? [],
@@ -194,6 +205,7 @@ export async function createEmployee(params: {
   employmentType?: EmploymentType | null;
   status?: EmployeeStatus;
   terminationDate?: string | null;
+  terminationCategory?: TerminationCategory | null;
   terminationReason?: string | null;
   notes?: string | null;
   onboarding?: EmployeeOnboardingTask[];
@@ -227,6 +239,7 @@ export async function createEmployee(params: {
     employmentType: params.employmentType ?? null,
     status: params.status ?? "active",
     terminationDate: params.terminationDate ?? null,
+    terminationCategory: params.terminationCategory ?? null,
     terminationReason: params.terminationReason ?? null,
     notes: params.notes ?? null,
     onboarding: params.onboarding ?? [],
@@ -258,6 +271,7 @@ export async function updateEmployee(
     employmentType: EmploymentType | null;
     status: EmployeeStatus;
     terminationDate: string | null;
+    terminationCategory: TerminationCategory | null;
     terminationReason: string | null;
     notes: string | null;
     onboarding: EmployeeOnboardingTask[];

@@ -115,19 +115,19 @@ export default function AuditLogPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("auditLog.title")}</h1>
-        <p className="text-sm text-muted">{t("auditLog.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("auditLog.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("auditLog.subtitle")}</p>
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold">{t("auditLog.filtersTitle")}</h2>
@@ -136,7 +136,7 @@ export default function AuditLogPage() {
           <div className="flex gap-2">
             <button
               type="button"
-              className="cursor-pointer rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground"
+              className="cursor-pointer rounded-2xl border border-border px-4 py-2 text-xs font-semibold text-foreground"
               onClick={downloadCsv}
               disabled={events.length === 0}
             >
@@ -149,7 +149,7 @@ export default function AuditLogPage() {
             <span className="mb-1 block text-xs text-muted">{t("auditLog.startDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={startDate}
               onChange={(event) => setStartDate(event.target.value)}
             />
@@ -158,7 +158,7 @@ export default function AuditLogPage() {
             <span className="mb-1 block text-xs text-muted">{t("auditLog.endDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={endDate}
               onChange={(event) => setEndDate(event.target.value)}
             />
@@ -166,7 +166,7 @@ export default function AuditLogPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("auditLog.user")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={userId}
               onChange={(event) => setUserId(event.target.value)}
             >
@@ -181,7 +181,7 @@ export default function AuditLogPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("auditLog.action")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={action}
               onChange={(event) => setAction(event.target.value)}
               placeholder={t("auditLog.actionPlaceholder")}
@@ -190,7 +190,7 @@ export default function AuditLogPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("auditLog.entity")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={entity}
               onChange={(event) => setEntity(event.target.value)}
               placeholder={t("auditLog.entityPlaceholder")}
@@ -199,7 +199,7 @@ export default function AuditLogPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("auditLog.search")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("auditLog.searchPlaceholder")}
@@ -209,7 +209,7 @@ export default function AuditLogPage() {
         <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
-            className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast"
+            className="cursor-pointer rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast"
             onClick={loadEvents}
             disabled={loading}
           >
@@ -217,7 +217,7 @@ export default function AuditLogPage() {
           </button>
           <button
             type="button"
-            className="cursor-pointer rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground"
+            className="cursor-pointer rounded-2xl border border-border px-4 py-2 text-xs font-semibold text-foreground"
             onClick={() => {
               setStartDate("");
               setEndDate("");
@@ -233,7 +233,7 @@ export default function AuditLogPage() {
         </div>
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="border-b border-border px-4 py-2 text-sm font-semibold">
           {t("auditLog.tableTitle")}
         </div>
@@ -248,8 +248,8 @@ export default function AuditLogPage() {
           <div className="p-4 text-sm text-muted">{t("auditLog.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("auditLog.column.date")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("auditLog.column.user")}</th>

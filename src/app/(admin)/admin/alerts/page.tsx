@@ -56,15 +56,15 @@ export default function AdminAlertsPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">{t("admin.alerts.title")}</h1>
-          <p className="text-sm text-muted">{t("admin.alerts.subtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("admin.alerts.title")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("admin.alerts.subtitle")}</p>
         </div>
         <a
           href={`/api/admin/alerts/export?status=${statusFilter}&severity=${severityFilter}`}
-          className="rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+          className="rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
         >
           {t("admin.alerts.exportCsv")}
         </a>
@@ -72,14 +72,14 @@ export default function AdminAlertsPage() {
 
       {error ? <p className="text-sm text-red-500">{error}</p> : null}
 
-      <div className={`app-card p-4 ${alignClass}`}>
+      <div className={`app-card p-6 ${alignClass}`}>
         <div className="grid gap-3 md:grid-cols-2">
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">{t("admin.alerts.status")}</span>
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
             >
               <option value="all">{t("common.all")}</option>
               <option value="open">{t("admin.alerts.status.open")}</option>
@@ -92,7 +92,7 @@ export default function AdminAlertsPage() {
             <select
               value={severityFilter}
               onChange={(event) => setSeverityFilter(event.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
             >
               <option value="all">{t("common.all")}</option>
               <option value="low">{t("admin.alerts.severity.low")}</option>
@@ -104,12 +104,12 @@ export default function AdminAlertsPage() {
         </div>
       </div>
 
-      <div className="app-card">
+      <div className="app-card card-modern">
         <div className="border-b border-border px-4 py-3 text-sm font-semibold">
           {t("admin.alerts.listTitle")}
         </div>
         {sortedAlerts.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-muted">{t("admin.alerts.empty")}</p>
+          <p className="px-4 py-4 text-sm text-muted page-subtitle">{t("admin.alerts.empty")}</p>
         ) : (
           <div className="divide-y divide-border">
             {sortedAlerts.map((alert) => (

@@ -104,26 +104,26 @@ export default function VendorCreditNotesPage() {
   }, [loadCreditNotes]);
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">{t("vendorCreditNote.title")}</h1>
-          <p className="text-sm text-muted">{t("vendorCreditNote.subtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("vendorCreditNote.title")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("vendorCreditNote.subtitle")}</p>
         </div>
         <Link
           href="/purchases/vendor-credit-notes/new"
-          className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+          className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
         >
           {t("vendorCreditNote.create")}
         </Link>
       </div>
 
-      <div className="app-card p-4">
+      <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.search")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("vendorCreditNote.searchPlaceholder")}
@@ -132,7 +132,7 @@ export default function VendorCreditNotesPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("vendorCreditNote.statusFilter")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
             >
@@ -147,7 +147,7 @@ export default function VendorCreditNotesPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("vendorCreditNote.vendorFilter")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={vendorFilter}
               onChange={(event) => setVendorFilter(event.target.value)}
               disabled={loadingVendors}
@@ -163,7 +163,7 @@ export default function VendorCreditNotesPage() {
         </div>
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="flex items-center justify-between border-b border-border px-4 py-2 text-sm font-semibold">
           <span>{t("vendorCreditNote.listTitle")}</span>
           <span className="text-xs text-muted">
@@ -181,8 +181,8 @@ export default function VendorCreditNotesPage() {
           <div className="p-4 text-sm text-muted">{t("vendorCreditNote.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("vendorCreditNote.number")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("vendorCreditNote.bill")}</th>

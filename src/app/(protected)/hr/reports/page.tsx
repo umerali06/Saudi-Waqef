@@ -259,12 +259,12 @@ export default function HrReportsPage() {
 
   if (!report && loading) {
     return (
-      <section className="space-y-6">
+      <section className="space-y-6 page-shell">
         <div>
           <SkeletonBlock className="h-6 w-48" />
           <SkeletonBlock className="mt-2 h-4 w-72" />
         </div>
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           <SkeletonBlock className="h-4 w-40" />
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             {Array.from({ length: 3 }).map((_, idx) => (
@@ -274,13 +274,13 @@ export default function HrReportsPage() {
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           {Array.from({ length: 6 }).map((_, idx) => (
-            <div key={idx} className="app-card p-4">
+            <div key={idx} className="app-card p-6 card-modern">
               <SkeletonBlock className="h-3 w-24" />
               <SkeletonBlock className="mt-3 h-6 w-20" />
             </div>
           ))}
         </div>
-        <div className="app-card p-5 space-y-3">
+        <div className="app-card p-6 space-y-3 card-modern">
           <SkeletonBlock className="h-4 w-48" />
           {Array.from({ length: 6 }).map((_, idx) => (
             <SkeletonBlock key={idx} className="h-10 w-full" />
@@ -291,19 +291,19 @@ export default function HrReportsPage() {
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("hr.reports.title")}</h1>
-        <p className="text-sm text-muted">{t("hr.reports.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("hr.reports.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("hr.reports.subtitle")}</p>
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold">{t("hr.reports.filtersTitle")}</h2>
@@ -312,7 +312,7 @@ export default function HrReportsPage() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              className="cursor-pointer rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground"
+              className="cursor-pointer rounded-2xl border border-border px-4 py-2 text-xs font-semibold text-foreground"
               onClick={downloadPdfSummary}
             >
               {t("hr.reports.exportPdf")}
@@ -324,7 +324,7 @@ export default function HrReportsPage() {
             <span className="mb-1 block text-xs text-muted">{t("hr.reports.startDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={startDate}
               onChange={(event) => setStartDate(event.target.value)}
             />
@@ -333,7 +333,7 @@ export default function HrReportsPage() {
             <span className="mb-1 block text-xs text-muted">{t("hr.reports.endDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={endDate}
               onChange={(event) => setEndDate(event.target.value)}
             />
@@ -341,7 +341,7 @@ export default function HrReportsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("hr.reports.department")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={departmentId}
               onChange={(event) => setDepartmentId(event.target.value)}
             >
@@ -357,7 +357,7 @@ export default function HrReportsPage() {
         <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
-            className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast"
+            className="cursor-pointer rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast"
             onClick={loadReport}
             disabled={loading}
           >
@@ -365,7 +365,7 @@ export default function HrReportsPage() {
           </button>
           <button
             type="button"
-            className="cursor-pointer rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground"
+            className="cursor-pointer rounded-2xl border border-border px-4 py-2 text-xs font-semibold text-foreground"
             onClick={() => {
               const range = getDefaultRange();
               setStartDate(range.startDate);
@@ -382,35 +382,35 @@ export default function HrReportsPage() {
       {report ? (
         <>
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="app-card p-4">
+            <div className="app-card p-6 card-modern">
               <p className="text-xs text-muted">{t("hr.reports.kpi.headcount")}</p>
               <p className="text-2xl font-semibold">{report.kpis.headcount}</p>
             </div>
-            <div className="app-card p-4">
+            <div className="app-card p-6 card-modern">
               <p className="text-xs text-muted">{t("hr.reports.kpi.active")}</p>
               <p className="text-2xl font-semibold">{report.kpis.activeEmployees}</p>
             </div>
-            <div className="app-card p-4">
+            <div className="app-card p-6 card-modern">
               <p className="text-xs text-muted">{t("hr.reports.kpi.absenteeism")}</p>
               <p className="text-2xl font-semibold">
                 {(report.kpis.absenteeismRate * 100).toFixed(1)}%
               </p>
             </div>
-            <div className="app-card p-4">
+            <div className="app-card p-6 card-modern">
               <p className="text-xs text-muted">{t("hr.reports.kpi.overtime")}</p>
               <p className="text-2xl font-semibold">{report.kpis.overtimeHours.toFixed(2)}</p>
             </div>
-            <div className="app-card p-4">
+            <div className="app-card p-6 card-modern">
               <p className="text-xs text-muted">{t("hr.reports.kpi.leaveDays")}</p>
               <p className="text-2xl font-semibold">{report.kpis.leaveDays.toFixed(1)}</p>
             </div>
-            <div className="app-card p-4">
+            <div className="app-card p-6 card-modern">
               <p className="text-xs text-muted">{t("hr.reports.kpi.payrollCost")}</p>
               <p className="text-2xl font-semibold">{report.kpis.payrollCost.toFixed(2)}</p>
             </div>
           </div>
 
-          <div className="app-card p-5">
+          <div className="app-card p-6 card-modern">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{t("hr.reports.employees.title")}</h2>
               <button
@@ -435,7 +435,7 @@ export default function HrReportsPage() {
                 <h3 className="text-sm font-semibold text-muted">
                   {t("hr.reports.employees.byDepartment")}
                 </h3>
-                <table className="mt-2 min-w-full text-sm">
+                <table className="mt-2 min-w-full text-sm table-modern">
                   <thead className="text-xs text-muted">
                     <tr>
                       <th className={`px-2 py-1 ${alignClass}`}>
@@ -460,7 +460,7 @@ export default function HrReportsPage() {
                 <h3 className="text-sm font-semibold text-muted">
                   {t("hr.reports.employees.byPosition")}
                 </h3>
-                <table className="mt-2 min-w-full text-sm">
+                <table className="mt-2 min-w-full text-sm table-modern">
                   <thead className="text-xs text-muted">
                     <tr>
                       <th className={`px-2 py-1 ${alignClass}`}>
@@ -485,7 +485,7 @@ export default function HrReportsPage() {
                 <h3 className="text-sm font-semibold text-muted">
                   {t("hr.reports.employees.byStatus")}
                 </h3>
-                <table className="mt-2 min-w-full text-sm">
+                <table className="mt-2 min-w-full text-sm table-modern">
                   <thead className="text-xs text-muted">
                     <tr>
                       <th className={`px-2 py-1 ${alignClass}`}>
@@ -512,7 +512,7 @@ export default function HrReportsPage() {
                 <h3 className="text-sm font-semibold text-muted">
                   {t("hr.reports.employees.hires")}
                 </h3>
-                <table className="mt-2 min-w-full text-sm">
+                <table className="mt-2 min-w-full text-sm table-modern">
                   <thead className="text-xs text-muted">
                     <tr>
                       <th className={`px-2 py-1 ${alignClass}`}>
@@ -552,7 +552,7 @@ export default function HrReportsPage() {
                 <h3 className="text-sm font-semibold text-muted">
                   {t("hr.reports.employees.terminations")}
                 </h3>
-                <table className="mt-2 min-w-full text-sm">
+                <table className="mt-2 min-w-full text-sm table-modern">
                   <thead className="text-xs text-muted">
                     <tr>
                       <th className={`px-2 py-1 ${alignClass}`}>
@@ -590,7 +590,7 @@ export default function HrReportsPage() {
               </div>
             </div>
           </div>
-          <div className="app-card p-5">
+          <div className="app-card p-6 card-modern">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{t("hr.reports.attendance.title")}</h2>
               <button
@@ -628,7 +628,7 @@ export default function HrReportsPage() {
                 <h3 className="text-sm font-semibold text-muted">
                   {t("hr.reports.attendance.byEmployee")}
                 </h3>
-                <table className="mt-2 min-w-full text-sm">
+                <table className="mt-2 min-w-full text-sm table-modern">
                   <thead className="text-xs text-muted">
                     <tr>
                       <th className={`px-2 py-1 ${alignClass}`}>
@@ -663,7 +663,7 @@ export default function HrReportsPage() {
                 <h3 className="text-sm font-semibold text-muted">
                   {t("hr.reports.attendance.byDepartment")}
                 </h3>
-                <table className="mt-2 min-w-full text-sm">
+                <table className="mt-2 min-w-full text-sm table-modern">
                   <thead className="text-xs text-muted">
                     <tr>
                       <th className={`px-2 py-1 ${alignClass}`}>
@@ -695,7 +695,7 @@ export default function HrReportsPage() {
             </div>
           </div>
 
-          <div className="app-card p-5">
+          <div className="app-card p-6 card-modern">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{t("hr.reports.leave.title")}</h2>
               <button
@@ -731,7 +731,7 @@ export default function HrReportsPage() {
                 {t("hr.reports.leave.balances")}
               </h3>
               <div className="mt-2 overflow-x-auto">
-                <table className="min-w-full text-sm">
+                <table className="min-w-full text-sm table-modern">
                   <thead className="text-xs text-muted">
                     <tr>
                       <th className={`px-2 py-1 ${alignClass}`}>
@@ -772,7 +772,7 @@ export default function HrReportsPage() {
                 {t("hr.reports.leave.pendingRequests")}
               </h3>
               <div className="mt-2 overflow-x-auto">
-                <table className="min-w-full text-sm">
+                <table className="min-w-full text-sm table-modern">
                   <thead className="text-xs text-muted">
                     <tr>
                       <th className={`px-2 py-1 ${alignClass}`}>
@@ -806,7 +806,7 @@ export default function HrReportsPage() {
             </div>
           </div>
 
-          <div className="app-card p-5">
+          <div className="app-card p-6 card-modern">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{t("hr.reports.payroll.title")}</h2>
               <button
@@ -837,7 +837,7 @@ export default function HrReportsPage() {
             </div>
 
             <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-border bg-surface px-4 py-3">
+              <div className="rounded-2xl border border-border bg-surface px-4 py-3">
                 <p className="text-xs text-muted">{t("hr.reports.payroll.currentRun")}</p>
                 {report.payroll.currentRun ? (
                   <>
@@ -864,7 +864,7 @@ export default function HrReportsPage() {
                   <p className="text-xs text-muted">{t("hr.reports.payroll.noRun")}</p>
                 )}
               </div>
-              <div className="rounded-xl border border-border bg-surface px-4 py-3">
+              <div className="rounded-2xl border border-border bg-surface px-4 py-3">
                 <p className="text-xs text-muted">{t("hr.reports.payroll.varianceTitle")}</p>
                 {report.payroll.variance ? (
                   <div className="mt-2 text-xs text-muted">
@@ -889,7 +889,7 @@ export default function HrReportsPage() {
                 {t("hr.reports.payroll.byDepartment")}
               </h3>
               <div className="mt-2 overflow-x-auto">
-                <table className="min-w-full text-sm">
+                <table className="min-w-full text-sm table-modern">
                   <thead className="text-xs text-muted">
                     <tr>
                       <th className={`px-2 py-1 ${alignClass}`}>
@@ -925,7 +925,7 @@ export default function HrReportsPage() {
                 {t("hr.reports.payroll.distribution")}
               </h3>
               <div className="mt-2 overflow-x-auto">
-                <table className="min-w-full text-sm">
+                <table className="min-w-full text-sm table-modern">
                   <thead className="text-xs text-muted">
                     <tr>
                       <th className={`px-2 py-1 ${alignClass}`}>

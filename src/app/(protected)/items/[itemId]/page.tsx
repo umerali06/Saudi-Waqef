@@ -525,13 +525,13 @@ export default function ItemDetailPage() {
 
   if (loadingItem && !item && !errorKey) {
     return (
-      <section className="space-y-6">
+      <section className="space-y-6 page-shell">
         <div className="space-y-3">
           <SkeletonBlock className="h-4 w-40" />
           <SkeletonBlock className="h-8 w-56" />
           <SkeletonBlock className="h-4 w-32" />
         </div>
-        <div className="app-card space-y-4 p-5">
+        <div className="app-card space-y-4 p-5 card-modern">
           <SkeletonBlock className="h-5 w-40" />
           <div className="grid gap-4 md:grid-cols-3">
             {Array.from({ length: 6 }).map((_, idx) => (
@@ -559,20 +559,20 @@ export default function ItemDetailPage() {
           </div>
         </div>
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="app-card space-y-3 p-5">
+          <div className="app-card space-y-3 p-5 card-modern">
             <SkeletonBlock className="h-5 w-40" />
             {Array.from({ length: 4 }).map((_, idx) => (
               <SkeletonBlock key={idx} className="h-4 w-full" />
             ))}
           </div>
-          <div className="app-card space-y-3 p-5 lg:col-span-2">
+          <div className="app-card space-y-3 p-5 lg:col-span-2 card-modern">
             <SkeletonBlock className="h-5 w-40" />
             {Array.from({ length: 4 }).map((_, idx) => (
               <SkeletonBlock key={idx} className="h-10 w-full" />
             ))}
           </div>
         </div>
-        <div className="app-card space-y-3 p-5">
+        <div className="app-card space-y-3 p-5 card-modern">
           <SkeletonBlock className="h-5 w-40" />
           {Array.from({ length: 4 }).map((_, idx) => (
             <SkeletonBlock key={idx} className="h-10 w-full" />
@@ -583,12 +583,12 @@ export default function ItemDetailPage() {
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs text-muted">{t("items.detailsTitle")}</p>
-          <h1 className="text-2xl font-semibold">{item?.name ?? "-"}</h1>
-          {item?.sku ? <p className="text-sm text-muted">{item.sku}</p> : null}
+          <h1 className="text-2xl font-semibold page-title">{item?.name ?? "-"}</h1>
+          {item?.sku ? <p className="text-sm text-muted page-subtitle">{item.sku}</p> : null}
         </div>
         <Link
           href="/items"
@@ -598,14 +598,14 @@ export default function ItemDetailPage() {
         </Link>
       </div>
 
-      <form onSubmit={handleUpdate} className="app-card p-5">
+      <form onSubmit={handleUpdate} className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("items.detailsSection")}</h2>
         {form ? (
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("items.type")}</span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.type}
                 onChange={(event) =>
                   setForm((prev) =>
@@ -622,7 +622,7 @@ export default function ItemDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("items.name")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.name}
                 onChange={(event) =>
                   setForm((prev) => (prev ? { ...prev, name: event.target.value } : prev))
@@ -633,7 +633,7 @@ export default function ItemDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("items.sku")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.sku}
                 onChange={(event) =>
                   setForm((prev) => (prev ? { ...prev, sku: event.target.value } : prev))
@@ -652,7 +652,7 @@ export default function ItemDetailPage() {
                 </button>
               </div>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.barcode}
                 onChange={(event) =>
                   setForm((prev) =>
@@ -664,7 +664,7 @@ export default function ItemDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("items.category")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.category}
                 onChange={(event) =>
                   setForm((prev) =>
@@ -676,7 +676,7 @@ export default function ItemDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("items.brand")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.brand}
                 onChange={(event) =>
                   setForm((prev) => (prev ? { ...prev, brand: event.target.value } : prev))
@@ -685,7 +685,7 @@ export default function ItemDetailPage() {
             </label>
           </div>
         ) : (
-          <p className="mt-4 text-sm text-muted">{t("common.loading")}</p>
+          <p className="mt-4 text-sm text-muted page-subtitle">{t("common.loading")}</p>
         )}
 
         {form ? (
@@ -693,7 +693,7 @@ export default function ItemDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("items.baseUnit")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.baseUnit}
                 onChange={(event) =>
                   setForm((prev) =>
@@ -706,7 +706,7 @@ export default function ItemDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("items.packUnit")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.packUnit}
                 onChange={(event) =>
                   setForm((prev) =>
@@ -722,7 +722,7 @@ export default function ItemDetailPage() {
                 type="number"
                 min="1"
                 step="1"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.packSize}
                 onChange={(event) =>
                   setForm((prev) =>
@@ -736,7 +736,7 @@ export default function ItemDetailPage() {
         ) : null}
 
         {form ? (
-          <div className="mt-2 rounded-xl bg-surface-muted px-3 py-2 text-xs text-muted">
+          <div className="mt-2 rounded-2xl bg-surface-muted px-3 py-2 text-xs text-muted">
             <span className="font-semibold text-foreground">
               {t("items.unitConversion")}:
             </span>{" "}
@@ -758,7 +758,7 @@ export default function ItemDetailPage() {
                 type="number"
                 min="0"
                 step="0.01"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.salePrice}
                 onChange={(event) =>
                   setForm((prev) =>
@@ -773,7 +773,7 @@ export default function ItemDetailPage() {
                 type="number"
                 min="0"
                 step="0.01"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.purchasePrice}
                 onChange={(event) =>
                   setForm((prev) =>
@@ -785,7 +785,7 @@ export default function ItemDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("items.taxCategory")}</span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={form.taxCategoryId}
               onChange={(event) =>
                 setForm((prev) =>
@@ -810,7 +810,7 @@ export default function ItemDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("items.incomeAccount")}</span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={form.incomeAccountId}
               onChange={(event) =>
                 setForm((prev) =>
@@ -830,7 +830,7 @@ export default function ItemDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("items.expenseAccount")}</span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={form.expenseAccountId}
               onChange={(event) =>
                 setForm((prev) =>
@@ -850,7 +850,7 @@ export default function ItemDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("common.status")}</span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.status}
                 onChange={(event) =>
                   setForm((prev) =>
@@ -891,7 +891,7 @@ export default function ItemDetailPage() {
                 type="number"
                 min="0"
                 step="1"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.minStock}
                 onChange={(event) =>
                   setForm((prev) =>
@@ -909,7 +909,7 @@ export default function ItemDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("items.descriptionAr")}</span>
               <textarea
-                className="min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.descriptionAr}
                 onChange={(event) =>
                   setForm((prev) =>
@@ -921,7 +921,7 @@ export default function ItemDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("items.descriptionEn")}</span>
               <textarea
-                className="min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.descriptionEn}
                 onChange={(event) =>
                   setForm((prev) =>
@@ -938,7 +938,7 @@ export default function ItemDetailPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("common.tags")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={form.tags}
                 onChange={(event) =>
                   setForm((prev) => (prev ? { ...prev, tags: event.target.value } : prev))
@@ -949,13 +949,13 @@ export default function ItemDetailPage() {
           </div>
         ) : null}
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
         <button
           type="submit"
-          className="mt-4 w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+          className="mt-4 w-fit rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           disabled={isPending}
         >
           {t("common.save")}
@@ -964,7 +964,7 @@ export default function ItemDetailPage() {
 
       {item?.trackInventory ? (
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="app-card p-5">
+          <div className="app-card p-6 card-modern">
             <h2 className="text-lg font-semibold">{t("items.inventorySummary")}</h2>
             <div className="mt-4 grid gap-2 text-sm">
               <div className="flex items-center justify-between">
@@ -991,7 +991,7 @@ export default function ItemDetailPage() {
               </div>
             </div>
           </div>
-          <div className="app-card p-5 lg:col-span-2">
+          <div className="app-card p-6 lg:col-span-2 card-modern">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">{t("items.adjustmentsTitle")}</h2>
               <span className="text-xs text-muted">
@@ -1004,7 +1004,7 @@ export default function ItemDetailPage() {
                 <input
                   type="number"
                   step="0.01"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={adjustmentQty}
                   onChange={(event) => setAdjustmentQty(event.target.value)}
                   required
@@ -1013,7 +1013,7 @@ export default function ItemDetailPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("items.adjustmentUnit")}</span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={adjustmentUnit}
                   onChange={(event) => setAdjustmentUnit(event.target.value)}
                 >
@@ -1027,7 +1027,7 @@ export default function ItemDetailPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("items.adjustmentReason")}</span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={adjustmentReason}
                   onChange={(event) =>
                     setAdjustmentReason(
@@ -1044,14 +1044,14 @@ export default function ItemDetailPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("items.adjustmentNote")}</span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={adjustmentNote}
                   onChange={(event) => setAdjustmentNote(event.target.value)}
                 />
               </label>
               <button
                 type="submit"
-                className="w-fit rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+                className="w-fit rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
                 disabled={isPending}
               >
                 {t("items.adjustmentAdd")}
@@ -1067,7 +1067,7 @@ export default function ItemDetailPage() {
               </div>
             ) : adjustments.length ? (
               <div className="mt-4 overflow-x-auto">
-                <table className="min-w-full text-sm">
+                <table className="min-w-full text-sm table-modern">
                   <thead className="text-xs text-muted">
                     <tr>
                       <th className={`px-2 py-2 ${alignClass}`}>{t("common.date")}</th>
@@ -1093,7 +1093,7 @@ export default function ItemDetailPage() {
                 </table>
               </div>
             ) : (
-              <p className="mt-4 text-sm text-muted">{t("items.adjustmentsEmpty")}</p>
+              <p className="mt-4 text-sm text-muted page-subtitle">{t("items.adjustmentsEmpty")}</p>
             )}
           </div>
         </div>
@@ -1103,7 +1103,7 @@ export default function ItemDetailPage() {
         </div>
       )}
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t("items.attachmentsTitle")}</h2>
           <span className="text-xs text-muted">
@@ -1121,7 +1121,7 @@ export default function ItemDetailPage() {
           <button
             type="button"
             onClick={handleUploadAttachment}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-xs font-semibold"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-xs font-semibold"
             disabled={isPending || isUploading || !attachmentFile}
           >
             {isUploading ? t("items.uploading") : t("items.uploadAttachment")}
@@ -1138,7 +1138,7 @@ export default function ItemDetailPage() {
           </div>
         ) : attachments.length ? (
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-sm">
+            <table className="min-w-full text-sm table-modern">
               <thead className="text-xs text-muted">
                 <tr>
                   <th className={`px-2 py-2 ${alignClass}`}>{t("items.attachmentName")}</th>
@@ -1196,7 +1196,7 @@ export default function ItemDetailPage() {
             </table>
           </div>
         ) : (
-          <p className="mt-4 text-sm text-muted">{t("items.attachmentsEmpty")}</p>
+          <p className="mt-4 text-sm text-muted page-subtitle">{t("items.attachmentsEmpty")}</p>
         )}
       </div>
     </section>

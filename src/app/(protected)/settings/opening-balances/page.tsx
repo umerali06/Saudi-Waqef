@@ -144,13 +144,13 @@ export default function OpeningBalancesPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("opening.title")}</h1>
-        <p className="text-sm text-muted">{t("opening.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("opening.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("opening.subtitle")}</p>
       </div>
 
-      <div className="app-card p-4">
+      <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-2">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
@@ -161,7 +161,7 @@ export default function OpeningBalancesPage() {
             ) : (
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                 value={asOfDate}
                 onChange={(event) => setAsOfDate(event.target.value)}
                 required
@@ -179,13 +179,13 @@ export default function OpeningBalancesPage() {
         </div>
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="border-b border-border px-4 py-2 text-sm font-semibold">
           {t("opening.title")}
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-surface-muted text-muted">
+          <table className="min-w-full text-sm table-modern">
+            <thead className="bg-surface-muted text-muted thead-modern">
               <tr>
                 <th className={`px-4 py-2 ${alignClass}`}>{t("coa.code")}</th>
                 <th className={`px-4 py-2 ${alignClass}`}>{t("coa.name")}</th>
@@ -224,7 +224,7 @@ export default function OpeningBalancesPage() {
                     <td className="px-4 py-2">
                       <input
                         type="number"
-                        className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                        className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                         value={row.debit}
                         onChange={(event) =>
                           setBalances((prev) => ({
@@ -241,7 +241,7 @@ export default function OpeningBalancesPage() {
                     <td className="px-4 py-2">
                       <input
                         type="number"
-                        className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                        className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                         value={row.credit}
                         onChange={(event) =>
                           setBalances((prev) => ({
@@ -287,18 +287,18 @@ export default function OpeningBalancesPage() {
       </div>
 
       {difference !== 0 ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
           {t("opening.mustBalance")}
         </div>
       ) : null}
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
       <button
         type="button"
-        className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:opacity-50"
+        className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:opacity-50"
         onClick={handleSave}
         disabled={isPending || difference !== 0 || isLoading}
       >

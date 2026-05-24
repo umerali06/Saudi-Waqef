@@ -23,7 +23,7 @@ const connectors: IntegrationConnector[] = [
     key: "custom",
     nameKey: "integrations.connector.custom",
     descriptionKey: "integrations.connector.customDesc",
-    supports: { test: false, sync: false },
+    supports: { test: true, sync: true },
   },
 ];
 

@@ -80,6 +80,7 @@ export type PayrollComputationResult = {
   prorationFactor: number;
   activeDays: number;
   currency: string;
+  dailyRate: number;
 };
 
 export const computePayrollForEmployee = (params: {
@@ -158,7 +159,13 @@ export const computePayrollForEmployee = (params: {
     (params.payrollSettings.overtimeMultiplier ?? 1);
   const latenessDeduction =
     lateMinutes * (params.payrollSettings.latenessPenaltyPerMinute ?? 0);
-  const dailyRate = activeDays > 0 ? (baseSalary + allowances) / activeDays : 0;
+  const actualWage = baseSalary + allowances;
+  const dailyRate =
+    params.payrollSettings.absenceDailyRateMode === "active_days"
+      ? activeDays > 0
+        ? actualWage / activeDays
+        : 0
+      : actualWage / 30;
   const unpaidLeaveDeduction = unpaidLeaveDays * dailyRate;
   const absenceDeduction = absentDays * dailyRate;
 
@@ -180,7 +187,7 @@ export const computePayrollForEmployee = (params: {
     unpaidLeaveDeduction +
     absenceDeduction +
     statutoryDeduction;
-  const netPay = grossPay - totalDeductions;
+  const netPay = Math.max(grossPay - totalDeductions, 0);
 
   return {
     baseSalary,
@@ -205,5 +212,6 @@ export const computePayrollForEmployee = (params: {
     prorationFactor,
     activeDays,
     currency: params.contract.salary.currency ?? "SAR",
+    dailyRate,
   };
 };

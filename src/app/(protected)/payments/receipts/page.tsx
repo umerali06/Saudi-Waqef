@@ -119,34 +119,34 @@ export default function ReceiptsPage() {
   );
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">{t("receipt.title")}</h1>
-          <p className="text-sm text-muted">{t("receipt.subtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("receipt.title")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("receipt.subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <a
             href={`/api/payments/receipts/export?companyId=${activeCompanyId ?? ""}`}
-            className="rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+            className="rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
           >
             {t("receipt.exportCsv")}
           </a>
           <Link
             href="/payments/receipts/new"
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           >
             {t("receipt.create")}
           </Link>
         </div>
       </div>
 
-      <div className="app-card p-4">
+      <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-5">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.search")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("receipt.searchPlaceholder")}
@@ -155,7 +155,7 @@ export default function ReceiptsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("receipt.statusFilter")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
             >
@@ -170,7 +170,7 @@ export default function ReceiptsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("receipt.customerFilter")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={customerFilter}
               onChange={(event) => setCustomerFilter(event.target.value)}
               disabled={loadingCustomers}
@@ -187,7 +187,7 @@ export default function ReceiptsPage() {
             <span className="mb-1 block text-xs text-muted">{t("receipt.fromDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={fromDate}
               onChange={(event) => setFromDate(event.target.value)}
             />
@@ -196,7 +196,7 @@ export default function ReceiptsPage() {
             <span className="mb-1 block text-xs text-muted">{t("receipt.toDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={toDate}
               onChange={(event) => setToDate(event.target.value)}
             />
@@ -204,7 +204,7 @@ export default function ReceiptsPage() {
         </div>
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="flex items-center justify-between border-b border-border px-4 py-2 text-sm font-semibold">
           <span>{t("receipt.listTitle")}</span>
           <span className="text-xs text-muted">
@@ -222,8 +222,8 @@ export default function ReceiptsPage() {
           <div className="p-4 text-sm text-muted">{t("receipt.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("receipt.number")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("receipt.date")}</th>

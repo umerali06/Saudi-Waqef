@@ -301,13 +301,13 @@ export default function JournalEntriesPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("journal.title")}</h1>
-        <p className="text-sm text-muted">{t("journal.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("journal.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("journal.subtitle")}</p>
       </div>
 
-      <div className="app-card p-4">
+      <div className="app-card p-6 card-modern">
         {isEntriesLoading && entries.length === 0 ? (
           <div className="grid gap-4 md:grid-cols-4">
             <div>
@@ -333,7 +333,7 @@ export default function JournalEntriesPage() {
                 {t("journal.filters.status")}
               </span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value)}
               >
@@ -349,7 +349,7 @@ export default function JournalEntriesPage() {
               </span>
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={startDate}
                 onChange={(event) => setStartDate(event.target.value)}
               />
@@ -360,7 +360,7 @@ export default function JournalEntriesPage() {
               </span>
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={endDate}
                 onChange={(event) => setEndDate(event.target.value)}
               />
@@ -368,7 +368,7 @@ export default function JournalEntriesPage() {
             <div className="flex items-end">
               <button
                 type="button"
-                className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+                className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
                 onClick={loadEntries}
               >
                 {t("common.apply")}
@@ -378,7 +378,7 @@ export default function JournalEntriesPage() {
         )}
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         {isAccountsLoading ? (
           <div className="space-y-4">
             <div className="flex justify-between">
@@ -415,7 +415,7 @@ export default function JournalEntriesPage() {
                 <span className="mb-1 block text-xs text-muted">{t("journal.date")}</span>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={entryDate}
                   onChange={(event) => setEntryDate(event.target.value)}
                 />
@@ -423,7 +423,7 @@ export default function JournalEntriesPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("journal.memo")}</span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={memo}
                   onChange={(event) => setMemo(event.target.value)}
                   placeholder={t("journal.memoPlaceholder")}
@@ -432,8 +432,8 @@ export default function JournalEntriesPage() {
             </div>
 
             <div className="mt-4 overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-surface-muted text-muted">
+              <table className="min-w-full text-sm table-modern">
+                <thead className="bg-surface-muted text-muted thead-modern">
                   <tr>
                     <th className={`px-4 py-2 ${alignClass}`}>{t("journal.account")}</th>
                     <th className={`px-4 py-2 ${alignClass}`}>{t("journal.debit")}</th>
@@ -446,7 +446,7 @@ export default function JournalEntriesPage() {
                     <tr key={`${index}-${line.accountId}`}>
                       <td className="px-4 py-2">
                         <select
-                          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                          className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                           value={line.accountId}
                           onChange={(event) => updateLine(index, "accountId", event.target.value)}
                         >
@@ -463,7 +463,7 @@ export default function JournalEntriesPage() {
                           type="number"
                           min="0"
                           step="0.01"
-                          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                          className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                           value={line.debit}
                           onChange={(event) => updateLine(index, "debit", event.target.value)}
                         />
@@ -473,7 +473,7 @@ export default function JournalEntriesPage() {
                           type="number"
                           min="0"
                           step="0.01"
-                          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                          className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                           value={line.credit}
                           onChange={(event) => updateLine(index, "credit", event.target.value)}
                         />
@@ -496,7 +496,7 @@ export default function JournalEntriesPage() {
             <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
               <button
                 type="button"
-                className="rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+                className="rounded-2xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
                 onClick={addLine}
               >
                 {t("journal.addLine")}
@@ -512,14 +512,14 @@ export default function JournalEntriesPage() {
               </div>
             </div>
             {errorKey ? (
-              <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+              <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
                 {t(errorKey)}
               </div>
             ) : null}
             <div className="mt-4 flex flex-wrap gap-3">
               <button
                 type="button"
-                className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+                className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
                 onClick={() => handleSubmit("draft")}
                 disabled={isPending || isAccountsLoading}
               >
@@ -527,7 +527,7 @@ export default function JournalEntriesPage() {
               </button>
               <button
                 type="button"
-                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+                className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
                 onClick={() => handleSubmit("posted")}
                 disabled={isPending || isAccountsLoading}
               >
@@ -536,7 +536,7 @@ export default function JournalEntriesPage() {
               {editingId ? (
                 <button
                   type="button"
-                  className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+                  className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
                   onClick={resetForm}
                   disabled={isPending}
                 >
@@ -548,7 +548,7 @@ export default function JournalEntriesPage() {
         )}
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="flex items-center justify-between border-b border-border px-4 py-2 text-sm font-semibold">
           <span>{t("journal.listTitle")}</span>
           <span className="text-xs text-muted">{entries.length}</span>
@@ -563,8 +563,8 @@ export default function JournalEntriesPage() {
           <div className="p-4 text-sm text-muted">{t("journal.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("journal.date")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("journal.memo")}</th>

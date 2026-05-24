@@ -466,18 +466,18 @@ export default function LeavePage() {
     });
   };
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("leave.title")}</h1>
-        <p className="text-sm text-muted">{t("leave.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("leave.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("leave.subtitle")}</p>
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">{t("leave.typesTitle")}</h2>
@@ -487,7 +487,7 @@ export default function LeavePage() {
             <button
               type="button"
               onClick={handleSaveType}
-              className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+              className="cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
               disabled={isPending}
             >
               {editTypeId ? t("leave.typeUpdate") : t("leave.typeCreate")}
@@ -500,7 +500,7 @@ export default function LeavePage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("leave.typeName")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={typeName}
                 onChange={(event) => setTypeName(event.target.value)}
               />
@@ -508,7 +508,7 @@ export default function LeavePage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("leave.typeCode")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={typeCode}
                 onChange={(event) => setTypeCode(event.target.value)}
               />
@@ -518,7 +518,7 @@ export default function LeavePage() {
               <input
                 type="number"
                 min="0"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={typeAllowance}
                 onChange={(event) => setTypeAllowance(event.target.value)}
               />
@@ -526,7 +526,7 @@ export default function LeavePage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("leave.typeStatus")}</span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={typeStatus}
                 onChange={(event) => setTypeStatus(event.target.value as "active" | "inactive")}
               >
@@ -562,11 +562,11 @@ export default function LeavePage() {
               ))}
             </div>
           ) : types.length === 0 ? (
-            <p className="text-sm text-muted">{t("leave.typesEmpty")}</p>
+            <p className="text-sm text-muted page-subtitle">{t("leave.typesEmpty")}</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-surface-muted text-muted">
+              <table className="min-w-full text-sm table-modern">
+                <thead className="bg-surface-muted text-muted thead-modern">
                   <tr>
                     <th className={`px-4 py-2 ${alignClass}`}>{t("leave.typeName")}</th>
                     <th className={`px-4 py-2 ${alignClass}`}>{t("leave.typeCode")}</th>
@@ -614,7 +614,7 @@ export default function LeavePage() {
           )}
         </div>
       </div>
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">{t("leave.requestsTitle")}</h2>
@@ -623,7 +623,7 @@ export default function LeavePage() {
           <div className="flex flex-wrap items-center gap-3">
             <a
               href={requestExportUrl || "#"}
-              className={`rounded-xl border border-border px-3 py-2 text-xs font-semibold ${
+              className={`rounded-2xl border border-border px-3 py-2 text-xs font-semibold ${
                 activeCompanyId ? "" : "pointer-events-none opacity-60"
               }`}
             >
@@ -632,7 +632,7 @@ export default function LeavePage() {
             <label className={`text-xs ${alignClass}`}>
               <span className="mb-1 block text-muted">{t("leave.requestStatus")}</span>
               <select
-                className="rounded-xl border border-border bg-surface px-3 py-2 text-xs"
+                className="rounded-2xl border border-border bg-surface px-3 py-2 text-xs"
                 value={requestStatusFilter}
                 onChange={(event) => setRequestStatusFilter(event.target.value)}
               >
@@ -651,7 +651,7 @@ export default function LeavePage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("leave.requestEmployee")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={requestEmployeeId}
               onChange={(event) => setRequestEmployeeId(event.target.value)}
               disabled={!isPrivileged || loadingEmployees}
@@ -666,7 +666,7 @@ export default function LeavePage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("leave.requestType")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={requestTypeId}
               onChange={(event) => setRequestTypeId(event.target.value)}
               disabled={loadingTypes}
@@ -682,7 +682,7 @@ export default function LeavePage() {
             <span className="mb-1 block text-xs text-muted">{t("leave.requestStartDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={requestStartDate}
               onChange={(event) => setRequestStartDate(event.target.value)}
             />
@@ -691,7 +691,7 @@ export default function LeavePage() {
             <span className="mb-1 block text-xs text-muted">{t("leave.requestEndDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={requestEndDate}
               onChange={(event) => setRequestEndDate(event.target.value)}
             />
@@ -699,7 +699,7 @@ export default function LeavePage() {
           <label className={`text-sm md:col-span-4 ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("leave.requestReason")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={requestReason}
               onChange={(event) => setRequestReason(event.target.value)}
             />
@@ -708,7 +708,7 @@ export default function LeavePage() {
         <button
           type="button"
           onClick={handleCreateRequest}
-          className="mt-4 cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+          className="mt-4 cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           disabled={isPending}
         >
           {t("leave.requestCreate")}
@@ -723,11 +723,11 @@ export default function LeavePage() {
               ))}
             </div>
           ) : requests.length === 0 ? (
-            <p className="text-sm text-muted">{t("leave.requestsEmpty")}</p>
+            <p className="text-sm text-muted page-subtitle">{t("leave.requestsEmpty")}</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-surface-muted text-muted">
+              <table className="min-w-full text-sm table-modern">
+                <thead className="bg-surface-muted text-muted thead-modern">
                   <tr>
                     <th className={`px-4 py-2 ${alignClass}`}>{t("leave.requestEmployee")}</th>
                     <th className={`px-4 py-2 ${alignClass}`}>{t("leave.requestType")}</th>
@@ -793,7 +793,7 @@ export default function LeavePage() {
         </div>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">{t("leave.balancesTitle")}</h2>
@@ -802,7 +802,7 @@ export default function LeavePage() {
           <div className="flex flex-wrap items-center gap-3">
             <a
               href={balanceExportUrl || "#"}
-              className={`rounded-xl border border-border px-3 py-2 text-xs font-semibold ${
+              className={`rounded-2xl border border-border px-3 py-2 text-xs font-semibold ${
                 activeCompanyId ? "" : "pointer-events-none opacity-60"
               }`}
             >
@@ -812,7 +812,7 @@ export default function LeavePage() {
               <span className="mb-1 block text-muted">{t("leave.balanceYear")}</span>
               <input
                 type="number"
-                className="rounded-xl border border-border bg-surface px-3 py-2 text-xs"
+                className="rounded-2xl border border-border bg-surface px-3 py-2 text-xs"
                 value={balanceYear}
                 onChange={(event) => setBalanceYear(event.target.value)}
               />
@@ -829,8 +829,8 @@ export default function LeavePage() {
           </div>
         ) : (
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("leave.requestEmployee")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("leave.requestType")}</th>
@@ -858,7 +858,7 @@ export default function LeavePage() {
       </div>
 
       {isPrivileged ? (
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           <div>
             <h2 className="text-lg font-semibold">{t("leave.adjustmentsTitle")}</h2>
             <p className="text-xs text-muted">{t("leave.adjustmentsSubtitle")}</p>
@@ -867,7 +867,7 @@ export default function LeavePage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("leave.requestEmployee")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={adjustEmployeeId}
               onChange={(event) => setAdjustEmployeeId(event.target.value)}
               disabled={loadingEmployees}
@@ -882,7 +882,7 @@ export default function LeavePage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("leave.requestType")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={adjustLeaveTypeId}
               onChange={(event) => setAdjustLeaveTypeId(event.target.value)}
               disabled={loadingTypes}
@@ -898,7 +898,7 @@ export default function LeavePage() {
               <span className="mb-1 block text-xs text-muted">{t("leave.adjustmentAmount")}</span>
               <input
                 type="number"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={adjustAmount}
                 onChange={(event) => setAdjustAmount(event.target.value)}
               />
@@ -906,7 +906,7 @@ export default function LeavePage() {
             <label className={`text-sm md:col-span-4 ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("leave.adjustmentReason")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={adjustReason}
                 onChange={(event) => setAdjustReason(event.target.value)}
               />
@@ -915,7 +915,7 @@ export default function LeavePage() {
           <button
             type="button"
             onClick={handleCreateAdjustment}
-            className="mt-4 cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="mt-4 cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
             disabled={isPending}
           >
             {t("leave.adjustmentCreate")}
@@ -930,11 +930,11 @@ export default function LeavePage() {
                 ))}
               </div>
             ) : adjustments.length === 0 ? (
-              <p className="text-sm text-muted">{t("leave.adjustmentsEmpty")}</p>
+              <p className="text-sm text-muted page-subtitle">{t("leave.adjustmentsEmpty")}</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-surface-muted text-muted">
+                <table className="min-w-full text-sm table-modern">
+                  <thead className="bg-surface-muted text-muted thead-modern">
                     <tr>
                       <th className={`px-4 py-2 ${alignClass}`}>{t("leave.requestEmployee")}</th>
                       <th className={`px-4 py-2 ${alignClass}`}>{t("leave.requestType")}</th>

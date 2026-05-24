@@ -242,18 +242,18 @@ export default function NewVendorPaymentPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("vendorPayment.createTitle")}</h1>
-        <p className="text-sm text-muted">{t("vendorPayment.createSubtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("vendorPayment.createTitle")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("vendorPayment.createSubtitle")}</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="app-card p-5">
+      <form onSubmit={handleSubmit} className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-3">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("vendorPayment.vendor")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={vendorId}
               onChange={(event) => setVendorId(event.target.value)}
               required
@@ -270,7 +270,7 @@ export default function NewVendorPaymentPage() {
             <span className="mb-1 block text-xs text-muted">{t("vendorPayment.date")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={paymentDate}
               onChange={(event) => setPaymentDate(event.target.value)}
               required
@@ -282,7 +282,7 @@ export default function NewVendorPaymentPage() {
               type="number"
               min="0"
               step="0.01"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={totalAmount}
               onChange={(event) => setTotalAmount(event.target.value)}
               required
@@ -291,7 +291,7 @@ export default function NewVendorPaymentPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("vendorPayment.method")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={method}
               onChange={(event) => setMethod(event.target.value)}
               required
@@ -307,7 +307,7 @@ export default function NewVendorPaymentPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("vendorPayment.account")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={accountId}
               onChange={(event) => setAccountId(event.target.value)}
               required
@@ -323,7 +323,7 @@ export default function NewVendorPaymentPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.reference")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={reference}
               onChange={(event) => setReference(event.target.value)}
               placeholder={t("vendorPayment.referencePlaceholder")}
@@ -334,11 +334,11 @@ export default function NewVendorPaymentPage() {
         <div className="mt-6">
           <h2 className="text-sm font-semibold">{t("vendorPayment.allocations")}</h2>
           {bills.length === 0 ? (
-            <p className="mt-2 text-sm text-muted">{t("vendorPayment.noBills")}</p>
+            <p className="mt-2 text-sm text-muted page-subtitle">{t("vendorPayment.noBills")}</p>
           ) : (
             <div className="mt-3 overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-surface-muted text-muted">
+              <table className="min-w-full text-sm table-modern">
+                <thead className="bg-surface-muted text-muted thead-modern">
                   <tr>
                     <th className={`px-3 py-2 ${alignClass}`}>{t("vendorPayment.bill")}</th>
                     <th className={`px-3 py-2 ${alignClass}`}>{t("common.issueDate")}</th>
@@ -361,7 +361,7 @@ export default function NewVendorPaymentPage() {
                           type="number"
                           min="0"
                           step="0.01"
-                          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                          className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                           value={allocations[bill.id] ?? ""}
                           onChange={(event) => handleAllocationChange(bill.id, event.target.value)}
                         />
@@ -375,25 +375,25 @@ export default function NewVendorPaymentPage() {
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-border bg-surface-muted p-3 text-sm">
+          <div className="rounded-2xl border border-border bg-surface-muted p-3 text-sm">
             <p className="text-xs text-muted">{t("vendorPayment.applied")}</p>
             <p className="mt-1 font-semibold">{formatCurrency(appliedAmount)}</p>
           </div>
-          <div className="rounded-xl border border-border bg-surface-muted p-3 text-sm">
+          <div className="rounded-2xl border border-border bg-surface-muted p-3 text-sm">
             <p className="text-xs text-muted">{t("vendorPayment.unapplied")}</p>
             <p className="mt-1 font-semibold">{formatCurrency(unappliedAmount)}</p>
           </div>
         </div>
 
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
 
         <button
           type="submit"
-          className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+          className="mt-4 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           disabled={isPending}
         >
           {t("vendorPayment.save")}

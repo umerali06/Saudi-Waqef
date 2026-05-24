@@ -189,13 +189,13 @@ export default function AccountingPeriodsPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("periods.title")}</h1>
-        <p className="text-sm text-muted">{t("periods.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("periods.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("periods.subtitle")}</p>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("periods.lockTitle")}</h2>
         <div className="mt-4 flex flex-wrap items-end gap-4">
           <label className={`text-sm ${alignClass}`}>
@@ -207,7 +207,7 @@ export default function AccountingPeriodsPage() {
             ) : (
               <input
                 type="date"
-                className="rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                 value={periodLockDate}
                 onChange={(event) => setPeriodLockDate(event.target.value)}
               />
@@ -216,7 +216,7 @@ export default function AccountingPeriodsPage() {
           <button
             type="button"
             onClick={handleLockDateSave}
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:opacity-50"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:opacity-50"
             disabled={isPending || isLoading}
           >
             {t("common.save")}
@@ -224,14 +224,14 @@ export default function AccountingPeriodsPage() {
         </div>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("periods.generateTitle")}</h2>
         <div className="mt-4 flex flex-wrap items-end gap-4">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("periods.year")}</span>
             <input
               type="number"
-              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={year}
               onChange={(event) => setYear(Number(event.target.value))}
             />
@@ -241,7 +241,7 @@ export default function AccountingPeriodsPage() {
               {t("periods.frequency")}
             </span>
             <select
-              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={frequency}
               onChange={(event) =>
                 setFrequency(event.target.value as "monthly" | "quarterly")
@@ -254,7 +254,7 @@ export default function AccountingPeriodsPage() {
           <button
             type="button"
             onClick={handleGenerate}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
             disabled={isPending}
           >
             {t("periods.generate")}
@@ -262,13 +262,13 @@ export default function AccountingPeriodsPage() {
         </div>
       </div>
 
-      <form onSubmit={handleCreatePeriod} className="app-card p-5">
+      <form onSubmit={handleCreatePeriod} className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("periods.createTitle")}</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-4">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("periods.name")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={newPeriod.name}
               onChange={(event) =>
                 setNewPeriod((prev) => ({ ...prev, name: event.target.value }))
@@ -282,7 +282,7 @@ export default function AccountingPeriodsPage() {
             </span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={newPeriod.startDate}
               onChange={(event) =>
                 setNewPeriod((prev) => ({ ...prev, startDate: event.target.value }))
@@ -296,7 +296,7 @@ export default function AccountingPeriodsPage() {
             </span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={newPeriod.endDate}
               onChange={(event) =>
                 setNewPeriod((prev) => ({ ...prev, endDate: event.target.value }))
@@ -309,7 +309,7 @@ export default function AccountingPeriodsPage() {
               {t("periods.frequency")}
             </span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               value={newPeriod.frequency}
               onChange={(event) =>
                 setNewPeriod((prev) => ({
@@ -324,20 +324,20 @@ export default function AccountingPeriodsPage() {
           </label>
         </div>
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
         <button
           type="submit"
-          className="mt-4 w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+          className="mt-4 w-fit rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           disabled={isPending}
         >
           {t("periods.create")}
         </button>
       </form>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="border-b border-border px-4 py-2 text-sm font-semibold">
           {t("periods.listTitle")}
         </div>
@@ -345,8 +345,8 @@ export default function AccountingPeriodsPage() {
           <div className="p-4 text-sm text-muted">{t("periods.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("periods.name")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>

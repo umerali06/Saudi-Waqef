@@ -126,7 +126,11 @@ export async function markAllNotificationsRead(params: {
   const batch = db.batch();
   snapshot.docs.forEach((doc) => {
     const data = doc.data();
-    if (params.companyId && data.companyId !== params.companyId) {
+    if (
+      params.companyId &&
+      data.companyId !== params.companyId &&
+      data.companyId !== null
+    ) {
       return;
     }
     batch.set(

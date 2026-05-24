@@ -820,7 +820,7 @@ export default function InvoiceDetailPage() {
 
   if (!invoice) {
     return (
-      <section className="space-y-6">
+      <section className="space-y-6 page-shell">
         <div className="space-y-3">
           <SkeletonBlock className="h-4 w-32" />
           <SkeletonBlock className="h-8 w-48" />
@@ -838,7 +838,7 @@ export default function InvoiceDetailPage() {
             <SkeletonBlock className="h-3 w-full" />
           </div>
         </div>
-        <div className="app-card space-y-3 p-4">
+        <div className="app-card space-y-3 p-4 card-modern">
           <SkeletonBlock className="h-4 w-32" />
           <SkeletonBlock className="h-10 w-full" />
           <SkeletonBlock className="h-10 w-full" />
@@ -849,12 +849,12 @@ export default function InvoiceDetailPage() {
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs text-muted">{t("invoice.detailsTitle")}</p>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold">{invoice.invoiceNumber}</h1>
+            <h1 className="text-2xl font-semibold page-title">{invoice.invoiceNumber}</h1>
             <span
               className={`rounded-full px-3 py-1 text-xs font-semibold ${
                 STATUS_STYLES[invoice.status]
@@ -863,7 +863,7 @@ export default function InvoiceDetailPage() {
               {t(`invoice.status.${invoice.status ?? "draft"}`)}
             </span>
           </div>
-          <p className="text-sm text-muted">{invoice.customerName}</p>
+          <p className="text-sm text-muted page-subtitle">{invoice.customerName}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link
@@ -874,7 +874,7 @@ export default function InvoiceDetailPage() {
           </Link>
           <Link
             href={`/sales/invoices/${invoiceId}/print`}
-            className="rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold"
+            className="rounded-2xl border border-border bg-surface px-3 py-2 text-xs font-semibold"
           >
             {t("invoice.print")}
           </Link>
@@ -882,7 +882,7 @@ export default function InvoiceDetailPage() {
             <button
               type="button"
               onClick={handleApprove}
-              className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-contrast"
+              className="rounded-2xl bg-primary px-3 py-2 text-xs font-semibold text-primary-contrast"
               disabled={isPending}
             >
               {t("invoice.approve")}
@@ -892,7 +892,7 @@ export default function InvoiceDetailPage() {
             <button
               type="button"
               onClick={handleCancel}
-              className="rounded-xl border border-border px-3 py-2 text-xs font-semibold text-foreground"
+              className="rounded-2xl border border-border px-3 py-2 text-xs font-semibold text-foreground"
               disabled={isPending}
             >
               {t("invoice.cancel")}
@@ -902,18 +902,18 @@ export default function InvoiceDetailPage() {
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
       {noticeKey ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
           {t(noticeKey)}
         </div>
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="app-card p-5 lg:col-span-2">
+        <div className="app-card p-6 lg:col-span-2 card-modern">
           <h2 className="text-lg font-semibold">{t("invoice.detailsSubtitle")}</h2>
           {isDraft ? (
             <form onSubmit={handleSave} className="mt-4 space-y-6">
@@ -921,7 +921,7 @@ export default function InvoiceDetailPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("invoice.customer")}</span>
                   <select
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={customerId}
                     onChange={(event) => setCustomerId(event.target.value)}
                     required
@@ -938,7 +938,7 @@ export default function InvoiceDetailPage() {
                   <span className="mb-1 block text-xs text-muted">{t("common.issueDate")}</span>
                   <input
                     type="date"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={invoiceDate}
                     onChange={(event) => setInvoiceDate(event.target.value)}
                   />
@@ -947,7 +947,7 @@ export default function InvoiceDetailPage() {
                   <span className="mb-1 block text-xs text-muted">{t("common.dueDate")}</span>
                   <input
                     type="date"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={dueDate}
                     onChange={(event) => setDueDate(event.target.value)}
                   />
@@ -955,7 +955,7 @@ export default function InvoiceDetailPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("invoice.paymentTerm")}</span>
                   <select
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={paymentTermId}
                     onChange={(event) => setPaymentTermId(event.target.value)}
                   >
@@ -998,12 +998,12 @@ export default function InvoiceDetailPage() {
                     return (
                       <div
                         key={line.id}
-                        className="grid gap-3 rounded-xl border border-border p-3 md:grid-cols-6"
+                        className="grid gap-3 rounded-2xl border border-border p-3 md:grid-cols-6"
                       >
                         <label className={`text-sm ${alignClass} md:col-span-2`}>
                           <span className="mb-1 block text-xs text-muted">{t("invoice.item")}</span>
                           <select
-                            className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                            className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                             value={line.itemId}
                             onChange={(event) => handleItemSelect(index, event.target.value)}
                           >
@@ -1021,7 +1021,7 @@ export default function InvoiceDetailPage() {
                             type="number"
                             min="0"
                             step="0.01"
-                            className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                            className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                             value={line.quantity}
                             onChange={(event) =>
                               handleLineChange(index, "quantity", event.target.value)
@@ -1031,7 +1031,7 @@ export default function InvoiceDetailPage() {
                         <label className={`text-sm ${alignClass}`}>
                           <span className="mb-1 block text-xs text-muted">{t("invoice.unit")}</span>
                           <select
-                            className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                            className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                             value={line.unit}
                             onChange={(event) => handleLineChange(index, "unit", event.target.value)}
                             disabled={!item}
@@ -1050,7 +1050,7 @@ export default function InvoiceDetailPage() {
                             type="number"
                             min="0"
                             step="0.01"
-                            className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                            className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                             value={line.unitPrice}
                             onChange={(event) =>
                               handleLineChange(index, "unitPrice", event.target.value)
@@ -1063,7 +1063,7 @@ export default function InvoiceDetailPage() {
                             type="number"
                             min="0"
                             step="0.1"
-                            className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                            className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                             value={line.discountRate}
                             onChange={(event) =>
                               handleLineChange(index, "discountRate", event.target.value)
@@ -1073,7 +1073,7 @@ export default function InvoiceDetailPage() {
                         <label className={`text-sm ${alignClass}`}>
                           <span className="mb-1 block text-xs text-muted">{t("invoice.taxCategory")}</span>
                           <select
-                            className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                            className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                             value={line.taxCategoryId}
                             onChange={(event) =>
                               handleLineChange(index, "taxCategoryId", event.target.value)
@@ -1107,7 +1107,7 @@ export default function InvoiceDetailPage() {
                 <button
                   type="button"
                   onClick={handleAddLine}
-                  className="mt-4 rounded-xl border border-border px-3 py-2 text-xs font-semibold"
+                  className="mt-4 rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
                 >
                   {t("invoice.addLine")}
                 </button>
@@ -1117,7 +1117,7 @@ export default function InvoiceDetailPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("common.notes")}</span>
                   <textarea
-                    className="min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={notes}
                     onChange={(event) => setNotes(event.target.value)}
                   />
@@ -1125,7 +1125,7 @@ export default function InvoiceDetailPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("invoice.terms")}</span>
                   <textarea
-                    className="min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={termsText}
                     onChange={(event) => setTermsText(event.target.value)}
                   />
@@ -1134,7 +1134,7 @@ export default function InvoiceDetailPage() {
 
               <button
                 type="submit"
-                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
+                className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
                 disabled={isPending}
               >
                 {t("invoice.updateDraft")}
@@ -1142,7 +1142,7 @@ export default function InvoiceDetailPage() {
             </form>
           ) : (
             <div className="mt-4 space-y-4 text-sm">
-              <div className="grid gap-3 rounded-xl border border-border bg-surface p-4 md:grid-cols-2">
+              <div className="grid gap-3 rounded-2xl border border-border bg-surface p-4 md:grid-cols-2">
                 <div>
                   <p className="text-xs text-muted">{t("invoice.customer")}</p>
                   <p className="font-semibold">{invoice.customerName}</p>
@@ -1159,14 +1159,14 @@ export default function InvoiceDetailPage() {
               </div>
 
               {invoice.billingAddress ? (
-                <div className="rounded-xl border border-border bg-surface p-4 text-xs text-muted">
+                <div className="rounded-2xl border border-border bg-surface p-4 text-xs text-muted">
                   {invoice.billingAddress}
                 </div>
               ) : null}
 
               <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-surface-muted text-muted">
+                <table className="min-w-full text-sm table-modern">
+                  <thead className="bg-surface-muted text-muted thead-modern">
                     <tr>
                       <th className={`px-3 py-2 ${alignClass}`}>{t("invoice.item")}</th>
                       <th className={`px-3 py-2 ${alignClass}`}>{t("invoice.quantity")}</th>
@@ -1196,14 +1196,14 @@ export default function InvoiceDetailPage() {
               </div>
 
               {invoice.notes ? (
-                <div className="rounded-xl border border-border bg-surface p-4 text-xs text-muted">
+                <div className="rounded-2xl border border-border bg-surface p-4 text-xs text-muted">
                   <p className="font-semibold text-foreground">{t("common.notes")}</p>
                   <p className="mt-2">{invoice.notes}</p>
                 </div>
               ) : null}
 
               {invoice.terms ? (
-                <div className="rounded-xl border border-border bg-surface p-4 text-xs text-muted">
+                <div className="rounded-2xl border border-border bg-surface p-4 text-xs text-muted">
                   <p className="font-semibold text-foreground">{t("invoice.terms")}</p>
                   <p className="mt-2">{invoice.terms}</p>
                 </div>
@@ -1213,7 +1213,7 @@ export default function InvoiceDetailPage() {
         </div>
 
         <div className="space-y-6">
-          <div className="app-card p-5">
+          <div className="app-card p-6 card-modern">
             <h3 className="text-sm font-semibold">{t("common.amount")}</h3>
             <div className="mt-4 space-y-2 text-sm">
               <div className="flex items-center justify-between">
@@ -1233,7 +1233,7 @@ export default function InvoiceDetailPage() {
                 <span>{formatCurrency(displayTotals.total)}</span>
               </div>
             </div>
-            <div className="mt-4 rounded-xl bg-surface-muted p-3 text-sm">
+            <div className="mt-4 rounded-2xl bg-surface-muted p-3 text-sm">
               <div className="flex items-center justify-between">
                 <span>{t("invoice.amountPaid")}</span>
                 <span>{formatCurrency(invoice.amountPaid)}</span>
@@ -1250,7 +1250,7 @@ export default function InvoiceDetailPage() {
           </div>
 
           {invoice.status !== "draft" && invoice.status !== "canceled" ? (
-            <div className="app-card p-5">
+            <div className="app-card p-6 card-modern">
               <h3 className="text-sm font-semibold">{t("invoice.sendTitle")}</h3>
               <p className="mt-1 text-xs text-muted">{t("invoice.sendSubtitle")}</p>
               <form onSubmit={handleSend} className="mt-4 space-y-3">
@@ -1258,7 +1258,7 @@ export default function InvoiceDetailPage() {
                   <span className="mb-1 block text-xs text-muted">{t("invoice.sendTo")}</span>
                   <input
                     type="email"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={sendTo}
                     onChange={(event) => setSendTo(event.target.value)}
                     required
@@ -1267,7 +1267,7 @@ export default function InvoiceDetailPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("invoice.sendSubject")}</span>
                   <input
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={sendSubject}
                     onChange={(event) => setSendSubject(event.target.value)}
                     required
@@ -1276,7 +1276,7 @@ export default function InvoiceDetailPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("invoice.sendMessage")}</span>
                   <textarea
-                    className="min-h-[110px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="min-h-[110px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={sendMessage}
                     onChange={(event) => setSendMessage(event.target.value)}
                     required
@@ -1284,7 +1284,7 @@ export default function InvoiceDetailPage() {
                 </label>
                 <button
                   type="submit"
-                  className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
+                  className="w-full rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
                   disabled={isPending}
                 >
                   {t("invoice.sendButton")}
@@ -1296,7 +1296,7 @@ export default function InvoiceDetailPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold">{t("invoice.paymentsTitle")}</h2>
             <span className="text-xs text-muted">{payments.length}</span>
@@ -1309,7 +1309,7 @@ export default function InvoiceDetailPage() {
                 <span className="mb-1 block text-xs text-muted">{t("invoice.paymentDate")}</span>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={paymentDate}
                   onChange={(event) => setPaymentDate(event.target.value)}
                   required
@@ -1321,7 +1321,7 @@ export default function InvoiceDetailPage() {
                   type="number"
                   min="0"
                   step="0.01"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={paymentAmount}
                   onChange={(event) => setPaymentAmount(event.target.value)}
                   required
@@ -1330,7 +1330,7 @@ export default function InvoiceDetailPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("invoice.paymentMethod")}</span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={paymentMethod}
                   onChange={(event) => setPaymentMethod(event.target.value)}
                 >
@@ -1344,7 +1344,7 @@ export default function InvoiceDetailPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("invoice.paymentAccount")}</span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={paymentAccountId}
                   onChange={(event) => setPaymentAccountId(event.target.value)}
                   required
@@ -1360,14 +1360,14 @@ export default function InvoiceDetailPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("invoice.paymentReference")}</span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={paymentReference}
                   onChange={(event) => setPaymentReference(event.target.value)}
                 />
               </label>
               <button
                 type="submit"
-                className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast md:col-span-2"
+                className="w-full rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast md:col-span-2"
                 disabled={isPending}
               >
                 {t("invoice.paymentRecord")}
@@ -1377,8 +1377,8 @@ export default function InvoiceDetailPage() {
 
           {payments.length > 0 ? (
             <div className="mt-4 overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-surface-muted text-muted">
+              <table className="min-w-full text-sm table-modern">
+                <thead className="bg-surface-muted text-muted thead-modern">
                   <tr>
                     <th className={`px-3 py-2 ${alignClass}`}>{t("invoice.paymentDate")}</th>
                     <th className={`px-3 py-2 ${alignClass}`}>{t("invoice.paymentMethod")}</th>
@@ -1399,11 +1399,11 @@ export default function InvoiceDetailPage() {
               </table>
             </div>
           ) : (
-            <p className="mt-4 text-sm text-muted">{t("invoice.paymentsEmpty")}</p>
+            <p className="mt-4 text-sm text-muted page-subtitle">{t("invoice.paymentsEmpty")}</p>
           )}
         </div>
 
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold">{t("invoice.creditNotesTitle")}</h2>
             <Link
@@ -1415,8 +1415,8 @@ export default function InvoiceDetailPage() {
           </div>
           {creditNotes.length > 0 ? (
             <div className="mt-4 overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-surface-muted text-muted">
+              <table className="min-w-full text-sm table-modern">
+                <thead className="bg-surface-muted text-muted thead-modern">
                   <tr>
                     <th className={`px-3 py-2 ${alignClass}`}>{t("creditNote.number")}</th>
                     <th className={`px-3 py-2 ${alignClass}`}>{t("creditNote.issueDate")}</th>
@@ -1446,12 +1446,12 @@ export default function InvoiceDetailPage() {
               </table>
             </div>
           ) : (
-            <p className="mt-4 text-sm text-muted">{t("invoice.creditNotesEmpty")}</p>
+            <p className="mt-4 text-sm text-muted page-subtitle">{t("invoice.creditNotesEmpty")}</p>
           )}
         </div>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">{t("invoice.attachmentsTitle")}</h2>
           <span className="text-xs text-muted">{attachments.length}</span>
@@ -1467,7 +1467,7 @@ export default function InvoiceDetailPage() {
           <button
             type="button"
             onClick={handleUploadAttachment}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-xs font-semibold"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-xs font-semibold"
             disabled={isPending || isUploading || !attachmentFile}
           >
             {isUploading ? t("invoice.uploading") : t("invoice.uploadAttachment")}
@@ -1477,7 +1477,7 @@ export default function InvoiceDetailPage() {
 
         {attachments.length ? (
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-sm">
+            <table className="min-w-full text-sm table-modern">
               <thead className="text-xs text-muted">
                 <tr>
                   <th className={`px-2 py-2 ${alignClass}`}>{t("invoice.attachmentName")}</th>
@@ -1535,7 +1535,7 @@ export default function InvoiceDetailPage() {
             </table>
           </div>
         ) : (
-          <p className="mt-4 text-sm text-muted">{t("invoice.attachmentsEmpty")}</p>
+          <p className="mt-4 text-sm text-muted page-subtitle">{t("invoice.attachmentsEmpty")}</p>
         )}
       </div>
     </section>

@@ -104,13 +104,13 @@ export default function DocumentBrandingPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("branding.title")}</h1>
-        <p className="text-sm text-muted">{t("branding.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("branding.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("branding.subtitle")}</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="app-card p-5">
+      <form onSubmit={handleSubmit} className="app-card p-6 card-modern">
         {isLoading ? (
           <div className="grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
@@ -184,7 +184,7 @@ export default function DocumentBrandingPage() {
                 {t("branding.header")}
               </span>
               <textarea
-                className="min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                className="min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                 value={branding.header}
                 onChange={(event) =>
                   setBranding((prev) => ({ ...prev, header: event.target.value }))
@@ -196,7 +196,7 @@ export default function DocumentBrandingPage() {
                 {t("branding.footer")}
               </span>
               <textarea
-                className="min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                className="min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                 value={branding.footer}
                 onChange={(event) =>
                   setBranding((prev) => ({ ...prev, footer: event.target.value }))
@@ -219,13 +219,13 @@ export default function DocumentBrandingPage() {
           </div>
         )}
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
         <button
           type="submit"
-          className="mt-4 w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+          className="mt-4 w-fit rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           disabled={isPending}
         >
           {t("common.save")}

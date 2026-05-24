@@ -201,6 +201,7 @@ export async function POST(request: Request) {
     employmentType: parsed.data.employmentType ?? null,
     status: parsed.data.status ?? "active",
     terminationDate: parsed.data.terminationDate ?? null,
+    terminationCategory: parsed.data.terminationCategory ?? null,
     terminationReason: parsed.data.terminationReason ?? null,
     notes: parsed.data.notes ?? null,
     onboarding,

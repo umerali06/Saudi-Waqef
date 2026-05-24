@@ -264,15 +264,15 @@ export default function AdminKnowledgeBasePage() {
   }, [categories]);
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("admin.kb.title")}</h1>
-        <p className="text-sm text-muted">{t("admin.kb.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("admin.kb.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("admin.kb.subtitle")}</p>
       </div>
 
       {error ? <p className="text-sm text-rose-600">{error}</p> : null}
 
-      <div className="app-card space-y-4 p-6">
+      <div className="app-card space-y-4 p-6 card-modern">
         <div>
           <h2 className="text-lg font-semibold">{t("admin.kb.categoriesTitle")}</h2>
           <p className="text-xs text-muted">{t("admin.kb.categoriesSubtitle")}</p>
@@ -281,7 +281,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.categoryNameAr")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={categoryForm.nameAr}
               onChange={(event) =>
                 setCategoryForm((prev) => ({ ...prev, nameAr: event.target.value }))
@@ -291,7 +291,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.categoryNameEn")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={categoryForm.nameEn}
               onChange={(event) =>
                 setCategoryForm((prev) => ({ ...prev, nameEn: event.target.value }))
@@ -301,7 +301,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.categoryDescAr")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={categoryForm.descriptionAr}
               onChange={(event) =>
                 setCategoryForm((prev) => ({ ...prev, descriptionAr: event.target.value }))
@@ -311,7 +311,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.categoryDescEn")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={categoryForm.descriptionEn}
               onChange={(event) =>
                 setCategoryForm((prev) => ({ ...prev, descriptionEn: event.target.value }))
@@ -321,7 +321,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.categorySlug")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={categoryForm.slug}
               onChange={(event) =>
                 setCategoryForm((prev) => ({ ...prev, slug: event.target.value }))
@@ -332,7 +332,7 @@ export default function AdminKnowledgeBasePage() {
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.categoryOrder")}</span>
             <input
               type="number"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={categoryForm.order}
               onChange={(event) =>
                 setCategoryForm((prev) => ({ ...prev, order: event.target.value }))
@@ -345,7 +345,7 @@ export default function AdminKnowledgeBasePage() {
             type="button"
             onClick={handleCategorySubmit}
             disabled={saving}
-            className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {editingCategoryId ? t("admin.kb.categoryUpdate") : t("admin.kb.categorySave")}
           </button>
@@ -353,7 +353,7 @@ export default function AdminKnowledgeBasePage() {
             <button
               type="button"
               onClick={resetCategoryForm}
-              className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+              className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
             >
               {t("common.cancel")}
             </button>
@@ -363,8 +363,8 @@ export default function AdminKnowledgeBasePage() {
           <p className="text-xs text-muted">{t("admin.kb.categoryEmpty")}</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className="px-3 py-2 text-left">{t("admin.kb.categoryNameEn")}</th>
                   <th className="px-3 py-2 text-left">{t("admin.kb.categoryNameAr")}</th>
@@ -405,7 +405,7 @@ export default function AdminKnowledgeBasePage() {
         )}
       </div>
 
-      <div className="app-card space-y-4 p-6">
+      <div className="app-card space-y-4 p-6 card-modern">
         <div>
           <h2 className="text-lg font-semibold">{t("admin.kb.articlesTitle")}</h2>
           <p className="text-xs text-muted">{t("admin.kb.articlesSubtitle")}</p>
@@ -414,7 +414,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.articleCategory")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={articleForm.categoryId}
               onChange={(event) =>
                 setArticleForm((prev) => ({ ...prev, categoryId: event.target.value }))
@@ -441,7 +441,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.articleTitleAr")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={articleForm.titleAr}
               onChange={(event) =>
                 setArticleForm((prev) => ({ ...prev, titleAr: event.target.value }))
@@ -451,7 +451,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.articleTitleEn")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={articleForm.titleEn}
               onChange={(event) =>
                 setArticleForm((prev) => ({ ...prev, titleEn: event.target.value }))
@@ -461,7 +461,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm md:col-span-2">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.articleSummaryAr")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={articleForm.summaryAr}
               onChange={(event) =>
                 setArticleForm((prev) => ({ ...prev, summaryAr: event.target.value }))
@@ -471,7 +471,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm md:col-span-2">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.articleSummaryEn")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={articleForm.summaryEn}
               onChange={(event) =>
                 setArticleForm((prev) => ({ ...prev, summaryEn: event.target.value }))
@@ -481,7 +481,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm md:col-span-2">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.articleContentAr")}</span>
             <textarea
-              className="min-h-[120px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="min-h-[120px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={articleForm.contentAr}
               onChange={(event) =>
                 setArticleForm((prev) => ({ ...prev, contentAr: event.target.value }))
@@ -491,7 +491,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm md:col-span-2">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.articleContentEn")}</span>
             <textarea
-              className="min-h-[120px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="min-h-[120px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={articleForm.contentEn}
               onChange={(event) =>
                 setArticleForm((prev) => ({ ...prev, contentEn: event.target.value }))
@@ -501,7 +501,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.articleTags")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={articleForm.tags}
               onChange={(event) =>
                 setArticleForm((prev) => ({ ...prev, tags: event.target.value }))
@@ -511,7 +511,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.articleSlug")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={articleForm.slug}
               onChange={(event) =>
                 setArticleForm((prev) => ({ ...prev, slug: event.target.value }))
@@ -524,7 +524,7 @@ export default function AdminKnowledgeBasePage() {
             type="button"
             onClick={handleArticleSubmit}
             disabled={saving}
-            className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {editingArticleId ? t("admin.kb.articleUpdate") : t("admin.kb.articleSave")}
           </button>
@@ -532,7 +532,7 @@ export default function AdminKnowledgeBasePage() {
             <button
               type="button"
               onClick={resetArticleForm}
-              className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+              className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
             >
               {t("common.cancel")}
             </button>
@@ -543,8 +543,8 @@ export default function AdminKnowledgeBasePage() {
           <p className="text-xs text-muted">{t("admin.kb.articleEmpty")}</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className="px-3 py-2 text-left">{t("admin.kb.articleTitleEn")}</th>
                   <th className="px-3 py-2 text-left">{t("admin.kb.articleCategory")}</th>
@@ -595,7 +595,7 @@ export default function AdminKnowledgeBasePage() {
         )}
       </div>
 
-      <div className="app-card space-y-4 p-6">
+      <div className="app-card space-y-4 p-6 card-modern">
         <div>
           <h2 className="text-lg font-semibold">{t("admin.kb.glossaryTitle")}</h2>
           <p className="text-xs text-muted">{t("admin.kb.glossarySubtitle")}</p>
@@ -604,7 +604,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.glossaryTermAr")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={glossaryForm.termAr}
               onChange={(event) =>
                 setGlossaryForm((prev) => ({ ...prev, termAr: event.target.value }))
@@ -614,7 +614,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.glossaryTermEn")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={glossaryForm.termEn}
               onChange={(event) =>
                 setGlossaryForm((prev) => ({ ...prev, termEn: event.target.value }))
@@ -624,7 +624,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm md:col-span-2">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.glossaryDefAr")}</span>
             <textarea
-              className="min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={glossaryForm.definitionAr}
               onChange={(event) =>
                 setGlossaryForm((prev) => ({ ...prev, definitionAr: event.target.value }))
@@ -634,7 +634,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm md:col-span-2">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.glossaryDefEn")}</span>
             <textarea
-              className="min-h-[90px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="min-h-[90px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={glossaryForm.definitionEn}
               onChange={(event) =>
                 setGlossaryForm((prev) => ({ ...prev, definitionEn: event.target.value }))
@@ -644,7 +644,7 @@ export default function AdminKnowledgeBasePage() {
           <label className="text-sm">
             <span className="mb-1 block text-xs text-muted">{t("admin.kb.glossaryCategory")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={glossaryForm.category}
               onChange={(event) =>
                 setGlossaryForm((prev) => ({ ...prev, category: event.target.value }))
@@ -657,7 +657,7 @@ export default function AdminKnowledgeBasePage() {
             type="button"
             onClick={handleGlossarySubmit}
             disabled={saving}
-            className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {editingGlossaryId ? t("admin.kb.glossaryUpdate") : t("admin.kb.glossarySave")}
           </button>
@@ -665,7 +665,7 @@ export default function AdminKnowledgeBasePage() {
             <button
               type="button"
               onClick={resetGlossaryForm}
-              className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+              className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
             >
               {t("common.cancel")}
             </button>
@@ -676,8 +676,8 @@ export default function AdminKnowledgeBasePage() {
           <p className="text-xs text-muted">{t("admin.kb.glossaryEmpty")}</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className="px-3 py-2 text-left">{t("admin.kb.glossaryTermEn")}</th>
                   <th className="px-3 py-2 text-left">{t("admin.kb.glossaryTermAr")}</th>

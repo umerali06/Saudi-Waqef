@@ -34,6 +34,9 @@ type PayrollSettings = {
   cycle: "monthly";
   overtimeMultiplier: number;
   latenessPenaltyPerMinute: number;
+  absenceDailyRateMode: "labor_law_30" | "active_days";
+  eosbEnabled: boolean;
+  eosbWageBasis: "actual" | "basic";
   gosiEnabled: boolean;
   gosiEmployeeRate: number;
   gosiEmployerRate: number;
@@ -121,6 +124,11 @@ export default function PayrollPage() {
   const [payrollCycle, setPayrollCycle] = useState<PayrollSettings["cycle"]>("monthly");
   const [overtimeMultiplier, setOvertimeMultiplier] = useState("1.5");
   const [latenessPenaltyPerMinute, setLatenessPenaltyPerMinute] = useState("0");
+  const [absenceDailyRateMode, setAbsenceDailyRateMode] =
+    useState<PayrollSettings["absenceDailyRateMode"]>("labor_law_30");
+  const [eosbEnabled, setEosbEnabled] = useState(true);
+  const [eosbWageBasis, setEosbWageBasis] =
+    useState<PayrollSettings["eosbWageBasis"]>("actual");
   const [gosiEnabled, setGosiEnabled] = useState(false);
   const [gosiEmployeeRate, setGosiEmployeeRate] = useState("0");
   const [gosiEmployerRate, setGosiEmployerRate] = useState("0");
@@ -254,6 +262,9 @@ export default function PayrollPage() {
         setPayrollCycle(settingsData.cycle ?? "monthly");
         setOvertimeMultiplier(String(settingsData.overtimeMultiplier ?? 1.5));
         setLatenessPenaltyPerMinute(String(settingsData.latenessPenaltyPerMinute ?? 0));
+        setAbsenceDailyRateMode(settingsData.absenceDailyRateMode ?? "labor_law_30");
+        setEosbEnabled(settingsData.eosbEnabled ?? true);
+        setEosbWageBasis(settingsData.eosbWageBasis ?? "actual");
         setGosiEnabled(settingsData.gosiEnabled ?? false);
         setGosiEmployeeRate(String(settingsData.gosiEmployeeRate ?? 0));
         setGosiEmployerRate(String(settingsData.gosiEmployerRate ?? 0));
@@ -354,6 +365,9 @@ export default function PayrollPage() {
           cycle: payrollCycle,
           overtimeMultiplier: overtime,
           latenessPenaltyPerMinute: lateness,
+          absenceDailyRateMode,
+          eosbEnabled,
+          eosbWageBasis,
           gosiEnabled,
           gosiEmployeeRate: gosiEmployee,
           gosiEmployerRate: gosiEmployer,
@@ -615,28 +629,28 @@ export default function PayrollPage() {
   }, [runItems, departmentLookup, getEmployeeById, locale, t]);
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold">{t("payroll.title")}</h1>
-          <p className="text-sm text-muted">{t("payroll.subtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("payroll.title")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("payroll.subtitle")}</p>
         </div>
         <HelpLink query="payroll" />
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
       {successKey ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
           {t(successKey)}
         </div>
       ) : null}
 
       {isPrivileged ? (
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           <div>
             <h2 className="text-lg font-semibold">{t("payroll.settingsTitle")}</h2>
             <p className="text-xs text-muted">{t("payroll.settingsSubtitle")}</p>
@@ -645,7 +659,7 @@ export default function PayrollPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("payroll.cycle")}</span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={payrollCycle}
                 onChange={(event) => setPayrollCycle(event.target.value as PayrollSettings["cycle"])}
               >
@@ -658,7 +672,7 @@ export default function PayrollPage() {
                 type="number"
                 min="1"
                 step="0.1"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={overtimeMultiplier}
                 onChange={(event) => setOvertimeMultiplier(event.target.value)}
               />
@@ -671,10 +685,50 @@ export default function PayrollPage() {
                 type="number"
                 min="0"
                 step="0.1"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={latenessPenaltyPerMinute}
                 onChange={(event) => setLatenessPenaltyPerMinute(event.target.value)}
               />
+            </label>
+            <label className={`text-sm ${alignClass}`}>
+              <span className="mb-1 block text-xs text-muted">
+                {t("payroll.absenceDailyRateMode")}
+              </span>
+              <select
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+                value={absenceDailyRateMode}
+                onChange={(event) =>
+                  setAbsenceDailyRateMode(
+                    event.target.value as PayrollSettings["absenceDailyRateMode"]
+                  )
+                }
+              >
+                <option value="labor_law_30">{t("payroll.absenceDailyRateMode.labor_law_30")}</option>
+                <option value="active_days">{t("payroll.absenceDailyRateMode.active_days")}</option>
+              </select>
+            </label>
+            <label className={`flex items-center gap-2 text-sm ${alignClass}`}>
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={eosbEnabled}
+                onChange={(event) => setEosbEnabled(event.target.checked)}
+              />
+              <span>{t("payroll.eosbEnabled")}</span>
+            </label>
+            <label className={`text-sm ${alignClass}`}>
+              <span className="mb-1 block text-xs text-muted">{t("payroll.eosbWageBasis")}</span>
+              <select
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+                value={eosbWageBasis}
+                onChange={(event) =>
+                  setEosbWageBasis(event.target.value as PayrollSettings["eosbWageBasis"])
+                }
+                disabled={!eosbEnabled}
+              >
+                <option value="actual">{t("payroll.eosbWageBasis.actual")}</option>
+                <option value="basic">{t("payroll.eosbWageBasis.basic")}</option>
+              </select>
             </label>
             <label className={`flex items-center gap-2 text-sm ${alignClass}`}>
               <input
@@ -691,7 +745,7 @@ export default function PayrollPage() {
                 type="number"
                 min="0"
                 step="0.1"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={gosiEmployeeRate}
                 onChange={(event) => setGosiEmployeeRate(event.target.value)}
                 disabled={!gosiEnabled}
@@ -703,7 +757,7 @@ export default function PayrollPage() {
                 type="number"
                 min="0"
                 step="0.1"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={gosiEmployerRate}
                 onChange={(event) => setGosiEmployerRate(event.target.value)}
                 disabled={!gosiEnabled}
@@ -724,7 +778,7 @@ export default function PayrollPage() {
                 type="number"
                 min="0"
                 step="0.1"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={incomeTaxRate}
                 onChange={(event) => setIncomeTaxRate(event.target.value)}
                 disabled={!incomeTaxEnabled}
@@ -733,7 +787,7 @@ export default function PayrollPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("payroll.salaryExpenseAccount")}</span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={salaryExpenseAccountId}
                   onChange={(event) => setSalaryExpenseAccountId(event.target.value)}
                   disabled={loadingLookups}
@@ -749,7 +803,7 @@ export default function PayrollPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("payroll.payrollPayableAccount")}</span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={payrollPayableAccountId}
                   onChange={(event) => setPayrollPayableAccountId(event.target.value)}
                   disabled={loadingLookups}
@@ -765,7 +819,7 @@ export default function PayrollPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("payroll.salaryDeductionsAccount")}</span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={salaryDeductionsAccountId}
                   onChange={(event) => setSalaryDeductionsAccountId(event.target.value)}
                   disabled={loadingLookups}
@@ -781,7 +835,7 @@ export default function PayrollPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("payroll.paymentAccount")}</span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={paymentAccountId}
                   onChange={(event) => setPaymentAccountId(event.target.value)}
                   disabled={loadingLookups}
@@ -798,7 +852,7 @@ export default function PayrollPage() {
           <button
             type="button"
             onClick={handleSaveSettings}
-            className="mt-4 cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="mt-4 cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
             disabled={isPending || loadingSettings}
           >
             {t("common.save")}
@@ -807,7 +861,7 @@ export default function PayrollPage() {
       ) : null}
 
       {isPrivileged ? (
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           <div>
             <h2 className="text-lg font-semibold">{t("payroll.runTitle")}</h2>
             <p className="text-xs text-muted">{t("payroll.runSubtitle")}</p>
@@ -817,7 +871,7 @@ export default function PayrollPage() {
               <span className="mb-1 block text-xs text-muted">{t("payroll.runPeriodStart")}</span>
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={periodStart}
                 onChange={(event) => setPeriodStart(event.target.value)}
               />
@@ -826,7 +880,7 @@ export default function PayrollPage() {
               <span className="mb-1 block text-xs text-muted">{t("payroll.runPeriodEnd")}</span>
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={periodEnd}
                 onChange={(event) => setPeriodEnd(event.target.value)}
               />
@@ -834,7 +888,7 @@ export default function PayrollPage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("payroll.runScope")}</span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={scope}
                 onChange={(event) => setScope(event.target.value)}
               >
@@ -860,7 +914,7 @@ export default function PayrollPage() {
           <button
             type="button"
             onClick={handleCreateRun}
-            className="mt-4 cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="mt-4 cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
             disabled={isPending}
           >
             {t("payroll.runCreate")}
@@ -868,7 +922,7 @@ export default function PayrollPage() {
         </div>
       ) : null}
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="flex items-center justify-between border-b border-border px-4 py-2 text-sm font-semibold">
           <span>{t("payroll.runListTitle")}</span>
           <span className="text-xs text-muted">{runs.length}</span>
@@ -884,8 +938,8 @@ export default function PayrollPage() {
           <div className="p-4 text-sm text-muted">{t("payroll.runEmpty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("payroll.runPeriod")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("payroll.runStatus")}</th>
@@ -948,14 +1002,14 @@ export default function PayrollPage() {
       </div>
 
       {selectedRun ? (
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           {loadingRunDetails ? (
             <div className="space-y-3">
               <SkeletonBlock className="h-5 w-40" />
               <SkeletonBlock className="h-4 w-64" />
               <div className="grid gap-4 md:grid-cols-3">
                 {Array.from({ length: 3 }).map((_, idx) => (
-                  <div key={idx} className="rounded-xl border border-border bg-surface px-4 py-3">
+                  <div key={idx} className="rounded-2xl border border-border bg-surface px-4 py-3">
                     <SkeletonBlock className="h-3 w-24" />
                     <SkeletonBlock className="mt-3 h-6 w-24" />
                   </div>
@@ -998,19 +1052,19 @@ export default function PayrollPage() {
               </div>
 
               <div className="mt-4 grid gap-4 md:grid-cols-3">
-                <div className="rounded-xl border border-border bg-surface px-4 py-3">
+                <div className="rounded-2xl border border-border bg-surface px-4 py-3">
                   <p className="text-xs text-muted">{t("payroll.runGross")}</p>
                   <p className="text-lg font-semibold">
                     {formatMoney(selectedRun.totals.grossPay)}
                   </p>
                 </div>
-                <div className="rounded-xl border border-border bg-surface px-4 py-3">
+                <div className="rounded-2xl border border-border bg-surface px-4 py-3">
                   <p className="text-xs text-muted">{t("payroll.runDeductions")}</p>
                   <p className="text-lg font-semibold">
                     {formatMoney(selectedRun.totals.totalDeductions)}
                   </p>
                 </div>
-                <div className="rounded-xl border border-border bg-surface px-4 py-3">
+                <div className="rounded-2xl border border-border bg-surface px-4 py-3">
                   <p className="text-xs text-muted">{t("payroll.runNet")}</p>
                   <p className="text-lg font-semibold">
                     {formatMoney(selectedRun.totals.netPay)}
@@ -1018,7 +1072,7 @@ export default function PayrollPage() {
                 </div>
               </div>
 
-          <div className="mt-6 rounded-xl border border-border bg-surface px-4 py-3">
+          <div className="mt-6 rounded-2xl border border-border bg-surface px-4 py-3">
             <h3 className="text-sm font-semibold text-muted">{t("payroll.varianceTitle")}</h3>
             {variance ? (
               <div className="mt-3 grid gap-4 md:grid-cols-3">
@@ -1057,7 +1111,7 @@ export default function PayrollPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("payroll.paymentMethod")}</span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={paymentMethod}
                   onChange={(event) => setPaymentMethod(event.target.value)}
                 />
@@ -1066,7 +1120,7 @@ export default function PayrollPage() {
                 <span className="mb-1 block text-xs text-muted">{t("payroll.paymentDate")}</span>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={paymentDate}
                   onChange={(event) => setPaymentDate(event.target.value)}
                 />
@@ -1074,7 +1128,7 @@ export default function PayrollPage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("payroll.paymentAccount")}</span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={paymentAccountOverride}
                   onChange={(event) => setPaymentAccountOverride(event.target.value)}
                 >
@@ -1090,7 +1144,7 @@ export default function PayrollPage() {
                 <button
                   type="button"
                   onClick={() => handlePayRun(selectedRun.id)}
-                  className="mt-1 cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+                  className="mt-1 cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
                   disabled={isPending}
                 >
                   {t("payroll.runPay")}
@@ -1107,7 +1161,7 @@ export default function PayrollPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("payroll.adjustmentEmployee")}</span>
                   <select
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={adjustItemId}
                     onChange={(event) => setAdjustItemId(event.target.value)}
                   >
@@ -1123,7 +1177,7 @@ export default function PayrollPage() {
                   <span className="mb-1 block text-xs text-muted">{t("payroll.adjustmentAmount")}</span>
                   <input
                     type="number"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={adjustAmount}
                     onChange={(event) => setAdjustAmount(event.target.value)}
                   />
@@ -1131,7 +1185,7 @@ export default function PayrollPage() {
                 <label className={`text-sm md:col-span-3 ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("payroll.adjustmentReason")}</span>
                   <input
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={adjustReason}
                     onChange={(event) => setAdjustReason(event.target.value)}
                   />
@@ -1140,7 +1194,7 @@ export default function PayrollPage() {
               <button
                 type="button"
                 onClick={handleCreateAdjustment}
-                className="mt-3 cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+                className="mt-3 cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
                 disabled={isPending}
               >
                 {t("payroll.adjustmentAdd")}
@@ -1154,8 +1208,8 @@ export default function PayrollPage() {
               <p className="mt-2 text-xs text-muted">{t("payroll.adjustmentsEmpty")}</p>
             ) : (
               <div className="mt-3 overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-surface-muted text-muted">
+                <table className="min-w-full text-sm table-modern">
+                  <thead className="bg-surface-muted text-muted thead-modern">
                     <tr>
                       <th className={`px-4 py-2 ${alignClass}`}>{t("payroll.adjustmentEmployee")}</th>
                       <th className={`px-4 py-2 ${alignClass}`}>{t("payroll.adjustmentAmount")}</th>
@@ -1196,8 +1250,8 @@ export default function PayrollPage() {
               <p className="mt-2 text-xs text-muted">{t("payroll.departmentSummaryEmpty")}</p>
             ) : (
               <div className="mt-3 overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-surface-muted text-muted">
+                <table className="min-w-full text-sm table-modern">
+                  <thead className="bg-surface-muted text-muted thead-modern">
                     <tr>
                       <th className={`px-4 py-2 ${alignClass}`}>{t("payroll.departmentName")}</th>
                       <th className={`px-4 py-2 ${alignClass}`}>{t("payroll.departmentEmployees")}</th>
@@ -1225,8 +1279,8 @@ export default function PayrollPage() {
               <div className="mt-6">
                 <h3 className="text-sm font-semibold text-muted">{t("payroll.itemsTitle")}</h3>
                 <div className="mt-3 overflow-x-auto">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-surface-muted text-muted">
+                  <table className="min-w-full text-sm table-modern">
+                    <thead className="bg-surface-muted text-muted thead-modern">
                       <tr>
                         <th className={`px-4 py-2 ${alignClass}`}>{t("payroll.itemEmployee")}</th>
                         <th className={`px-4 py-2 ${alignClass}`}>{t("payroll.itemGross")}</th>

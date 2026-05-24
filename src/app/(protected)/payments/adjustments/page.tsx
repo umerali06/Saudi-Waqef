@@ -166,18 +166,18 @@ export default function AdjustmentsPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("adjustment.title")}</h1>
-        <p className="text-sm text-muted">{t("adjustment.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("adjustment.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("adjustment.subtitle")}</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="app-card p-5">
+      <form onSubmit={handleSubmit} className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-3">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("adjustment.account")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={accountId}
               onChange={(event) => setAccountId(event.target.value)}
               required
@@ -193,7 +193,7 @@ export default function AdjustmentsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("adjustment.type")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={type}
               onChange={(event) => setType(event.target.value as "increase" | "decrease")}
             >
@@ -205,7 +205,7 @@ export default function AdjustmentsPage() {
             <span className="mb-1 block text-xs text-muted">{t("adjustment.date")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={adjustmentDate}
               onChange={(event) => setAdjustmentDate(event.target.value)}
               required
@@ -217,7 +217,7 @@ export default function AdjustmentsPage() {
               type="number"
               min="0"
               step="0.01"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               required
@@ -226,7 +226,7 @@ export default function AdjustmentsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("adjustment.offsetAccount")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={offsetAccountId}
               onChange={(event) => setOffsetAccountId(event.target.value)}
               required
@@ -242,7 +242,7 @@ export default function AdjustmentsPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("adjustment.reason")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
             />
@@ -250,27 +250,27 @@ export default function AdjustmentsPage() {
           <label className={`text-sm ${alignClass} md:col-span-2`}>
             <span className="mb-1 block text-xs text-muted">{t("common.memo")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={memo}
               onChange={(event) => setMemo(event.target.value)}
             />
           </label>
         </div>
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
         <button
           type="submit"
-          className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+          className="mt-4 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           disabled={isPending}
         >
           {t("adjustment.create")}
         </button>
       </form>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="flex items-center justify-between border-b border-border px-4 py-2 text-sm font-semibold">
           <span>{t("adjustment.listTitle")}</span>
           <span className="text-xs text-muted">
@@ -288,8 +288,8 @@ export default function AdjustmentsPage() {
           <div className="p-4 text-sm text-muted">{t("adjustment.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("adjustment.number")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("adjustment.date")}</th>

@@ -336,20 +336,20 @@ export default function BillingPortalPage() {
     }).format(amount);
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("billing.title")}</h1>
-        <p className="text-sm text-muted">{t("billing.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("billing.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("billing.subtitle")}</p>
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="app-card p-5 lg:col-span-2">
+        <div className="app-card p-6 lg:col-span-2 card-modern">
           <h2 className="text-lg font-semibold">{t("billing.currentPlan")}</h2>
           {loading ? (
             <div className="mt-4 space-y-3">
@@ -392,17 +392,17 @@ export default function BillingPortalPage() {
               ) : null}
             </div>
           ) : (
-            <p className="mt-2 text-sm text-muted">{t("billing.noSubscription")}</p>
+            <p className="mt-2 text-sm text-muted page-subtitle">{t("billing.noSubscription")}</p>
           )}
         </div>
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           <h2 className="text-lg font-semibold">{t("billing.actions")}</h2>
           <div className="mt-3 flex flex-col gap-2">
             {subscription?.status === "canceled" ? (
               <button
                 type="button"
                 onClick={handleReactivate}
-                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
+                className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
               >
                 {t("billing.reactivate")}
               </button>
@@ -411,14 +411,14 @@ export default function BillingPortalPage() {
                 <button
                   type="button"
                   onClick={() => handleCancel(true)}
-                  className="rounded-xl border border-border px-4 py-2 text-sm font-semibold"
+                  className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold"
                 >
                   {t("billing.cancelAtPeriod")}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleCancel(false)}
-                  className="rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-600"
+                  className="rounded-2xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-600"
                 >
                   {t("billing.cancelNow")}
                 </button>
@@ -428,13 +428,13 @@ export default function BillingPortalPage() {
         </div>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <h2 className="text-lg font-semibold">{t("billing.changePlan")}</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("billing.selectPlan")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={selectedPlanId}
               onChange={(event) => setSelectedPlanId(event.target.value)}
             >
@@ -449,7 +449,7 @@ export default function BillingPortalPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("billing.billingCycle")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={billingCycle}
               onChange={(event) => setBillingCycle(event.target.value as "monthly" | "yearly")}
             >
@@ -461,7 +461,7 @@ export default function BillingPortalPage() {
             <button
               type="button"
               onClick={handleChangePlan}
-              className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+              className="w-full rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
               disabled={isPending}
             >
               {t("billing.applyPlan")}
@@ -471,7 +471,7 @@ export default function BillingPortalPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold">{t("billing.paymentMethods")}</h2>
             {isAdmin ? (
@@ -481,7 +481,7 @@ export default function BillingPortalPage() {
                     ? `/api/billing/payment-methods/export?companyId=${activeCompanyId}`
                     : "#"
                 }
-                className={`rounded-xl border border-border px-3 py-2 text-xs font-semibold ${
+                className={`rounded-2xl border border-border px-3 py-2 text-xs font-semibold ${
                   activeCompanyId ? "" : "pointer-events-none opacity-60"
                 }`}
               >
@@ -497,12 +497,12 @@ export default function BillingPortalPage() {
                 <SkeletonBlock className="h-8 w-5/6" />
               </div>
             ) : methods.length === 0 ? (
-              <p className="text-sm text-muted">{t("billing.noPaymentMethods")}</p>
+              <p className="text-sm text-muted page-subtitle">{t("billing.noPaymentMethods")}</p>
             ) : (
               methods.map((method) => (
                 <div
                   key={method.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3 py-2"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border px-3 py-2"
                 >
                   <span>
                     {method.brand ?? method.type} •••• {method.last4}
@@ -544,7 +544,7 @@ export default function BillingPortalPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("billing.methodType")}</span>
                   <select
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={methodForm.type}
                     onChange={(event) =>
                       setMethodForm((prev) => ({ ...prev, type: event.target.value }))
@@ -557,7 +557,7 @@ export default function BillingPortalPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("billing.methodBrand")}</span>
                   <input
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={methodForm.brand}
                     onChange={(event) =>
                       setMethodForm((prev) => ({ ...prev, brand: event.target.value }))
@@ -567,7 +567,7 @@ export default function BillingPortalPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("billing.methodLast4")}</span>
                   <input
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={methodForm.last4}
                     maxLength={4}
                     onChange={(event) =>
@@ -578,7 +578,7 @@ export default function BillingPortalPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("billing.methodToken")}</span>
                   <input
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={methodForm.token}
                     onChange={(event) =>
                       setMethodForm((prev) => ({ ...prev, token: event.target.value }))
@@ -588,7 +588,7 @@ export default function BillingPortalPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("billing.methodExpMonth")}</span>
                   <input
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={methodForm.expMonth}
                     onChange={(event) =>
                       setMethodForm((prev) => ({ ...prev, expMonth: event.target.value }))
@@ -598,7 +598,7 @@ export default function BillingPortalPage() {
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("billing.methodExpYear")}</span>
                   <input
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={methodForm.expYear}
                     onChange={(event) =>
                       setMethodForm((prev) => ({ ...prev, expYear: event.target.value }))
@@ -618,7 +618,7 @@ export default function BillingPortalPage() {
               </label>
               <button
                 type="submit"
-                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
+                className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
                 disabled={isPending}
               >
                 {t("billing.addMethod")}
@@ -627,7 +627,7 @@ export default function BillingPortalPage() {
           ) : null}
         </div>
 
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold">{t("billing.invoices")}</h2>
             {isAdmin ? (
@@ -637,7 +637,7 @@ export default function BillingPortalPage() {
                     ? `/api/billing/invoices/export?companyId=${activeCompanyId}`
                     : "#"
                 }
-                className={`rounded-xl border border-border px-3 py-2 text-xs font-semibold ${
+                className={`rounded-2xl border border-border px-3 py-2 text-xs font-semibold ${
                   activeCompanyId ? "" : "pointer-events-none opacity-60"
                 }`}
               >
@@ -652,12 +652,12 @@ export default function BillingPortalPage() {
                 <SkeletonBlock className="h-8 w-5/6" />
               </div>
             ) : invoices.length === 0 ? (
-              <p className="text-sm text-muted">{t("billing.noInvoices")}</p>
+              <p className="text-sm text-muted page-subtitle">{t("billing.noInvoices")}</p>
             ) : (
               invoices.map((invoice) => (
                 <div
                   key={invoice.id}
-                  className="rounded-xl border border-border px-3 py-2"
+                  className="rounded-2xl border border-border px-3 py-2"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-semibold">{invoice.planName}</span>
@@ -699,14 +699,14 @@ export default function BillingPortalPage() {
       </div>
 
       {isAdmin ? (
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           <h2 className="text-lg font-semibold">{t("billing.adminTitle")}</h2>
-          <p className="text-sm text-muted">{t("billing.adminSubtitle")}</p>
+          <p className="text-sm text-muted page-subtitle">{t("billing.adminSubtitle")}</p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("billing.overrideStatus")}</span>
               <select
-                className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={subscription?.status ?? "active"}
                 onChange={(event) => handleOverrideStatus(event.target.value)}
               >

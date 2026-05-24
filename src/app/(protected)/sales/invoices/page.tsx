@@ -120,11 +120,11 @@ export default function SalesInvoicesPage() {
   );
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">{t("invoice.title")}</h1>
-          <p className="text-sm text-muted">{t("invoice.subtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("invoice.title")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("invoice.subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -146,7 +146,7 @@ export default function SalesInvoicesPage() {
                 setNotice("invoice.remindersSent");
               });
             }}
-            className="rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground"
+            className="rounded-2xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground"
             disabled={isPending}
           >
             {t("invoice.sendReminders")}
@@ -171,14 +171,14 @@ export default function SalesInvoicesPage() {
                 loadInvoices();
               });
             }}
-            className="rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground"
+            className="rounded-2xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground"
             disabled={isPending}
           >
             {t("invoice.runRecurring")}
           </button>
           <Link
             href="/sales/invoices/new"
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           >
             {t("invoice.create")}
           </Link>
@@ -186,22 +186,22 @@ export default function SalesInvoicesPage() {
       </div>
 
       {notice ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
           {t(notice)}
         </div>
       ) : null}
       {error ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
           {t(error)}
         </div>
       ) : null}
 
-      <div className="app-card p-4">
+      <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.search")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("invoice.searchPlaceholder")}
@@ -210,7 +210,7 @@ export default function SalesInvoicesPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("invoice.statusFilter")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
             >
@@ -225,7 +225,7 @@ export default function SalesInvoicesPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("invoice.customerFilter")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={customerFilter}
               onChange={(event) => setCustomerFilter(event.target.value)}
               disabled={loadingCustomers}
@@ -242,7 +242,7 @@ export default function SalesInvoicesPage() {
             <span className="mb-1 block text-xs text-muted">{t("invoice.fromDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={fromDate}
               onChange={(event) => setFromDate(event.target.value)}
             />
@@ -251,7 +251,7 @@ export default function SalesInvoicesPage() {
             <span className="mb-1 block text-xs text-muted">{t("invoice.toDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={toDate}
               onChange={(event) => setToDate(event.target.value)}
             />
@@ -267,7 +267,7 @@ export default function SalesInvoicesPage() {
         </div>
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="flex items-center justify-between border-b border-border px-4 py-2 text-sm font-semibold">
           <span>{t("invoice.listTitle")}</span>
           <span className="text-xs text-muted">
@@ -286,8 +286,8 @@ export default function SalesInvoicesPage() {
           <div className="p-4 text-sm text-muted">{t("invoice.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("invoice.number")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("invoice.customer")}</th>

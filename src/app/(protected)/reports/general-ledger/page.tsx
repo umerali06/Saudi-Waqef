@@ -198,20 +198,20 @@ export default function GeneralLedgerPage() {
   }, [searchParams, accountId, startDate, endDate]);
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("reports.ledger.title")}</h1>
-        <p className="text-sm text-muted">{t("reports.ledger.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("reports.ledger.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("reports.ledger.subtitle")}</p>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-end gap-4">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
               {t("reports.ledger.account")}
             </span>
             <select
-              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={accountId}
               onChange={(event) => setAccountId(event.target.value)}
             >
@@ -229,7 +229,7 @@ export default function GeneralLedgerPage() {
             </span>
             <input
               type="date"
-              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={startDate}
               onChange={(event) => setStartDate(event.target.value)}
             />
@@ -240,7 +240,7 @@ export default function GeneralLedgerPage() {
             </span>
             <input
               type="date"
-              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={endDate}
               onChange={(event) => setEndDate(event.target.value)}
             />
@@ -249,7 +249,7 @@ export default function GeneralLedgerPage() {
             type="button"
             onClick={loadLedger}
             disabled={isPending}
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {t("reports.ledger.view")}
           </button>
@@ -259,7 +259,7 @@ export default function GeneralLedgerPage() {
             type="button"
             onClick={() => handleExport("csv")}
             disabled={isPending}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
           >
             {t("reports.ledger.exportCsv")}
           </button>
@@ -267,13 +267,13 @@ export default function GeneralLedgerPage() {
             type="button"
             onClick={() => handleExport("pdf")}
             disabled={isPending}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
           >
             {t("reports.ledger.exportPdf")}
           </button>
         </div>
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
@@ -300,7 +300,7 @@ export default function GeneralLedgerPage() {
         </div>
       ) : null}
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="border-b border-border px-4 py-2 text-sm font-semibold">
           {t("reports.ledger.tableTitle")}
         </div>
@@ -308,8 +308,8 @@ export default function GeneralLedgerPage() {
           <div className="p-4 text-sm text-muted">{t("reports.ledger.empty")}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("reports.ledger.date")}</th>
                   <th className={`px-4 py-2 ${alignClass}`}>{t("reports.ledger.memo")}</th>

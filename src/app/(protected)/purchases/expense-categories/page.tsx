@@ -146,24 +146,24 @@ export default function ExpenseCategoriesPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("expenseCategory.title")}</h1>
-        <p className="text-sm text-muted">{t("expenseCategory.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("expenseCategory.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("expenseCategory.subtitle")}</p>
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
 
-      <div className="app-card p-4">
+      <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-3">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expenseCategory.name")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
@@ -171,7 +171,7 @@ export default function ExpenseCategoriesPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expenseCategory.account")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={accountId}
               onChange={(event) => setAccountId(event.target.value)}
             >
@@ -186,7 +186,7 @@ export default function ExpenseCategoriesPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expenseCategory.status")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={status}
               onChange={(event) => setStatus(event.target.value as "active" | "inactive")}
             >
@@ -203,7 +203,7 @@ export default function ExpenseCategoriesPage() {
             type="button"
             onClick={handleSubmit}
             disabled={isPending}
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {editingId ? t("expenseCategory.update") : t("expenseCategory.create")}
           </button>
@@ -211,7 +211,7 @@ export default function ExpenseCategoriesPage() {
             <button
               type="button"
               onClick={resetForm}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary"
+              className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary"
             >
               {t("common.cancel")}
             </button>
@@ -219,7 +219,7 @@ export default function ExpenseCategoriesPage() {
         </div>
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="flex items-center justify-between border-b border-border px-4 py-2 text-sm font-semibold">
           <span>{t("expenseCategory.listTitle")}</span>
           <span className="text-xs text-muted">{categories.length}</span>

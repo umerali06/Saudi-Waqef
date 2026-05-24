@@ -463,16 +463,16 @@ export default function ReportsExportCenterPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("reports.exportCenter.title")}</h1>
-        <p className="text-sm text-muted">{t("reports.exportCenter.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("reports.exportCenter.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("reports.exportCenter.subtitle")}</p>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div>
           <h2 className="text-lg font-semibold">{t("reports.exportCenter.formTitle")}</h2>
-          <p className="text-sm text-muted">{t("reports.exportCenter.formSubtitle")}</p>
+          <p className="text-sm text-muted page-subtitle">{t("reports.exportCenter.formSubtitle")}</p>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <label className={`text-sm ${alignClass}`}>
@@ -480,7 +480,7 @@ export default function ReportsExportCenterPage() {
               {t("reports.exportCenter.reportType")}
             </span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={reportType}
               onChange={(event) => handleReportTypeChange(event.target.value)}
             >
@@ -496,7 +496,7 @@ export default function ReportsExportCenterPage() {
               {t("reports.exportCenter.format")}
             </span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={format}
               onChange={(event) => setFormat(event.target.value)}
             >
@@ -514,7 +514,7 @@ export default function ReportsExportCenterPage() {
               </span>
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={startDate}
                 onChange={(event) => setStartDate(event.target.value)}
               />
@@ -527,7 +527,7 @@ export default function ReportsExportCenterPage() {
               </span>
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={endDate}
                 onChange={(event) => setEndDate(event.target.value)}
               />
@@ -540,7 +540,7 @@ export default function ReportsExportCenterPage() {
               </span>
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={asOfDate}
                 onChange={(event) => setAsOfDate(event.target.value)}
               />
@@ -552,7 +552,7 @@ export default function ReportsExportCenterPage() {
                 {t("reports.exportCenter.account")}
               </span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={accountId}
                 onChange={(event) => setAccountId(event.target.value)}
               >
@@ -571,7 +571,7 @@ export default function ReportsExportCenterPage() {
                 {t("reports.exportCenter.vatPeriod")}
               </span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={periodId}
                 onChange={(event) => setPeriodId(event.target.value)}
               >
@@ -589,19 +589,19 @@ export default function ReportsExportCenterPage() {
           <button
             type="button"
             onClick={handleExport}
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           >
             {t("reports.exportCenter.exportButton")}
           </button>
           {errorKey ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
               {t(errorKey)}
             </div>
           ) : null}
         </div>
       </div>
 
-      <div className="app-card space-y-4 p-5">
+      <div className="app-card space-y-4 p-5 card-modern">
         <h2 className="text-lg font-semibold">{t("reports.exportCenter.historyTitle")}</h2>
         <div className="app-panel p-4">
           <p className="text-sm font-semibold">{t("reports.exportCenter.filtersTitle")}</p>
@@ -611,7 +611,7 @@ export default function ReportsExportCenterPage() {
                 {t("reports.exportCenter.filter.reportType")}
               </span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={filterReportType}
                 onChange={(event) => setFilterReportType(event.target.value)}
               >
@@ -628,7 +628,7 @@ export default function ReportsExportCenterPage() {
                 {t("reports.exportCenter.filter.format")}
               </span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={filterFormat}
                 onChange={(event) => setFilterFormat(event.target.value)}
               >
@@ -643,7 +643,7 @@ export default function ReportsExportCenterPage() {
                 {t("reports.exportCenter.filter.user")}
               </span>
               <select
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={filterUserId}
                 onChange={(event) => setFilterUserId(event.target.value)}
               >
@@ -661,7 +661,7 @@ export default function ReportsExportCenterPage() {
               </span>
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={filterStartDate}
                 onChange={(event) => setFilterStartDate(event.target.value)}
               />
@@ -672,7 +672,7 @@ export default function ReportsExportCenterPage() {
               </span>
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={filterEndDate}
                 onChange={(event) => setFilterEndDate(event.target.value)}
               />
@@ -682,23 +682,23 @@ export default function ReportsExportCenterPage() {
             <button
               type="button"
               onClick={handleApplyFilters}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary"
+              className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary"
             >
               {t("reports.exportCenter.filter.apply")}
             </button>
             <button
               type="button"
               onClick={handleResetFilters}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-muted transition hover:text-foreground"
+              className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold text-muted transition hover:text-foreground"
             >
               {t("reports.exportCenter.filter.reset")}
             </button>
           </div>
         </div>
-        <div className="overflow-hidden rounded-xl border border-border">
+        <div className="overflow-hidden rounded-2xl border border-border">
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-muted text-muted">
+            <table className="min-w-full text-sm table-modern">
+              <thead className="bg-surface-muted text-muted thead-modern">
                 <tr>
                   <th className={`px-4 py-2 ${alignClass}`}>
                     {t("reports.exportCenter.exportTable.date")}

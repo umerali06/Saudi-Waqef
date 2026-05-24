@@ -122,12 +122,12 @@ export default function HelpArticlePage() {
 
   if (loading) {
     return (
-      <section className="space-y-6">
+      <section className="space-y-6 page-shell">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SkeletonBlock className="h-6 w-40" />
           <SkeletonBlock className="h-8 w-24" />
         </div>
-        <div className="app-card space-y-3 p-5">
+        <div className="app-card space-y-3 p-5 card-modern">
           <SkeletonBlock className="h-4 w-64" />
           <SkeletonBlock className="h-3 w-40" />
           <SkeletonBlock className="h-3 w-full" />
@@ -144,16 +144,16 @@ export default function HelpArticlePage() {
 
   if (!article || errorKey) {
     return (
-      <section className="space-y-4">
+      <section className="space-y-4 page-shell">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold">{t("help.article.title")}</h1>
-            <p className="text-sm text-muted">{t("help.article.subtitle")}</p>
+            <h1 className="text-2xl font-semibold page-title">{t("help.article.title")}</h1>
+            <p className="text-sm text-muted page-subtitle">{t("help.article.subtitle")}</p>
           </div>
           <button
             type="button"
             onClick={() => router.push("/help")}
-            className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+            className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
           >
             {t("help.back")}
           </button>
@@ -166,13 +166,13 @@ export default function HelpArticlePage() {
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs text-muted">{displayCategory || t("help.articlesTitle")}</p>
-          <h1 className="text-2xl font-semibold">{displayTitle}</h1>
+          <h1 className="text-2xl font-semibold page-title">{displayTitle}</h1>
           {displaySummary ? (
-            <p className="mt-2 text-sm text-muted">{displaySummary}</p>
+            <p className="mt-2 text-sm text-muted page-subtitle">{displaySummary}</p>
           ) : null}
           {formattedUpdated ? (
             <p className="mt-1 text-xs text-muted">
@@ -182,13 +182,13 @@ export default function HelpArticlePage() {
         </div>
         <Link
           href="/help"
-          className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+          className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
         >
           {t("help.back")}
         </Link>
       </div>
 
-      <div className="app-card space-y-4 p-5">
+      <div className="app-card space-y-4 p-5 card-modern">
         <div className="whitespace-pre-line text-sm leading-7 text-foreground">
           {displayContent}
         </div>
@@ -203,7 +203,7 @@ export default function HelpArticlePage() {
         ) : null}
       </div>
 
-      <div className="app-card space-y-4 p-5">
+      <div className="app-card space-y-4 p-5 card-modern">
         <div>
           <h2 className="text-sm font-semibold">{t("help.article.feedbackTitle")}</h2>
           <p className="text-xs text-muted">{t("help.article.feedbackPrompt")}</p>
@@ -232,22 +232,22 @@ export default function HelpArticlePage() {
             value={message}
             onChange={(event) => setMessage(event.target.value)}
             placeholder={t("help.article.feedbackPlaceholder")}
-            className="min-h-[120px] w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+            className="min-h-[120px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
           />
         </label>
         {errorKey ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
         {sent ? (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
             {t("help.article.feedbackSuccess")}
           </div>
         ) : null}
         <button
           type="button"
-          className="w-fit rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+          className="w-fit rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           onClick={handleSubmitFeedback}
           disabled={isPending || !rating}
         >

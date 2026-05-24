@@ -603,24 +603,24 @@ export default function AttendancePage() {
     });
   };
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("attendance.title")}</h1>
-        <p className="text-sm text-muted">{t("attendance.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("attendance.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("attendance.subtitle")}</p>
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
       {successKey ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
           {t(successKey)}
         </div>
       ) : null}
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">{t("attendance.summaryTitle")}</h2>
@@ -631,7 +631,7 @@ export default function AttendancePage() {
               <span className="mb-1 block">{t("attendance.filterStartDate")}</span>
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-1 text-xs"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-1 text-xs"
                 value={filterStartDate}
                 onChange={(event) => setFilterStartDate(event.target.value)}
               />
@@ -640,7 +640,7 @@ export default function AttendancePage() {
               <span className="mb-1 block">{t("attendance.filterEndDate")}</span>
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-1 text-xs"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-1 text-xs"
                 value={filterEndDate}
                 onChange={(event) => setFilterEndDate(event.target.value)}
               />
@@ -650,7 +650,7 @@ export default function AttendancePage() {
         {loadingSummary ? (
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             {Array.from({ length: 9 }).map((_, idx) => (
-              <div key={idx} className="rounded-xl border border-border bg-surface px-4 py-3">
+              <div key={idx} className="rounded-2xl border border-border bg-surface px-4 py-3">
                 <SkeletonBlock className="h-3 w-24" />
                 <SkeletonBlock className="mt-3 h-6 w-24" />
               </div>
@@ -658,45 +658,45 @@ export default function AttendancePage() {
           </div>
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-3">
-            <div className="rounded-xl border border-border bg-surface px-4 py-3">
+            <div className="rounded-2xl border border-border bg-surface px-4 py-3">
               <p className="text-xs text-muted">{t("attendance.summary.presentDays")}</p>
               <p className="text-lg font-semibold">{summary?.totals?.presentDays ?? 0}</p>
             </div>
-            <div className="rounded-xl border border-border bg-surface px-4 py-3">
+            <div className="rounded-2xl border border-border bg-surface px-4 py-3">
               <p className="text-xs text-muted">{t("attendance.summary.absentDays")}</p>
               <p className="text-lg font-semibold">{summary?.totals?.absentDays ?? 0}</p>
             </div>
-            <div className="rounded-xl border border-border bg-surface px-4 py-3">
+            <div className="rounded-2xl border border-border bg-surface px-4 py-3">
               <p className="text-xs text-muted">{t("attendance.summary.leaveDays")}</p>
               <p className="text-lg font-semibold">{summary?.totals?.leaveDays ?? 0}</p>
             </div>
-            <div className="rounded-xl border border-border bg-surface px-4 py-3">
+            <div className="rounded-2xl border border-border bg-surface px-4 py-3">
               <p className="text-xs text-muted">{t("attendance.summary.holidayDays")}</p>
               <p className="text-lg font-semibold">{summary?.totals?.holidayDays ?? 0}</p>
             </div>
-            <div className="rounded-xl border border-border bg-surface px-4 py-3">
+            <div className="rounded-2xl border border-border bg-surface px-4 py-3">
               <p className="text-xs text-muted">{t("attendance.summary.lateDays")}</p>
               <p className="text-lg font-semibold">{summary?.totals?.lateDays ?? 0}</p>
             </div>
-            <div className="rounded-xl border border-border bg-surface px-4 py-3">
+            <div className="rounded-2xl border border-border bg-surface px-4 py-3">
               <p className="text-xs text-muted">{t("attendance.summary.totalMinutes")}</p>
               <p className="text-lg font-semibold">
                 {formatMinutes(summary?.totals?.totalMinutes ?? 0)}
               </p>
             </div>
-            <div className="rounded-xl border border-border bg-surface px-4 py-3">
+            <div className="rounded-2xl border border-border bg-surface px-4 py-3">
               <p className="text-xs text-muted">{t("attendance.summary.overtimeMinutes")}</p>
               <p className="text-lg font-semibold">
                 {formatMinutes(summary?.totals?.overtimeMinutes ?? 0)}
               </p>
             </div>
-            <div className="rounded-xl border border-border bg-surface px-4 py-3">
+            <div className="rounded-2xl border border-border bg-surface px-4 py-3">
               <p className="text-xs text-muted">{t("attendance.summary.lateMinutes")}</p>
               <p className="text-lg font-semibold">
                 {formatMinutes(summary?.totals?.lateMinutes ?? 0)}
               </p>
             </div>
-            <div className="rounded-xl border border-border bg-surface px-4 py-3">
+            <div className="rounded-2xl border border-border bg-surface px-4 py-3">
               <p className="text-xs text-muted">{t("attendance.summary.earlyMinutes")}</p>
               <p className="text-lg font-semibold">
                 {formatMinutes(summary?.totals?.earlyMinutes ?? 0)}
@@ -706,7 +706,7 @@ export default function AttendancePage() {
         )}
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div>
           <h2 className="text-lg font-semibold">{t("attendance.self.title")}</h2>
           <p className="text-xs text-muted">{t("attendance.self.subtitle")}</p>
@@ -715,7 +715,7 @@ export default function AttendancePage() {
           <button
             type="button"
             onClick={handleSelfCheckIn}
-            className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
             disabled={isPending}
           >
             {t("attendance.self.checkIn")}
@@ -723,7 +723,7 @@ export default function AttendancePage() {
           <button
             type="button"
             onClick={handleSelfCheckOut}
-            className="cursor-pointer rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+            className="cursor-pointer rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
             disabled={isPending}
           >
             {t("attendance.self.checkOut")}
@@ -735,7 +735,7 @@ export default function AttendancePage() {
       </div>
 
       {isPrivileged ? (
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           <div>
             <h2 className="text-lg font-semibold">{t("attendance.settingsTitle")}</h2>
             <p className="text-xs text-muted">{t("attendance.settingsSubtitle")}</p>
@@ -756,7 +756,7 @@ export default function AttendancePage() {
                   <span className="mb-1 block text-xs text-muted">{t("attendance.shiftStart")}</span>
                   <input
                     type="time"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={shiftStart}
                     onChange={(event) => setShiftStart(event.target.value)}
                   />
@@ -765,7 +765,7 @@ export default function AttendancePage() {
                   <span className="mb-1 block text-xs text-muted">{t("attendance.shiftEnd")}</span>
                   <input
                     type="time"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={shiftEnd}
                     onChange={(event) => setShiftEnd(event.target.value)}
                   />
@@ -775,7 +775,7 @@ export default function AttendancePage() {
                   <input
                     type="number"
                     min="0"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={graceMinutes}
                     onChange={(event) => setGraceMinutes(event.target.value)}
                   />
@@ -785,7 +785,7 @@ export default function AttendancePage() {
                   <input
                     type="number"
                     min="0"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={roundingMinutes}
                     onChange={(event) => setRoundingMinutes(event.target.value)}
                   />
@@ -797,7 +797,7 @@ export default function AttendancePage() {
                   <input
                     type="number"
                     min="0"
-                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                    className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                     value={overtimeThresholdMinutes}
                     onChange={(event) => setOvertimeThresholdMinutes(event.target.value)}
                   />
@@ -821,7 +821,7 @@ export default function AttendancePage() {
               <button
                 type="button"
                 onClick={handleSaveSettings}
-                className="mt-4 cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+                className="mt-4 cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
                 disabled={isPending}
               >
                 {t("common.save")}
@@ -832,7 +832,7 @@ export default function AttendancePage() {
       ) : null}
 
       {isPrivileged ? (
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           <div>
             <h2 className="text-lg font-semibold">{t("attendance.holidaysTitle")}</h2>
             <p className="text-xs text-muted">{t("attendance.holidaysSubtitle")}</p>
@@ -841,7 +841,7 @@ export default function AttendancePage() {
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("attendance.holidayName")}</span>
               <input
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={holidayName}
                 onChange={(event) => setHolidayName(event.target.value)}
               />
@@ -850,7 +850,7 @@ export default function AttendancePage() {
               <span className="mb-1 block text-xs text-muted">{t("attendance.holidayDate")}</span>
               <input
                 type="date"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={holidayDate}
                 onChange={(event) => setHolidayDate(event.target.value)}
               />
@@ -868,7 +868,7 @@ export default function AttendancePage() {
             <button
               type="button"
               onClick={handleSaveHoliday}
-              className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+              className="cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
               disabled={isPending}
             >
               {editHolidayId ? t("attendance.holidayUpdate") : t("attendance.holidayCreate")}
@@ -877,7 +877,7 @@ export default function AttendancePage() {
               <button
                 type="button"
                 onClick={resetHolidayForm}
-                className="cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted"
+                className="cursor-pointer rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted"
               >
                 {t("attendance.holidayCancelEdit")}
               </button>
@@ -892,11 +892,11 @@ export default function AttendancePage() {
                 ))}
               </div>
             ) : holidays.length === 0 ? (
-              <p className="text-sm text-muted">{t("attendance.holidaysEmpty")}</p>
+              <p className="text-sm text-muted page-subtitle">{t("attendance.holidaysEmpty")}</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-surface-muted text-muted">
+                <table className="min-w-full text-sm table-modern">
+                  <thead className="bg-surface-muted text-muted thead-modern">
                     <tr>
                       <th className={`px-4 py-2 ${alignClass}`}>{t("attendance.holidayName")}</th>
                       <th className={`px-4 py-2 ${alignClass}`}>{t("attendance.holidayDate")}</th>
@@ -940,7 +940,7 @@ export default function AttendancePage() {
         </div>
       ) : null}
       {isPrivileged ? (
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">{t("attendance.importTitle")}</h2>
@@ -950,7 +950,7 @@ export default function AttendancePage() {
               <button
                 type="button"
                 onClick={handleDownloadTemplate}
-                className="cursor-pointer rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+                className="cursor-pointer rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
                 disabled={isPending}
               >
                 {t("common.downloadTemplate")}
@@ -966,7 +966,7 @@ export default function AttendancePage() {
               <button
                 type="button"
                 onClick={handleImport}
-                className="cursor-pointer rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+                className="cursor-pointer rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
                 disabled={isPending || !importFile}
               >
                 {t("common.import")}
@@ -974,7 +974,7 @@ export default function AttendancePage() {
             </div>
           </div>
           {importSummary ? (
-            <div className="mt-4 rounded-xl border border-border bg-surface px-4 py-3 text-sm">
+            <div className="mt-4 rounded-2xl border border-border bg-surface px-4 py-3 text-sm">
               <p>{t("attendance.importSummary", { count: String(importSummary.created) })}</p>
               {importSummary.errors.length > 0 ? (
                 <div className="mt-3">
@@ -993,7 +993,7 @@ export default function AttendancePage() {
         </div>
       ) : null}
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">{t("attendance.recordsTitle")}</h2>
@@ -1001,7 +1001,7 @@ export default function AttendancePage() {
           </div>
           <a
             href={exportUrl || "#"}
-            className={`rounded-xl border border-border px-3 py-2 text-xs font-semibold ${
+            className={`rounded-2xl border border-border px-3 py-2 text-xs font-semibold ${
               activeCompanyId ? "" : "pointer-events-none opacity-60"
             }`}
           >
@@ -1012,7 +1012,7 @@ export default function AttendancePage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("attendance.filterEmployee")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={filterEmployeeId}
               onChange={(event) => setFilterEmployeeId(event.target.value)}
               disabled={!isPrivileged || loadingEmployees}
@@ -1028,7 +1028,7 @@ export default function AttendancePage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("attendance.filterStatus")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={filterStatus}
               onChange={(event) => setFilterStatus(event.target.value)}
             >
@@ -1044,7 +1044,7 @@ export default function AttendancePage() {
             <span className="mb-1 block text-xs text-muted">{t("attendance.filterStartDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={filterStartDate}
               onChange={(event) => setFilterStartDate(event.target.value)}
             />
@@ -1053,7 +1053,7 @@ export default function AttendancePage() {
             <span className="mb-1 block text-xs text-muted">{t("attendance.filterEndDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={filterEndDate}
               onChange={(event) => setFilterEndDate(event.target.value)}
             />
@@ -1067,7 +1067,7 @@ export default function AttendancePage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("attendance.recordEmployee")}</span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={recordEmployeeId}
                   onChange={(event) => setRecordEmployeeId(event.target.value)}
                   disabled={Boolean(editRecordId) || loadingEmployees}
@@ -1084,7 +1084,7 @@ export default function AttendancePage() {
                 <span className="mb-1 block text-xs text-muted">{t("attendance.recordDate")}</span>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={recordDate}
                   onChange={(event) => setRecordDate(event.target.value)}
                   disabled={Boolean(editRecordId)}
@@ -1094,7 +1094,7 @@ export default function AttendancePage() {
                 <span className="mb-1 block text-xs text-muted">{t("attendance.recordCheckIn")}</span>
                 <input
                   type="time"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={recordCheckIn}
                   onChange={(event) => setRecordCheckIn(event.target.value)}
                 />
@@ -1103,7 +1103,7 @@ export default function AttendancePage() {
                 <span className="mb-1 block text-xs text-muted">{t("attendance.recordCheckOut")}</span>
                 <input
                   type="time"
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={recordCheckOut}
                   onChange={(event) => setRecordCheckOut(event.target.value)}
                 />
@@ -1111,7 +1111,7 @@ export default function AttendancePage() {
               <label className={`text-sm ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("attendance.recordStatus")}</span>
                 <select
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={recordStatus}
                   onChange={(event) => setRecordStatus(event.target.value)}
                 >
@@ -1125,7 +1125,7 @@ export default function AttendancePage() {
               <label className={`text-sm md:col-span-3 ${alignClass}`}>
                 <span className="mb-1 block text-xs text-muted">{t("attendance.recordNotes")}</span>
                 <input
-                  className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={recordNotes}
                   onChange={(event) => setRecordNotes(event.target.value)}
                 />
@@ -1135,7 +1135,7 @@ export default function AttendancePage() {
               <button
                 type="button"
                 onClick={handleSaveRecord}
-                className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+                className="cursor-pointer rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
                 disabled={isPending}
               >
                 {editRecordId ? t("attendance.recordUpdate") : t("attendance.recordCreate")}
@@ -1143,7 +1143,7 @@ export default function AttendancePage() {
               <button
                 type="button"
                 onClick={resetRecordForm}
-                className="cursor-pointer rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted"
+                className="cursor-pointer rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted"
               >
                 {t("attendance.recordClear")}
               </button>
@@ -1160,11 +1160,11 @@ export default function AttendancePage() {
               ))}
             </div>
           ) : records.length === 0 ? (
-            <p className="text-sm text-muted">{t("attendance.recordsEmpty")}</p>
+            <p className="text-sm text-muted page-subtitle">{t("attendance.recordsEmpty")}</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-surface-muted text-muted">
+              <table className="min-w-full text-sm table-modern">
+                <thead className="bg-surface-muted text-muted thead-modern">
                   <tr>
                     <th className={`px-4 py-2 ${alignClass}`}>{t("attendance.recordEmployee")}</th>
                     <th className={`px-4 py-2 ${alignClass}`}>{t("attendance.recordDate")}</th>

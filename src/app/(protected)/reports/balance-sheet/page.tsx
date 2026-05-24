@@ -98,7 +98,7 @@ export default function BalanceSheetPage() {
   }, [loadReport]);
 
   const renderSection = (title: string, section: BalanceSheetSection) => (
-    <div className="app-card overflow-hidden">
+    <div className="app-card overflow-hidden card-modern">
       <div className="border-b border-border px-4 py-2 text-sm font-semibold">
         {title}
       </div>
@@ -106,8 +106,8 @@ export default function BalanceSheetPage() {
         <div className="p-4 text-sm text-muted">{t("reports.balanceSheet.empty")}</div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-surface-muted text-muted">
+          <table className="min-w-full text-sm table-modern">
+            <thead className="bg-surface-muted text-muted thead-modern">
               <tr>
                 <th className={`px-4 py-2 ${alignClass}`}>
                   {t("reports.balanceSheet.account")}
@@ -152,13 +152,13 @@ export default function BalanceSheetPage() {
   );
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("reports.balanceSheet.title")}</h1>
-        <p className="text-sm text-muted">{t("reports.balanceSheet.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("reports.balanceSheet.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("reports.balanceSheet.subtitle")}</p>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-end gap-4">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
@@ -166,7 +166,7 @@ export default function BalanceSheetPage() {
             </span>
             <input
               type="date"
-              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={asOfDate}
               onChange={(event) => setAsOfDate(event.target.value)}
             />
@@ -175,7 +175,7 @@ export default function BalanceSheetPage() {
             type="button"
             onClick={loadReport}
             disabled={isPending}
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {t("reports.balanceSheet.view")}
           </button>
@@ -185,7 +185,7 @@ export default function BalanceSheetPage() {
             type="button"
             onClick={() => handleExport("csv")}
             disabled={isPending}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
           >
             {t("reports.balanceSheet.exportCsv")}
           </button>
@@ -193,13 +193,13 @@ export default function BalanceSheetPage() {
             type="button"
             onClick={() => handleExport("pdf")}
             disabled={isPending}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
           >
             {t("reports.balanceSheet.exportPdf")}
           </button>
         </div>
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}

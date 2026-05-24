@@ -31,6 +31,8 @@ export async function GET(_: Request, context: RouteContext) {
   return NextResponse.json({
     jobs: jobs.map((job) => ({
       ...job,
+      startedAt: job.startedAt ? job.startedAt.toISOString() : null,
+      finishedAt: job.finishedAt ? job.finishedAt.toISOString() : null,
       createdAt: job.createdAt.toISOString(),
       updatedAt: job.updatedAt ? job.updatedAt.toISOString() : null,
     })),

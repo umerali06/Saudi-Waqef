@@ -236,17 +236,17 @@ export default function ExpensesPage() {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">{t("expense.title")}</h1>
-          <p className="text-sm text-muted">{t("expense.subtitle")}</p>
+          <h1 className="text-2xl font-semibold page-title">{t("expense.title")}</h1>
+          <p className="text-sm text-muted page-subtitle">{t("expense.subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={exportCsv}
-            className="rounded-xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary"
+            className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary"
           >
             {t("common.export")}
           </button>
@@ -254,13 +254,13 @@ export default function ExpensesPage() {
             type="button"
             onClick={bulkApprove}
             disabled={!selectedIds.length || isPending}
-            className="rounded-xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-60"
           >
             {t("expense.approveSelected")}
           </button>
           <Link
             href="/purchases/expenses/new"
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
           >
             {t("expense.create")}
           </Link>
@@ -268,17 +268,17 @@ export default function ExpensesPage() {
       </div>
 
       {errorKey ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
           {t(errorKey)}
         </div>
       ) : null}
 
-      <div className="app-card p-4">
+      <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("common.search")}</span>
             <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("expense.searchPlaceholder")}
@@ -287,7 +287,7 @@ export default function ExpensesPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.statusFilter")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
             >
@@ -302,7 +302,7 @@ export default function ExpensesPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.categoryFilter")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={categoryFilter}
               onChange={(event) => setCategoryFilter(event.target.value)}
               disabled={loadingCategories}
@@ -318,7 +318,7 @@ export default function ExpensesPage() {
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">{t("expense.paymentFilter")}</span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={paymentFilter}
               onChange={(event) => setPaymentFilter(event.target.value)}
             >
@@ -335,7 +335,7 @@ export default function ExpensesPage() {
               {t("expense.reimbursableFilter")}
             </span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={reimbursableFilter}
               onChange={(event) => setReimbursableFilter(event.target.value)}
             >
@@ -349,7 +349,7 @@ export default function ExpensesPage() {
               {t("expense.reimbursementFilter")}
             </span>
             <select
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={reimbursementFilter}
               onChange={(event) => setReimbursementFilter(event.target.value)}
             >
@@ -365,7 +365,7 @@ export default function ExpensesPage() {
             <span className="mb-1 block text-xs text-muted">{t("expense.fromDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={fromDate}
               onChange={(event) => setFromDate(event.target.value)}
             />
@@ -374,7 +374,7 @@ export default function ExpensesPage() {
             <span className="mb-1 block text-xs text-muted">{t("expense.toDate")}</span>
             <input
               type="date"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={toDate}
               onChange={(event) => setToDate(event.target.value)}
             />
@@ -382,7 +382,7 @@ export default function ExpensesPage() {
         </div>
       </div>
 
-      <div className="app-card overflow-hidden">
+      <div className="app-card overflow-hidden card-modern">
         <div className="flex items-center justify-between border-b border-border px-4 py-2 text-sm font-semibold">
           <span>{t("expense.listTitle")}</span>
           <span className="text-xs text-muted">

@@ -105,13 +105,13 @@ export default function CashFlowPage() {
   }, [activeCompanyId, endDate, loadReport, startDate]);
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 page-shell">
       <div>
-        <h1 className="text-2xl font-semibold">{t("reports.cashFlow.title")}</h1>
-        <p className="text-sm text-muted">{t("reports.cashFlow.subtitle")}</p>
+        <h1 className="text-2xl font-semibold page-title">{t("reports.cashFlow.title")}</h1>
+        <p className="text-sm text-muted page-subtitle">{t("reports.cashFlow.subtitle")}</p>
       </div>
 
-      <div className="app-card p-5">
+      <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-end gap-4">
           <label className={`text-sm ${alignClass}`}>
             <span className="mb-1 block text-xs text-muted">
@@ -119,7 +119,7 @@ export default function CashFlowPage() {
             </span>
             <input
               type="date"
-              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={startDate}
               onChange={(event) => setStartDate(event.target.value)}
             />
@@ -130,7 +130,7 @@ export default function CashFlowPage() {
             </span>
             <input
               type="date"
-              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+              className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={endDate}
               onChange={(event) => setEndDate(event.target.value)}
             />
@@ -139,7 +139,7 @@ export default function CashFlowPage() {
             type="button"
             onClick={loadReport}
             disabled={isPending}
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {t("reports.cashFlow.view")}
           </button>
@@ -149,7 +149,7 @@ export default function CashFlowPage() {
             type="button"
             onClick={() => handleExport("csv")}
             disabled={isPending}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
           >
             {t("reports.cashFlow.exportCsv")}
           </button>
@@ -157,13 +157,13 @@ export default function CashFlowPage() {
             type="button"
             onClick={() => handleExport("pdf")}
             disabled={isPending}
-            className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
+            className="rounded-2xl border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-muted"
           >
             {t("reports.cashFlow.exportPdf")}
           </button>
         </div>
         {errorKey ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}
           </div>
         ) : null}
@@ -187,7 +187,7 @@ export default function CashFlowPage() {
       ) : null}
 
       {report ? (
-        <div className="app-card p-5">
+        <div className="app-card p-6 card-modern">
           <h2 className="text-lg font-semibold">{t("reports.cashFlow.operating")}</h2>
           <div className="mt-3 space-y-2 text-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -216,7 +216,7 @@ export default function CashFlowPage() {
 
       {report ? (
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="app-card p-5">
+          <div className="app-card p-6 card-modern">
             <h2 className="text-lg font-semibold">{t("reports.cashFlow.investing")}</h2>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
               <span>{t("reports.cashFlow.netFromInvesting")}</span>
@@ -225,7 +225,7 @@ export default function CashFlowPage() {
               </span>
             </div>
           </div>
-          <div className="app-card p-5">
+          <div className="app-card p-6 card-modern">
             <h2 className="text-lg font-semibold">{t("reports.cashFlow.financing")}</h2>
             <div className="mt-3 space-y-2 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -242,7 +242,7 @@ export default function CashFlowPage() {
       ) : null}
 
       {report ? (
-        <div className="app-card overflow-hidden">
+        <div className="app-card overflow-hidden card-modern">
           <div className="border-b border-border px-4 py-2 text-sm font-semibold">
             {t("reports.cashFlow.cashAccounts")}
           </div>
@@ -250,8 +250,8 @@ export default function CashFlowPage() {
             <div className="p-4 text-sm text-muted">{t("reports.cashFlow.empty")}</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-surface-muted text-muted">
+              <table className="min-w-full text-sm table-modern">
+                <thead className="bg-surface-muted text-muted thead-modern">
                   <tr>
                     <th className={`px-4 py-2 ${alignClass}`}>
                       {t("reports.cashFlow.account")}
