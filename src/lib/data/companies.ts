@@ -139,3 +139,17 @@ export async function listActiveCompanies(options?: { limit?: number }) {
     .filter((company) => company.name.length > 0)
     .sort((a, b) => a.name.localeCompare(b.name));
 }
+
+export async function findActiveCompanyByName(name: string) {
+  const normalizedName = name.trim().toLowerCase();
+  if (!normalizedName) {
+    return null;
+  }
+
+  const companies = await listActiveCompanies();
+  const match = companies.find(
+    (company) => company.name.trim().toLowerCase() === normalizedName
+  );
+
+  return match ? getCompanyById(match.id) : null;
+}

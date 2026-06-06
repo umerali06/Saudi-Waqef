@@ -12,12 +12,13 @@ export async function GET(req: NextRequest) {
     }
 
     const systemAdmin = await isSystemAdminUser(user.id, user.email ?? undefined);
+    const memberships = systemAdmin ? [] : await listMembershipsByUser(user.id);
+    const ownedCompanyIds = memberships
+      .filter((membership) => membership.role === "owner")
+      .map((membership) => membership.companyId);
+
     if (!systemAdmin) {
-      const memberships = await listMembershipsByUser(user.id);
-      const canAccess = memberships.some(
-        (membership) => membership.role === "owner" || membership.role === "admin"
-      );
-      if (!canAccess) {
+      if (ownedCompanyIds.length === 0) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }
@@ -26,8 +27,13 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status") as "pending" | "approved" | "rejected" | null;
     
     const requests = await getRegistrationRequests(status || undefined);
+    const visibleRequests = systemAdmin
+      ? requests
+      : requests.filter(
+          (request) => request.companyId && ownedCompanyIds.includes(request.companyId)
+        );
     
-    return NextResponse.json({ requests });
+    return NextResponse.json({ requests: visibleRequests });
   } catch (error) {
     console.error("Failed to fetch registration requests:", error);
     return NextResponse.json(

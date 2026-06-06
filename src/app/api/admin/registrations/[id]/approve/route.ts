@@ -4,6 +4,8 @@ import { createUser, getUserByEmail } from "@/lib/data/users";
 import { createCompany, getCompanyById } from "@/lib/data/companies";
 import { createMembership, getMembership, updateMembershipRole } from "@/lib/data/memberships";
 import { queueEmailWithDispatch } from "@/lib/email/queue";
+import { getSessionUser } from "@/lib/auth-helpers";
+import { isSystemAdminUser } from "@/lib/data/system-admins";
 import { v4 as uuid } from "uuid";
 import crypto from "crypto";
 import type { Role } from "@/lib/types";
@@ -44,6 +46,10 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
+    const sessionUser = await getSessionUser({ ignoreImpersonation: true });
+    if (!sessionUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const request = await getRegistrationRequestById(id);
 
@@ -55,11 +61,29 @@ export async function POST(
       return NextResponse.json({ error: "Request is not pending" }, { status: 400 });
     }
 
-    const existingUser = await getUserByEmail(request.email);
-    const userId = existingUser?.id ?? uuid();
+    const systemAdmin = await isSystemAdminUser(sessionUser.id, sessionUser.email ?? undefined);
     const selectedCompany = request.companyId
       ? await getCompanyById(request.companyId)
       : null;
+
+    if (request.companyId) {
+      if (!selectedCompany || selectedCompany.status !== "active") {
+        return NextResponse.json({ error: "Company is not active" }, { status: 400 });
+      }
+
+      const approverMembership = await getMembership({
+        userId: sessionUser.id,
+        companyId: request.companyId,
+      });
+      if (approverMembership?.role !== "owner") {
+        return NextResponse.json({ error: "Only the company owner can approve this request" }, { status: 403 });
+      }
+    } else if (!systemAdmin) {
+      return NextResponse.json({ error: "Only a system admin can approve unlinked requests" }, { status: 403 });
+    }
+
+    const existingUser = await getUserByEmail(request.email);
+    const userId = existingUser?.id ?? uuid();
     const companyId = selectedCompany?.id ?? uuid();
     const membershipId = uuid();
     const password = crypto.randomBytes(8).toString("hex");

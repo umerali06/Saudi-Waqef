@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "@/i18n/provider";
 import { RegistrationRequest } from "@/lib/data/registration-requests";
-import { useRouter } from "next/navigation";
-import { useCompany } from "@/components/company-provider";
 import { SkeletonBlock } from "@/components/skeleton";
 
 export default function AdminRegistrationsPage() {
@@ -14,15 +12,6 @@ export default function AdminRegistrationsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("pending");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const { activeCompany } = useCompany();
-
-  // Basic client-side permission check (server-side check should be in API)
-  useEffect(() => {
-    if (activeCompany && !["owner", "admin"].includes(activeCompany.role)) {
-      router.push("/dashboard");
-    }
-  }, [activeCompany, router]);
 
   useEffect(() => {
     fetch("/api/admin/registrations")
