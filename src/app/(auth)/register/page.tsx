@@ -7,7 +7,7 @@ import { useTranslations } from "@/i18n/provider";
 export default function RegisterPage() {
   const { t, locale } = useTranslations();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
-  
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -20,10 +20,25 @@ export default function RegisterPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function mapRegisterError(message?: string) {
+    switch (message) {
+      case "Missing required fields":
+        return t("auth.register.errors.missingFields");
+      case "Invalid requested role":
+        return t("auth.register.errors.invalidRole");
+      case "Invalid company name":
+        return t("auth.register.errors.invalidCompanyName");
+      case "Internal Server Error":
+        return t("auth.register.errors.server");
+      default:
+        return t("auth.register.errors.generic");
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    
+
     startTransition(async () => {
       try {
         const res = await fetch("/api/register", {
@@ -32,13 +47,16 @@ export default function RegisterPage() {
           body: JSON.stringify(formData),
         });
 
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+
         if (!res.ok) {
-          throw new Error("Failed to submit request");
+          setError(mapRegisterError(data?.error));
+          return;
         }
 
         setSubmitted(true);
       } catch {
-        setError("error.generic"); // Use a generic error or add a specific one
+        setError(t("auth.register.errors.network"));
       }
     });
   };
@@ -188,7 +206,7 @@ export default function RegisterPage() {
               </div>
               <div className="ml-3">
                 <h3 className="text-sm font-medium text-red-800">
-                  {t("common.unknown")}
+                  {error}
                 </h3>
               </div>
             </div>

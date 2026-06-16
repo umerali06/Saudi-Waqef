@@ -38,14 +38,11 @@ export async function POST(req: NextRequest) {
     }
 
     const company = await findActiveCompanyByName(normalizedCompanyName);
-    if (!company) {
-      return NextResponse.json({ error: "Company is not active or does not exist" }, { status: 400 });
-    }
 
     const id = await createRegistrationRequest({
       name,
       email,
-      companyId: company.id,
+      companyId: company?.id,
       companyName: normalizedCompanyName,
       phone,
       requestedRole: normalizedRequestedRole,
@@ -64,8 +61,8 @@ export async function POST(req: NextRequest) {
         <div style="font-family: sans-serif; padding: 20px;">
           <h2>Request Received</h2>
           <p>Dear ${name},</p>
-          <p>We have received your request for <strong>${normalizedRequestedRole}</strong> access to <strong>${company.name}</strong>.</p>
-          <p>The company owner will review your request. You will receive another email once it is approved or rejected.</p>
+          <p>We have received your request for <strong>${normalizedRequestedRole}</strong> access to <strong>${normalizedCompanyName}</strong>.</p>
+          <p>An administrator will review your request. You will receive another email once it is approved or rejected.</p>
           <br/>
           <p>Best regards,</p>
           <p>The Saudi Waqef Team</p>
@@ -77,7 +74,7 @@ export async function POST(req: NextRequest) {
     try {
       const [admins, ownerUserIds] = await Promise.all([
         listSystemAdmins(),
-        listUserIdsByCompanyRoles(company.id, ["owner"]),
+        company ? listUserIdsByCompanyRoles(company.id, ["owner"]) : Promise.resolve([]),
       ]);
       const recipientUserIds = Array.from(
         new Set([
@@ -90,10 +87,10 @@ export async function POST(req: NextRequest) {
         recipientUserIds.map((userId) =>
           createNotification({
             userId,
-            companyId: company.id,
+            companyId: company?.id ?? null,
             type: "registration_received",
             title: "New Access Request",
-            body: `${name} requested ${normalizedRequestedRole} access to ${company.name}`,
+            body: `${name} requested ${normalizedRequestedRole} access to ${normalizedCompanyName}`,
             data: { requestId: id },
           })
         )
@@ -106,12 +103,12 @@ export async function POST(req: NextRequest) {
           .map((owner) =>
             sendEmail({
               to: owner.email,
-              subject: `Access Request for ${company.name} - Saudi Waqef`,
+              subject: `Access Request for ${normalizedCompanyName} - Saudi Waqef`,
               body: `
                 <div style="font-family: sans-serif; padding: 20px;">
                   <h2>New Access Request</h2>
                   <p>Dear ${owner.name},</p>
-                  <p>${name} (${email}) requested <strong>${normalizedRequestedRole}</strong> access to <strong>${company.name}</strong>.</p>
+                  <p>${name} (${email}) requested <strong>${normalizedRequestedRole}</strong> access to <strong>${normalizedCompanyName}</strong>.</p>
                   ${phone ? `<p>Phone: ${phone}</p>` : ""}
                   <p>Only a company owner can approve this request.</p>
                   <p><a href="${reviewUrl}">Review request</a></p>
