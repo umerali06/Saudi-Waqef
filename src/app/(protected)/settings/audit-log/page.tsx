@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
-import { useToast } from "@/components/toast";
 import { SkeletonBlock } from "@/components/skeleton";
 
 type AuditEvent = {

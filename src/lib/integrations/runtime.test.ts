@@ -1,6 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { executeIntegrationRequest } from "@/lib/integrations/runtime";
 
+vi.mock("@/lib/data/companies", () => ({
+  getCompanyById: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock("@/lib/data/customers", () => ({
+  getCustomerById: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock("@/lib/data/sales-invoices", () => ({
+  listSalesInvoices: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock("@/lib/data/purchase-bills", () => ({
+  listPurchaseBills: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock("@/lib/data/employees", () => ({
   listEmployees: vi.fn().mockResolvedValue([
     {
@@ -69,6 +85,7 @@ describe("executeIntegrationRequest", () => {
       ok: true,
       status: 200,
       statusText: "OK",
+      headers: new Headers(),
       text: vi.fn().mockResolvedValue('{"ok":true}'),
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -107,6 +124,7 @@ describe("executeIntegrationRequest", () => {
       ok: true,
       status: 202,
       statusText: "Accepted",
+      headers: new Headers(),
       text: vi.fn().mockResolvedValue("accepted"),
     });
     vi.stubGlobal("fetch", fetchMock);

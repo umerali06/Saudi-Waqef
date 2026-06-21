@@ -22,7 +22,8 @@ type RouteContext = {
 const validateCredentials = (connector: string, creds: Record<string, unknown>) => {
   const missing: string[] = [];
   if (connector === "zatca") {
-    if (!creds.apiKey) missing.push("apiKey");
+    if (!creds.binarySecurityToken) missing.push("binarySecurityToken");
+    if (!creds.secret) missing.push("secret");
     if (!creds.certificatePem) missing.push("certificatePem");
     if (!creds.privateKeyPem) missing.push("privateKeyPem");
   } else if (connector === "gosi" || connector === "mudad") {
@@ -114,11 +115,13 @@ export async function POST(_: Request, context: RouteContext) {
   let details: Record<string, unknown> | undefined;
 
   try {
-    const result = await executeIntegrationRequest({
-      integration,
-      mode: "test",
-      correlationId: jobId,
-    });
+    const result = integration.connector === "zatca"
+      ? await validateZatcaCertificate(integration)
+      : await executeIntegrationRequest({
+          integration,
+          mode: "test",
+          correlationId: jobId,
+        });
     ok = result.ok;
     message = result.ok
       ? `Connection test passed with HTTP ${result.status}.`
@@ -179,4 +182,25 @@ export async function POST(_: Request, context: RouteContext) {
   });
 
   return NextResponse.json({ ok, message, details }, { status: ok ? 200 : 400 });
+}
+
+async function validateZatcaCertificate(integration: NonNullable<Awaited<ReturnType<typeof getIntegrationById>>>) {
+  const { parseCertificate } = await import("@talha7k/zatca");
+  const certificate = parseCertificate(String(integration.credentials?.certificatePem ?? ""));
+  if (!certificate.isValid) throw new Error("ZATCA production certificate is expired or not yet valid.");
+  return {
+    ok: true,
+    status: 200,
+    statusText: "Certificate valid",
+    requestUrl: `zatca://${integration.environment}/production-csid`,
+    bodyPreview: JSON.stringify({
+      issuer: certificate.issuer,
+      serialNumber: certificate.serialNumber,
+      validTo: certificate.validTo,
+      daysUntilExpiry: certificate.daysUntilExpiry,
+    }),
+    durationMs: 0,
+    attempt: 1,
+    callback: undefined,
+  };
 }

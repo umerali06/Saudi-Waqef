@@ -209,6 +209,8 @@ export default function IntegrationsPage() {
     )
   );
   const [previewInvoiceId, setPreviewInvoiceId] = useState("");
+  const [zatcaOtp, setZatcaOtp] = useState("");
+  const [zatcaComplianceInvoiceId, setZatcaComplianceInvoiceId] = useState("");
   const [previewPayload, setPreviewPayload] = useState<Record<string, unknown> | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [noticeKey, setNoticeKey] = useState<string | null>(null);
@@ -717,6 +719,27 @@ export default function IntegrationsPage() {
     latestSyncSummary && latestSyncSummary.integrationId === selectedIntegrationId
       ? latestSyncSummary
       : null;
+  const selectedIntegration = integrations.find((item) => item.id === selectedIntegrationId) ?? null;
+
+  const handleZatcaOnboarding = async (action: "compliance-csid" | "verify-compliance" | "production-csid") => {
+    if (!selectedIntegrationId) return;
+    setErrorKey(null);
+    setNoticeKey(null);
+    const response = await fetch(`/api/integrations/${selectedIntegrationId}/zatca/onboarding`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, otp: zatcaOtp, invoiceId: zatcaComplianceInvoiceId }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setValidationErrors([data.error || JSON.stringify(data.checks || "ZATCA onboarding failed")]);
+      return;
+    }
+    setValidationErrors([]);
+    setNoticeKey("integrations.updated");
+    await loadIntegrations();
+    await loadDetails(selectedIntegrationId);
+  };
 
   return (
     <section className="space-y-6 page-shell">
@@ -1852,6 +1875,41 @@ export default function IntegrationsPage() {
               className="mt-3 rounded-2xl border border-border px-4 py-2 text-xs font-semibold"
             >
               Apply Reconcile
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedIntegration?.connector === "zatca" ? (
+        <div className="app-card p-6 card-modern">
+          <h3 className="text-sm font-semibold">ZATCA Phase 2 onboarding</h3>
+          <p className="mt-1 text-xs text-muted">
+            Issue the compliance CSID, pass all six document checks, then issue the production CSID.
+          </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <input
+              className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+              value={zatcaOtp}
+              onChange={(event) => setZatcaOtp(event.target.value)}
+              placeholder="Fatoora portal OTP"
+              inputMode="numeric"
+            />
+            <input
+              className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+              value={zatcaComplianceInvoiceId}
+              onChange={(event) => setZatcaComplianceInvoiceId(event.target.value)}
+              placeholder="Approved invoice ID for compliance samples"
+            />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" onClick={() => handleZatcaOnboarding("compliance-csid")} className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold">
+              1. Request compliance CSID
+            </button>
+            <button type="button" onClick={() => handleZatcaOnboarding("verify-compliance")} className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold">
+              2. Run six compliance checks
+            </button>
+            <button type="button" onClick={() => handleZatcaOnboarding("production-csid")} className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold">
+              3. Request production CSID
             </button>
           </div>
         </div>

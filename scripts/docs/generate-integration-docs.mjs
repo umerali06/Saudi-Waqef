@@ -836,11 +836,11 @@ function renderApiModuleTables(endpointRows) {
   const modules = Array.from(moduleMap.keys()).sort((a, b) => a.localeCompare(b));
   const sections = [];
 
-  for (const module of modules) {
-    const rows = moduleMap.get(module) ?? [];
+  for (const moduleName of modules) {
+    const rows = moduleMap.get(moduleName) ?? [];
     rows.sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
     const tableLines = [
-      `## Module: ${module}`,
+      `## Module: ${moduleName}`,
       "",
       `Operations: **${rows.length}**`,
       "",

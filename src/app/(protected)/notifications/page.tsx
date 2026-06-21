@@ -35,7 +35,7 @@ export default function NotificationsPage() {
         dateStyle: "medium",
         timeStyle: "short",
       }).format(new Date(value));
-    } catch (e) {
+    } catch {
       return value;
     }
   };

@@ -297,10 +297,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="mx-4 mt-4 flex flex-col gap-3">
-            <header className="sticky top-0 z-20 flex w-full flex-wrap items-center justify-between gap-4 rounded-2xl px-6 py-4 app-header">
-              <div className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="mx-2 mt-2 flex flex-col gap-3 sm:mx-4 sm:mt-4">
+            <header className="sticky top-0 z-20 flex w-full min-w-0 flex-wrap items-center justify-between gap-3 rounded-2xl px-3 py-3 sm:gap-4 sm:px-6 sm:py-4 app-header">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:gap-3">
                 <button
                   type="button"
                   className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-white text-muted shadow-sm transition hover:text-foreground lg:hidden header-action"
@@ -332,14 +332,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </button>
                 </div>
               </div>
-              <div className={`flex items-center gap-4 text-sm ${alignClass}`}>
+              <div className={`flex min-w-0 max-w-full items-center gap-2 text-sm sm:gap-4 ${alignClass}`}>
                 <div className="topbar-user">
                   <div className="topbar-avatar">
                     {(data?.user?.name ?? t("common.user")).slice(0, 1).toUpperCase()}
                   </div>
-                  <div className={alignClass}>
+                  <div className={`min-w-0 ${alignClass}`}>
                     <p className="font-semibold">{data?.user?.name ?? t("common.user")}</p>
-                    <p className="text-xs text-muted">{data?.user?.email ?? ""}</p>
+                    <p className="max-w-40 truncate text-xs text-muted">{data?.user?.email ?? ""}</p>
                     <div className="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide app-badge">
                       {t(`role.${activeRole}`)}
                     </div>
@@ -397,7 +397,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ) : null}
           </div>
 
-          <main className="flex-1 overflow-y-auto px-6 py-10 app-main">{children}</main>
+          <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-5 sm:px-6 sm:py-10 app-main">{children}</main>
         </div>
       </div>
     </div>

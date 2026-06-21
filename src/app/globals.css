@@ -284,6 +284,38 @@ body::after {
   border-spacing: 0 10px;
 }
 
+@media (max-width: 639px) {
+  .page-shell {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .page-shell .app-card,
+  .page-shell .app-panel {
+    border-radius: 18px;
+  }
+
+  .app-header .header-pill {
+    max-width: calc(100vw - 5.5rem);
+  }
+
+  .app-header .topbar-user {
+    min-width: 0;
+    max-width: calc(100vw - 7.5rem);
+  }
+
+  .table-modern {
+    min-width: 42rem;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    max-width: 100%;
+  }
+}
+
 .table-modern thead {
   position: sticky;
   top: 0;

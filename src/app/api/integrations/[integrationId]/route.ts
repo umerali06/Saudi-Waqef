@@ -87,7 +87,13 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  await updateIntegration(integrationId, parsed.data);
+  await updateIntegration(integrationId, {
+    ...parsed.data,
+    ...(parsed.data.config ? { config: { ...(integration.config ?? {}), ...parsed.data.config } } : {}),
+    ...(parsed.data.credentials ? {
+      credentials: { ...(integration.credentials ?? {}), ...parsed.data.credentials },
+    } : {}),
+  });
 
   await recordAuditEvent({
     companyId: integration.companyId,
@@ -96,7 +102,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     action: "integration.update",
     entity: "integration",
     entityId: integrationId,
-    metadata: parsed.data,
+    metadata: {
+      ...parsed.data,
+      ...(parsed.data.credentials ? { credentials: "[REDACTED]" } : {}),
+    },
   });
 
   const updated = await getIntegrationById(integrationId);

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import type { SessionUser } from "@/lib/auth-helpers";
 import { useTranslations } from "@/i18n/provider";
 
@@ -14,7 +13,6 @@ export function Navbar({ user }: NavbarProps) {
   const { t, locale, setLocale } = useTranslations();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const pathname = usePathname();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -214,4 +212,3 @@ export function Navbar({ user }: NavbarProps) {
     </header>
   );
 }
-

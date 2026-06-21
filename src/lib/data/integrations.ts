@@ -1,6 +1,14 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase/admin";
+import { decryptString, encryptString } from "@/lib/security/crypto";
+
+const readCredentials = (data: Record<string, unknown>) => {
+  if (typeof data.credentialsEnc === "string" && data.credentialsEnc) {
+    return JSON.parse(decryptString(data.credentialsEnc)) as Record<string, unknown>;
+  }
+  return (data.credentials ?? {}) as Record<string, unknown>;
+};
 
 export type IntegrationConnector = "zatca" | "gosi" | "mudad" | "custom";
 export type IntegrationStatus = "inactive" | "active" | "error";
@@ -37,7 +45,7 @@ export async function listIntegrations(companyId: string) {
       status: data.status ?? "inactive",
       environment: data.environment ?? "sandbox",
       config: data.config ?? {},
-      credentials: data.credentials ?? {},
+      credentials: readCredentials(data),
       lastSyncAt: data.lastSyncAt?.toDate ? data.lastSyncAt.toDate() : undefined,
       lastError: data.lastError ?? null,
       createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
@@ -62,7 +70,7 @@ export async function getIntegrationById(integrationId: string) {
     status: data.status ?? "inactive",
     environment: data.environment ?? "sandbox",
     config: data.config ?? {},
-    credentials: data.credentials ?? {},
+    credentials: readCredentials(data),
     lastSyncAt: data.lastSyncAt?.toDate ? data.lastSyncAt.toDate() : undefined,
     lastError: data.lastError ?? null,
     createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
@@ -87,7 +95,8 @@ export async function createIntegration(params: {
     status: params.status ?? "inactive",
     environment: params.environment ?? "sandbox",
     config: params.config ?? {},
-    credentials: params.credentials ?? {},
+    credentialsEnc: encryptString(JSON.stringify(params.credentials ?? {})),
+    credentials: null,
     createdAt: Timestamp.now(),
   });
   return id;
@@ -109,6 +118,11 @@ export async function updateIntegration(
     ...updates,
     updatedAt: Timestamp.now(),
   };
+  if (updates.credentials) {
+    payload.credentialsEnc = encryptString(JSON.stringify(updates.credentials));
+    delete payload.credentials;
+    payload.credentials = null;
+  }
   if (updates.lastSyncAt instanceof Date) {
     payload.lastSyncAt = Timestamp.fromDate(updates.lastSyncAt);
   }

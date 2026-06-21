@@ -503,6 +503,10 @@ export const executeIntegrationRequest = async (params: {
   mode: IntegrationMode;
   correlationId?: string;
 }): Promise<IntegrationResponse> => {
+  if (params.integration.connector === "zatca" && params.mode === "sync") {
+    const { executeZatcaSubmission } = await import("@/lib/integrations/zatca/service");
+    return executeZatcaSubmission(params.integration);
+  }
   const requestUrl = resolveRequestUrl(params.integration, params.mode);
   const method = getMethod(params.integration, params.mode);
   const timeoutMs = parseTimeout(getConfigValue(params.integration.config, "timeoutMs"));
