@@ -70,7 +70,8 @@ Generated on: 2026-03-03T08:39:37.896Z
 
 ## 2. Authentication and Scopes
 - Internal application APIs use authenticated sessions and role/system guards.
-- API key (Bearer token) is currently implemented for: `GET /api/developer/ping`.
+- API key (Bearer token) is implemented for developer health checks and the external API v1 layer.
+- External integrations should use `/api/external/v1/*` or `/external/v1/*`, not internal session routes such as `/api/invoices`.
 - API key scopes currently defined in code:
   - read:accounting
   - write:accounting
@@ -108,6 +109,19 @@ curl -H "Authorization: Bearer <API_KEY>" https://<your-domain>/api/developer/pi
 }
 ```
 
+External API v1 examples:
+
+```bash
+curl -H "Authorization: Bearer <API_KEY>" https://<your-domain>/api/external/v1/ping
+curl -H "Authorization: Bearer <API_KEY>" "https://<your-domain>/api/external/v1/invoices?startDate=2026-01-01&endDate=2026-01-31"
+curl -H "Authorization: Bearer <API_KEY>" "https://<your-domain>/api/external/v1/vat?startDate=2026-01-01&endDate=2026-03-31"
+curl -H "Authorization: Bearer <API_KEY>" "https://<your-domain>/api/external/v1/reports/profit-loss?startDate=2026-01-01&endDate=2026-01-31"
+curl -H "Authorization: Bearer <API_KEY>" "https://<your-domain>/api/external/v1/hr?startDate=2026-01-01&endDate=2026-01-31"
+curl -H "Authorization: Bearer <API_KEY>" "https://<your-domain>/api/external/v1/payroll?startDate=2026-01-01&endDate=2026-01-31"
+```
+
+Full beginner guide: `docs/developer/external-v1-api-guide.md`.
+
 ## 5. Rate Limits and Security Policies
 - Documented API policy in `docs/developer/api-overview.md`:
   - Default: 300 requests/minute per key
@@ -123,4 +137,4 @@ curl -H "Authorization: Bearer <API_KEY>" https://<your-domain>/api/developer/pi
 ## Notes for External Integrators
 - The codebase currently exposes many internal application endpoints under `/api/*`.
 - Treat internal routes as implementation-level APIs unless a stable integration contract is explicitly published.
-- For stable external integrations, align first on the approved endpoint subset and versioning policy.
+- For stable external integrations, use the approved `/api/external/v1/*` endpoint subset.
