@@ -37,6 +37,22 @@ The company profile must contain its legal name, VAT number, and commercial regi
 
 Repeat onboarding with a production integration before going live. Never copy sandbox CSIDs into production.
 
+## External ZATCA connector API
+
+The ZATCA connector is also exposed through API-key routes for external integration testing:
+
+- `GET /api/external/v1/zatca`
+- `GET /api/external/v1/zatca/status?integrationId=<ID>`
+- `POST /api/external/v1/zatca/csid/request`
+- `POST /api/external/v1/zatca/compliance/check`
+- `POST /api/external/v1/zatca/production/csid`
+- `POST /api/external/v1/zatca/invoice/sign`
+- `POST /api/external/v1/zatca/production/submit`
+
+Alias routes are also available under `/external/v1/zatca/...`.
+
+Beginner client test guide: `docs/developer/zatca-sandbox-test-guide.md`.
+
 ## Operational rules
 
 - One sync job runs per integration so invoice counter and previous hash ordering cannot race.

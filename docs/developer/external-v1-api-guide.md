@@ -53,6 +53,11 @@ Do not use the internal route for external integrations. Use the external route.
 | HR summary | `/api/hr/reports/summary` | `/api/external/v1/hr` |
 | Payroll runs | `/api/payroll/runs` | `/api/external/v1/payroll` |
 | Payroll run detail | `/api/payroll/runs/{runId}` | `/api/external/v1/payroll/runs/{runId}` |
+| ZATCA connector | N/A | `/api/external/v1/zatca` |
+| ZATCA CSID request | N/A | `/api/external/v1/zatca/csid/request` |
+| ZATCA compliance check | N/A | `/api/external/v1/zatca/compliance/check` |
+| ZATCA invoice signing | N/A | `/api/external/v1/zatca/invoice/sign` |
+| ZATCA submission | N/A | `/api/external/v1/zatca/production/submit` |
 
 ## Beginner test steps
 
@@ -232,5 +237,6 @@ Fix:
 - Use the external API routes above, not the internal UI routes.
 - Start with `ping`.
 - Then test one endpoint per area: invoices, VAT, reports, HR, payroll.
+- ZATCA has a separate sandbox onboarding flow. Use `docs/developer/zatca-sandbox-test-guide.md`.
 - Save the full request URL, headers, HTTP status code, and response body for each failed test.
 - For ZATCA/ERP integration, invoices and VAT reports should be tested first because they are the critical accounting data sources.

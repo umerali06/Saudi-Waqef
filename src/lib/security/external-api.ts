@@ -14,6 +14,26 @@ const hasScope = (key: ApiKeyRecord, allowedScopes: ApiKeyScope[]) =>
 
 const requestPath = (request: Request) => new URL(request.url).pathname;
 
+const classifyExternalError = (message: string) => {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("not found")) {
+    return 404;
+  }
+  if (
+    normalized.includes("required") ||
+    normalized.includes("must") ||
+    normalized.includes("first") ||
+    normalized.includes("rejected") ||
+    normalized.includes("invalid") ||
+    normalized.includes("sandbox") ||
+    normalized.includes("production") ||
+    normalized.includes("compliance")
+  ) {
+    return 400;
+  }
+  return 500;
+};
+
 export async function withExternalApiAuth(
   request: Request,
   allowedScopes: ApiKeyScope[],
@@ -79,14 +99,18 @@ export async function withExternalApiAuth(
     return response;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal server error";
+    const status = classifyExternalError(message);
     await recordApiKeyUsage({
       keyId: key.id,
       companyId: key.companyId,
       endpoint,
       method,
-      status: 500,
+      status,
       error: message,
     });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: status === 500 ? "Internal server error" : message },
+      { status }
+    );
   }
 }
