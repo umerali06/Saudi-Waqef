@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { ZatcaError } from "@talha7k/zatca";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
 import { getIntegrationById } from "@/lib/data/integrations";
 import { recordAuditEvent } from "@/lib/data/audit-log";
+import { zatcaOtpConfirmSchema } from "@/lib/validators/zatca-wizard";
 import {
   requestZatcaComplianceCsid,
   requestZatcaProductionCsid,
@@ -31,12 +33,13 @@ export async function POST(request: Request, context: Context) {
 
   try {
     if (action === "compliance-csid") {
-      await requestZatcaComplianceCsid({ integration, otp: text(body.otp) });
+      const parsed = zatcaOtpConfirmSchema.safeParse({ otp: body.otp });
+      if (!parsed.success) {
+        return NextResponse.json({ error: "A valid one-time code is required." }, { status: 400 });
+      }
+      await requestZatcaComplianceCsid({ integration, otp: parsed.data.otp });
     } else if (action === "verify-compliance") {
-      const result = await verifyZatcaCompliance({
-        integration,
-        invoiceId: text(body.invoiceId),
-      });
+      const result = await verifyZatcaCompliance({ integration });
       if (!result.ok) return NextResponse.json(result, { status: 422 });
       return NextResponse.json(result);
     } else if (action === "production-csid") {
@@ -55,6 +58,15 @@ export async function POST(request: Request, context: Context) {
     });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "ZATCA onboarding failed" }, { status: 400 });
+    if (error instanceof ZatcaError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code, details: error.details },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "ZATCA onboarding failed" },
+      { status: 400 }
+    );
   }
 }

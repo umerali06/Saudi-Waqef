@@ -128,3 +128,65 @@ export async function updateIntegration(
   }
   await db.collection("integrations").doc(integrationId).set(payload, { merge: true });
 }
+
+/**
+ * Persists the ZATCA hash-chain counter only if the caller still holds the
+ * submission lock it claimed via `acquireZatcaSubmissionLock`. Guards against
+ * the lock's TTL expiring mid-run and a second caller starting a fresh
+ * submission against the same integration while this one is still writing.
+ */
+export async function updateIntegrationZatcaChainInTransaction(params: {
+  integrationId: string;
+  expectedLockRunId: string;
+  chain: { lastHash: string; lastUuid: string; counter: number; updatedAt: string };
+}) {
+  const lockRef = db.collection("zatca_submission_locks").doc(params.integrationId);
+  const integrationRef = db.collection("integrations").doc(params.integrationId);
+
+  await db.runTransaction(async (tx) => {
+    const [lockSnap, integrationSnap] = await Promise.all([tx.get(lockRef), tx.get(integrationRef)]);
+    if (!lockSnap.exists || lockSnap.data()?.runId !== params.expectedLockRunId) {
+      throw new Error(`ZATCA_LOCK_LOST: submission lock for integration ${params.integrationId} was lost mid-run.`);
+    }
+    const currentConfig = (integrationSnap.data()?.config ?? {}) as Record<string, unknown>;
+    tx.set(
+      integrationRef,
+      {
+        config: { ...currentConfig, zatcaHashChain: params.chain },
+        updatedAt: Timestamp.now(),
+      },
+      { merge: true }
+    );
+  });
+}
+
+/**
+ * Cross-tenant read — the only one in this file. Must only ever be called
+ * from the CRON_SECRET-gated ZATCA cron routes (certificate-expiry,
+ * reporting-sla), never from a company-scoped user request.
+ */
+export async function listAllActiveZatcaIntegrations() {
+  const snapshot = await db
+    .collection("integrations")
+    .where("connector", "==", "zatca")
+    .where("status", "==", "active")
+    .get();
+
+  return snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      companyId: data.companyId,
+      name: data.name ?? data.connector,
+      connector: data.connector ?? "custom",
+      status: data.status ?? "inactive",
+      environment: data.environment ?? "sandbox",
+      config: data.config ?? {},
+      credentials: readCredentials(data),
+      lastSyncAt: data.lastSyncAt?.toDate ? data.lastSyncAt.toDate() : undefined,
+      lastError: data.lastError ?? null,
+      createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+      updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : undefined,
+    } as IntegrationRecord;
+  });
+}

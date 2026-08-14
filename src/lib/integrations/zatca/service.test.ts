@@ -1,7 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import { mapSalesInvoiceToZatca } from "@/lib/integrations/zatca/service";
 
-vi.mock("@/lib/data/integrations", () => ({ updateIntegration: vi.fn() }));
+vi.mock("@/lib/data/integrations", () => ({
+  updateIntegration: vi.fn(),
+  updateIntegrationZatcaChainInTransaction: vi.fn(),
+}));
+vi.mock("@/lib/integrations/zatca/submission-lock", () => ({
+  acquireZatcaSubmissionLock: vi.fn().mockResolvedValue("run-1"),
+  releaseZatcaSubmissionLock: vi.fn(),
+}));
 vi.mock("@/lib/data/companies", () => ({
   getCompanyById: vi.fn().mockResolvedValue({
     id: "company-1", name: "Seller", legalName: "Seller LLC", currency: "SAR",

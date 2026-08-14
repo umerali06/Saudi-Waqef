@@ -128,6 +128,47 @@ export const notificationTemplates: Record<NotificationType, Template> = {
       "New registration request received from {companyName} ({name})."
     ),
   },
+  zatca_certificate_expiring: {
+    title: template("شهادة زاتكا ستنتهي قريبًا", "ZATCA certificate expiring soon"),
+    subject: template(
+      "شهادة زاتكا ستنتهي بعد {daysUntilExpiry} يومًا",
+      "Your ZATCA certificate expires in {daysUntilExpiry} days"
+    ),
+    body: template(
+      "شهادة زاتكا للفوترة الإلكترونية ستنتهي صلاحيتها في {expiryDate} (بعد {daysUntilExpiry} يومًا). يرجى التواصل مع الدعم لتجديدها قبل الانتهاء.",
+      "Your ZATCA e-invoicing certificate expires on {expiryDate} ({daysUntilExpiry} days from now). Please contact support to renew it before it expires."
+    ),
+  },
+  zatca_certificate_expired: {
+    title: template("انتهت صلاحية شهادة زاتكا", "ZATCA certificate expired"),
+    subject: template("انتهت صلاحية شهادة زاتكا", "Your ZATCA certificate has expired"),
+    body: template(
+      "انتهت صلاحية شهادة زاتكا للفوترة الإلكترونية في {expiryDate}. لن يتم إرسال أي فواتير جديدة إلى زاتكا حتى يتم تجديد الشهادة. يرجى التواصل مع الدعم فورًا.",
+      "Your ZATCA e-invoicing certificate expired on {expiryDate}. New invoices cannot be sent to ZATCA until it is renewed. Please contact support right away."
+    ),
+  },
+  zatca_reporting_sla_risk: {
+    title: template("اقترب موعد إرسال فاتورة لزاتكا", "A ZATCA reporting deadline is approaching"),
+    subject: template(
+      "الفاتورة {invoiceNumber} يجب إرسالها لزاتكا قبل {dueDate}",
+      "Invoice {invoiceNumber} must be reported to ZATCA by {dueDate}"
+    ),
+    body: template(
+      "يجب إرسال الفاتورة {invoiceNumber} إلى زاتكا قبل {dueDate} (ضمن 24 ساعة من إصدارها). يرجى التحقق من حالة المزامنة.",
+      "Invoice {invoiceNumber} must be reported to ZATCA by {dueDate} (within 24 hours of issuance). Please check the sync status."
+    ),
+  },
+  zatca_reporting_sla_breached: {
+    title: template("تجاوزت الفاتورة موعد الإرسال لزاتكا", "A ZATCA reporting deadline was missed"),
+    subject: template(
+      "لم يتم إرسال الفاتورة {invoiceNumber} إلى زاتكا في الوقت المحدد",
+      "Invoice {invoiceNumber} was not reported to ZATCA in time"
+    ),
+    body: template(
+      "لم يتم إرسال الفاتورة {invoiceNumber} إلى زاتكا ضمن 24 ساعة من إصدارها (الموعد المحدد كان {dueDate}). يرجى المراجعة والتواصل مع الدعم إذا لزم الأمر.",
+      "Invoice {invoiceNumber} was not reported to ZATCA within 24 hours of issuance (deadline was {dueDate}). Please review and contact support if needed."
+    ),
+  },
 };
 
 export const templateSamples: Record<NotificationType, Record<string, string>> = {
@@ -193,6 +234,21 @@ export const templateSamples: Record<NotificationType, Record<string, string>> =
     companyName: "شركة المثال",
     name: "أحمد محمد",
     requestId: "123",
+  },
+  zatca_certificate_expiring: {
+    daysUntilExpiry: "14",
+    expiryDate: "2026-09-01",
+  },
+  zatca_certificate_expired: {
+    expiryDate: "2026-09-01",
+  },
+  zatca_reporting_sla_risk: {
+    invoiceNumber: "INV-1024",
+    dueDate: "2026-08-15T10:00:00Z",
+  },
+  zatca_reporting_sla_breached: {
+    invoiceNumber: "INV-1024",
+    dueDate: "2026-08-15T10:00:00Z",
   },
 };
 

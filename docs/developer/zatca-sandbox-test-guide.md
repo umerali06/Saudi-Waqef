@@ -1,6 +1,9 @@
 # ZATCA Sandbox Test Guide for Client
 
-This guide explains how to test ZATCA Phase 2 integration from zero.
+This guide explains how to test ZATCA Phase 2 integration from zero using the
+raw external API (`curl`/API key) -- for a developer or technical
+integrator. If you just want to click through the app's own setup screens
+with no API key, use `zatca-beginner-setup-guide.md` instead.
 
 Important: the general External API test proves ERP/API access. ZATCA testing is a separate flow because ZATCA requires Sandbox onboarding, CSR generation, CSID certificates, XML signing, compliance checks, and invoice submission.
 
@@ -178,23 +181,29 @@ Expected:
 
 If OTP is wrong or expired, ZATCA will reject the request. Generate a new OTP and retry.
 
-## Test 5: Run six ZATCA compliance checks
+## Test 5: Run the ZATCA compliance test batch (11 scenarios)
 
-This submits six signed sample documents to ZATCA Sandbox:
+This builds and submits 11 self-contained signed sample documents to ZATCA Sandbox
+(no real invoice needed -- the endpoint no longer takes an `invoiceId`):
 
 1. Standard invoice
-2. Simplified invoice
-3. Standard credit note
-4. Simplified credit note
-5. Standard debit note
+2. Standard credit note
+3. Standard debit note
+4. Simplified invoice
+5. Simplified credit note
 6. Simplified debit note
+7. Standard invoice with a line-level discount
+8. Standard invoice with a header-level charge
+9. Standard invoice with multiple tax categories (standard + zero-rated lines)
+10. Standard invoice with a VAT-exempt line
+11. Standard invoice with a negative-quantity return line (reported, but does not gate onboarding -- ZATCA may legitimately reject it since returns should go through credit notes)
 
 ```powershell
 curl.exe -i `
   -X POST `
   -H "Authorization: Bearer $API_KEY" `
   -H "Content-Type: application/json" `
-  -d "{`"integrationId`":`"$INTEGRATION_ID`",`"invoiceId`":`"$INVOICE_ID`"}" `
+  -d "{`"integrationId`":`"$INTEGRATION_ID`"}" `
   "$BASE_URL/api/external/v1/zatca/compliance/check"
 ```
 
@@ -202,11 +211,11 @@ Expected:
 
 - HTTP `200`
 - `ok: true`
-- Six checks returned
-- Each check has `valid: true`
+- 11 checks returned in `checks`, each tagged with `scenarioId` and `gating`
+- Every check with `gating: true` has `valid: true` (10 of 11 -- the return-line scenario is excluded from gating)
 - `onboardingStatus: compliance_verified`
 
-If one check fails, response will be HTTP `422` and will include ZATCA messages.
+If a gating check fails, the response is HTTP `422` and includes ZATCA's messages for each failed scenario.
 
 ## Test 6: Request production/simulation CSID
 

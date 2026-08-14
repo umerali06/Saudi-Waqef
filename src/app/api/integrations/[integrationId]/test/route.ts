@@ -12,6 +12,7 @@ import { createIntegrationLog } from "@/lib/data/integration-logs";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { executeIntegrationRequest } from "@/lib/integrations/runtime";
 import { validateIntegrationReadiness } from "@/lib/integrations/validation";
+import { runZatcaTestConnection } from "@/lib/integrations/zatca/test-connection";
 
 export const runtime = "nodejs";
 
@@ -116,7 +117,7 @@ export async function POST(_: Request, context: RouteContext) {
 
   try {
     const result = integration.connector === "zatca"
-      ? await validateZatcaCertificate(integration)
+      ? await runZatcaTestConnection(integration)
       : await executeIntegrationRequest({
           integration,
           mode: "test",
@@ -182,25 +183,4 @@ export async function POST(_: Request, context: RouteContext) {
   });
 
   return NextResponse.json({ ok, message, details }, { status: ok ? 200 : 400 });
-}
-
-async function validateZatcaCertificate(integration: NonNullable<Awaited<ReturnType<typeof getIntegrationById>>>) {
-  const { parseCertificate } = await import("@talha7k/zatca");
-  const certificate = parseCertificate(String(integration.credentials?.certificatePem ?? ""));
-  if (!certificate.isValid) throw new Error("ZATCA production certificate is expired or not yet valid.");
-  return {
-    ok: true,
-    status: 200,
-    statusText: "Certificate valid",
-    requestUrl: `zatca://${integration.environment}/production-csid`,
-    bodyPreview: JSON.stringify({
-      issuer: certificate.issuer,
-      serialNumber: certificate.serialNumber,
-      validTo: certificate.validTo,
-      daysUntilExpiry: certificate.daysUntilExpiry,
-    }),
-    durationMs: 0,
-    attempt: 1,
-    callback: undefined,
-  };
 }

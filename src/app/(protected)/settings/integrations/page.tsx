@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
 
@@ -208,9 +209,6 @@ export default function IntegrationsPage() {
       2
     )
   );
-  const [previewInvoiceId, setPreviewInvoiceId] = useState("");
-  const [zatcaOtp, setZatcaOtp] = useState("");
-  const [zatcaComplianceInvoiceId, setZatcaComplianceInvoiceId] = useState("");
   const [previewPayload, setPreviewPayload] = useState<Record<string, unknown> | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [noticeKey, setNoticeKey] = useState<string | null>(null);
@@ -634,24 +632,6 @@ export default function IntegrationsPage() {
     await loadDetails(integrationId);
   };
 
-  const handlePreviewZatca = async () => {
-    if (!activeCompanyId || !previewInvoiceId.trim()) {
-      return;
-    }
-    setErrorKey(null);
-    setNoticeKey(null);
-    const response = await fetch(
-      `/api/integrations/zatca/preview?companyId=${activeCompanyId}&invoiceId=${previewInvoiceId.trim()}`
-    );
-    if (!response.ok) {
-      setErrorKey("integrations.previewFailed");
-      setPreviewPayload(null);
-      return;
-    }
-    const data = await response.json();
-    setPreviewPayload(data.draft ?? null);
-  };
-
   const applyConnectorPreset = (connector: Integration["connector"]) => {
     const preset = CONNECTOR_PRESETS[connector];
     if (!preset) return;
@@ -721,26 +701,6 @@ export default function IntegrationsPage() {
       : null;
   const selectedIntegration = integrations.find((item) => item.id === selectedIntegrationId) ?? null;
 
-  const handleZatcaOnboarding = async (action: "compliance-csid" | "verify-compliance" | "production-csid") => {
-    if (!selectedIntegrationId) return;
-    setErrorKey(null);
-    setNoticeKey(null);
-    const response = await fetch(`/api/integrations/${selectedIntegrationId}/zatca/onboarding`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, otp: zatcaOtp, invoiceId: zatcaComplianceInvoiceId }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      setValidationErrors([data.error || JSON.stringify(data.checks || "ZATCA onboarding failed")]);
-      return;
-    }
-    setValidationErrors([]);
-    setNoticeKey("integrations.updated");
-    await loadIntegrations();
-    await loadDetails(selectedIntegrationId);
-  };
-
   return (
     <section className="space-y-6 page-shell">
       <div>
@@ -775,6 +735,19 @@ export default function IntegrationsPage() {
       {!isAdmin ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">
           {t("integrations.adminOnly")}
+        </div>
+      ) : null}
+
+      {isAdmin && !integrations.some((integration) => integration.connector === "zatca") ? (
+        <div className="app-card p-6 card-modern">
+          <h2 className="text-sm font-semibold">{t("integrations.zatca.wizard.setupCard.title")}</h2>
+          <p className="mt-1 text-xs text-muted">{t("integrations.zatca.wizard.setupCard.description")}</p>
+          <Link
+            href="/settings/integrations/zatca"
+            className="mt-3 inline-block rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast"
+          >
+            {t("integrations.zatca.wizard.setupCard.cta")}
+          </Link>
         </div>
       ) : null}
 
@@ -1882,57 +1855,20 @@ export default function IntegrationsPage() {
 
       {selectedIntegration?.connector === "zatca" ? (
         <div className="app-card p-6 card-modern">
-          <h3 className="text-sm font-semibold">ZATCA Phase 2 onboarding</h3>
-          <p className="mt-1 text-xs text-muted">
-            Issue the compliance CSID, pass all six document checks, then issue the production CSID.
-          </p>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <input
-              className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
-              value={zatcaOtp}
-              onChange={(event) => setZatcaOtp(event.target.value)}
-              placeholder="Fatoora portal OTP"
-              inputMode="numeric"
-            />
-            <input
-              className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
-              value={zatcaComplianceInvoiceId}
-              onChange={(event) => setZatcaComplianceInvoiceId(event.target.value)}
-              placeholder="Approved invoice ID for compliance samples"
-            />
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button type="button" onClick={() => handleZatcaOnboarding("compliance-csid")} className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold">
-              1. Request compliance CSID
-            </button>
-            <button type="button" onClick={() => handleZatcaOnboarding("verify-compliance")} className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold">
-              2. Run six compliance checks
-            </button>
-            <button type="button" onClick={() => handleZatcaOnboarding("production-csid")} className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold">
-              3. Request production CSID
-            </button>
-          </div>
+          <h3 className="text-sm font-semibold">{t("integrations.zatca.wizard.setupCard.title")}</h3>
+          <p className="mt-1 text-xs text-muted">{t("integrations.zatca.wizard.setupCard.description")}</p>
+          <Link
+            href="/settings/integrations/zatca"
+            className="mt-3 inline-block rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast"
+          >
+            {t("integrations.zatca.wizard.manage")}
+          </Link>
         </div>
       ) : null}
 
       <div className="app-card p-6 card-modern">
         <h3 className="text-sm font-semibold">{t("integrations.zatcaPreviewTitle")}</h3>
         <p className="mt-1 text-xs text-muted">{t("integrations.zatcaPreviewSubtitle")}</p>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <input
-            className="w-full max-w-sm rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
-            value={previewInvoiceId}
-            onChange={(event) => setPreviewInvoiceId(event.target.value)}
-            placeholder={t("integrations.invoiceIdPlaceholder")}
-          />
-          <button
-            type="button"
-            onClick={handlePreviewZatca}
-            className="rounded-2xl border border-border px-4 py-2 text-xs font-semibold"
-          >
-            {t("integrations.preview")}
-          </button>
-        </div>
         {previewPayload ? (
           <pre className="mt-4 max-h-80 overflow-auto rounded-2xl border border-border bg-surface-muted p-3 text-xs">
             {JSON.stringify(previewPayload, null, 2)}

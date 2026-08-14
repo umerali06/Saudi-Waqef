@@ -9,7 +9,7 @@ import {
   type TaxCategoryId,
 } from "@talha7k/zatca";
 import type { IntegrationRecord } from "@/lib/data/integrations";
-import { updateIntegration } from "@/lib/data/integrations";
+import { updateIntegration, updateIntegrationZatcaChainInTransaction } from "@/lib/data/integrations";
 import { getCompanyById } from "@/lib/data/companies";
 import { getCustomerById } from "@/lib/data/customers";
 import { listSalesInvoices, type SalesInvoice } from "@/lib/data/sales-invoices";
@@ -19,6 +19,12 @@ import {
   getZatcaArtifactByInvoiceId,
   updateZatcaArtifactStatus,
 } from "@/lib/data/zatca-artifacts";
+import {
+  acquireZatcaSubmissionLock,
+  releaseZatcaSubmissionLock,
+} from "@/lib/integrations/zatca/submission-lock";
+import { logger } from "@/lib/ops/logger";
+import { redactSecrets } from "@/lib/security/redact";
 
 const UUID_NAMESPACE = "f1c74ab4-9968-48f5-a919-6f6f01d93086";
 
@@ -145,6 +151,28 @@ export async function executeZatcaSubmission(integration: IntegrationRecord) {
     throw new Error("ZATCA production CSID token, secret, certificate, and private key are required.");
   }
 
+  const runId = await acquireZatcaSubmissionLock(integration.id);
+  try {
+    return await runZatcaSubmissionLoop({ integration, binarySecurityToken, secret, privateKeyPem, certificatePem, runId });
+  } finally {
+    await releaseZatcaSubmissionLock(integration.id, runId).catch((error) => {
+      logger.warn("Failed to release ZATCA submission lock", {
+        integrationId: integration.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+  }
+}
+
+async function runZatcaSubmissionLoop(params: {
+  integration: IntegrationRecord;
+  binarySecurityToken: string;
+  secret: string;
+  privateKeyPem: string;
+  certificatePem: string;
+  runId: string;
+}) {
+  const { integration, binarySecurityToken, secret, privateKeyPem, certificatePem, runId } = params;
   const storedChain = integration.config?.zatcaHashChain;
   let chain: HashChainState = storedChain && typeof storedChain === "object"
     ? storedChain as HashChainState
@@ -213,6 +241,10 @@ export async function executeZatcaSubmission(integration: IntegrationRecord) {
       clearanceStatus: response?.clearanceStatus ?? null,
       clearedInvoice: response?.clearedInvoice ?? null,
     };
+    const isReporting = document.profileId === "reporting:1.0";
+    const reportingDueAt = isReporting
+      ? new Date(new Date(`${document.issueDate}T${document.issueTime}Z`).getTime() + 24 * 60 * 60 * 1000)
+      : null;
     let artifactId = existing?.id;
     if (!artifactId) {
       artifactId = await createZatcaArtifact({
@@ -223,8 +255,12 @@ export async function executeZatcaSubmission(integration: IntegrationRecord) {
         qr: result.qrCodeBase64,
         payload: { document, signedXml: result.signedXml },
         status: accepted ? "accepted" : "rejected",
+        reportingDueAt,
       });
     }
+    // This artifact write is independent of the hash-chain lock below and must
+    // always happen: ZATCA really did accept/reject this document regardless
+    // of whether we can still safely persist the updated chain state.
     await updateZatcaArtifactStatus(artifactId, {
       status: accepted ? "accepted" : "rejected",
       providerReference: document.uuid,
@@ -241,9 +277,31 @@ export async function executeZatcaSubmission(integration: IntegrationRecord) {
     if (!accepted) break;
     if (result.newHashChainState) {
       chain = result.newHashChainState;
-      await updateIntegration(integration.id, {
-        config: { ...(integration.config ?? {}), zatcaHashChain: chain },
-      });
+      try {
+        await updateIntegrationZatcaChainInTransaction({
+          integrationId: integration.id,
+          expectedLockRunId: runId,
+          chain,
+        });
+      } catch (error) {
+        // The document above was already accepted by ZATCA and recorded in
+        // zatca_artifacts — that cannot and must not be undone. But we no
+        // longer trust our in-memory chain state to be the true tail, so we
+        // stop rather than risk submitting the next document with a stale
+        // previousInvoiceHash. Manual recovery: resync config.zatcaHashChain
+        // from the latest accepted zatca_artifacts document for this company.
+        logger.error("ZATCA hash-chain lock lost mid-run; stopping sync. Manual recovery required.", {
+          integrationId: integration.id,
+          lastAcceptedUuid: document.uuid,
+          ...redactSecrets({ chain }),
+          error: error instanceof Error ? error.message : String(error),
+        });
+        await updateIntegration(integration.id, {
+          status: "error",
+          lastError: "ZATCA_LOCK_LOST",
+        });
+        break;
+      }
     }
   }
 

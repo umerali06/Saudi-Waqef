@@ -1,19 +1,24 @@
 import {
   ZatcaApiClient,
+  ZatcaError,
+  ZatcaErrorCode,
   extractCertificateSignature,
   extractRawPublicKey,
   generateCSR,
-  generateCreditNoteXml,
   generateInvoiceXml,
   generatePhase2TLV,
   signInvoice,
-  type CreditNoteData,
-  type InvoiceData,
 } from "@talha7k/zatca";
 import { getCompanyById } from "@/lib/data/companies";
 import { getIntegrationById, updateIntegration, type IntegrationRecord } from "@/lib/data/integrations";
 import { getSalesInvoiceById } from "@/lib/data/sales-invoices";
 import { executeZatcaSubmission, mapSalesInvoiceToZatca } from "@/lib/integrations/zatca/service";
+import { buildZatcaSupplierInfo } from "@/lib/integrations/zatca/company-info";
+import {
+  GATING_SCENARIOS,
+  COMPLIANCE_SCENARIOS,
+  buildAndSignComplianceScenario,
+} from "@/lib/integrations/zatca/compliance-scenarios";
 
 const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
@@ -93,7 +98,11 @@ export async function requestZatcaComplianceCsid(params: {
   });
   const result = await client.requestComplianceCSID(csr.csr, params.otp);
   if (result.status !== "ACCEPTED") {
-    throw new Error(result.error?.message || "Compliance CSID rejected.");
+    throw new ZatcaError(
+      result.error?.message || "Compliance CSID rejected.",
+      ZatcaErrorCode.API_ERROR,
+      result.error
+    );
   }
 
   const credentials = integration.credentials ?? {};
@@ -126,14 +135,11 @@ export async function requestZatcaComplianceCsid(params: {
   };
 }
 
-export async function verifyZatcaCompliance(params: {
-  integration: IntegrationRecord;
-  invoiceId: string;
-}) {
+export async function verifyZatcaCompliance(params: { integration: IntegrationRecord }) {
   const integration = params.integration;
-  const invoice = await getSalesInvoiceById(params.invoiceId);
-  if (!invoice || invoice.companyId !== integration.companyId) {
-    throw new Error("A valid company invoice is required.");
+  const company = await getCompanyById(integration.companyId);
+  if (!company) {
+    throw new Error("Company not found.");
   }
 
   const credentials = integration.credentials ?? {};
@@ -146,83 +152,48 @@ export async function verifyZatcaCompliance(params: {
   }
 
   const config = mergedZatcaConfig(integration);
+  const supplier = buildZatcaSupplierInfo(company, config);
   const client = new ZatcaApiClient({
     environment: integration.environment,
     timeout: 30000,
   });
-  const base = await mapSalesInvoiceToZatca({
-    integration,
-    invoice,
-    chain: { lastHash: "", lastUuid: "", counter: 0, updatedAt: new Date().toISOString() },
-  });
-  const checks: Array<{ kind: string; valid: boolean; messages: string[] }> = [];
-  let counter = 0;
 
-  for (const subtype of ["0100000", "0200000"] as const) {
-    for (const code of ["388", "381", "383"] as const) {
-      counter += 1;
-      const uuid = crypto.randomUUID();
-      const document = {
-        ...base,
-        uuid,
-        invoiceNumber: `COMP-${subtype.slice(0, 2)}-${code}-${counter}`,
-        invoiceCounter: counter,
-        invoiceTypeCode: code,
-        invoiceTypeCodeName: subtype,
-        profileId: subtype === "0100000" ? "clearance:1.0" : "reporting:1.0",
-        ...(subtype === "0100000" && !base.customer
-          ? {
-              customer: {
-                name: text(config.complianceBuyerName) || "Compliance Buyer",
-                vatNumber:
-                  text(config.complianceBuyerVatNumber) ||
-                  companyVatFallback(base.supplier.vatNumber),
-                address: base.supplier.address,
-              },
-            }
-          : {}),
-      } as InvoiceData;
-
-      const xml =
-        code === "381"
-          ? generateCreditNoteXml({
-              ...document,
-              originalInvoiceNumber: invoice.invoiceNumber,
-              originalInvoiceUuid: base.uuid,
-              originalInvoiceDate: invoice.invoiceDate,
-              reason: "Compliance test",
-            } as CreditNoteData)
-          : generateInvoiceXml(document);
-      const signed = signInvoice({
-        xml,
-        privateKeyPem,
-        certificatePem: cert,
-        qrData: {
-          sellerName: base.supplier.nameEn,
-          vatNumber: base.supplier.vatNumber,
-          timestamp: `${document.issueDate}T${document.issueTime}Z`,
-          totalWithVat: document.taxInclusiveAmount.toFixed(2),
-          vatTotal: document.taxAmount.toFixed(2),
-          certificateSignature: extractCertificateSignature(cert),
-        },
-      });
-      const verification = await client.verifyCompliance(
-        { binarySecurityToken: token, secret },
-        signed.invoiceHash,
-        uuid,
-        Buffer.from(signed.signedXml).toString("base64")
-      );
-      checks.push({ kind: `${subtype}:${code}`, ...verification });
-    }
+  const checks: Array<{ scenarioId: string; gating: boolean; valid: boolean; messages: string[] }> = [];
+  for (const scenarioId of COMPLIANCE_SCENARIOS) {
+    const scenario = buildAndSignComplianceScenario(scenarioId, {
+      supplier,
+      privateKeyPem,
+      certificatePem: cert,
+    });
+    const verification = await client.verifyCompliance(
+      { binarySecurityToken: token, secret },
+      scenario.invoiceHash,
+      scenario.uuid,
+      Buffer.from(scenario.signedXml).toString("base64")
+    );
+    checks.push({
+      scenarioId,
+      gating: (GATING_SCENARIOS as string[]).includes(scenarioId),
+      ...verification,
+    });
   }
 
-  const ok = checks.every((check) => check.valid);
+  const ok = checks.filter((check) => check.gating).every((check) => check.valid);
   if (ok) {
     await updateIntegration(integration.id, {
       config: {
         ...(integration.config ?? {}),
         onboardingStatus: "compliance_verified",
         complianceVerifiedAt: new Date().toISOString(),
+      },
+    });
+  } else {
+    await updateIntegration(integration.id, {
+      config: {
+        ...(integration.config ?? {}),
+        onboardingStatus: "compliance_failed",
+        complianceFailedAt: new Date().toISOString(),
+        complianceFailureDetail: checks.filter((check) => check.gating && !check.valid),
       },
     });
   }
@@ -253,7 +224,11 @@ export async function requestZatcaProductionCsid(params: {
   });
   const result = await client.requestProductionCSID({ binarySecurityToken: token, secret }, requestId);
   if (result.status !== "ACCEPTED") {
-    throw new Error(result.error?.message || "Production CSID rejected.");
+    throw new ZatcaError(
+      result.error?.message || "Production CSID rejected.",
+      ZatcaErrorCode.API_ERROR,
+      result.error
+    );
   }
 
   await updateIntegration(integration.id, {
@@ -344,8 +319,4 @@ export async function submitZatcaProductionDocuments(params: {
   integration: IntegrationRecord;
 }) {
   return executeZatcaSubmission(params.integration);
-}
-
-function companyVatFallback(vat: string) {
-  return vat === "300000000000003" ? "310000000000003" : "300000000000003";
 }

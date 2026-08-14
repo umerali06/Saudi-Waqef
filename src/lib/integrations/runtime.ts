@@ -1,13 +1,10 @@
 import { listAttendanceRecords } from "@/lib/data/attendance-records";
-import { getCompanyById } from "@/lib/data/companies";
-import { getCustomerById } from "@/lib/data/customers";
 import type { IntegrationRecord } from "@/lib/data/integrations";
 import { listPurchaseBills } from "@/lib/data/purchase-bills";
 import { listPayrollRunItems } from "@/lib/data/payroll-run-items";
 import { listPayrollRuns } from "@/lib/data/payroll-runs";
 import { listSalesInvoices } from "@/lib/data/sales-invoices";
 import { listEmployees } from "@/lib/data/employees";
-import { mapInvoiceToZatcaDraft } from "@/lib/integrations/zatca/mapping";
 import { buildGosiPayload } from "@/lib/integrations/gosi/payload";
 import { buildMudadPayload } from "@/lib/integrations/mudad/payload";
 
@@ -335,10 +332,6 @@ const filterBasePayload = (
 };
 
 export const buildRequestPayload = async (integration: IntegrationRecord) => {
-  if (integration.connector === "zatca") {
-    return buildZatcaSyncPayload(integration);
-  }
-
   const config = integration.config ?? {};
   const basePayload = await buildBasePayload(integration);
   const includeDatasets = getStringArrayConfig(config, "includeDatasets");
@@ -370,60 +363,6 @@ export const buildRequestPayload = async (integration: IntegrationRecord) => {
   }
 
   return filteredBase;
-};
-
-const buildZatcaSyncPayload = async (integration: IntegrationRecord) => {
-  const company = await getCompanyById(integration.companyId);
-  if (!company) {
-    throw new Error("Company not found for ZATCA payload generation");
-  }
-
-  const config = integration.config ?? {};
-  const incrementalEnabled = String(getConfigValue(config, "incremental") ?? "true") !== "false";
-  const maxInvoices = Math.min(
-    Math.max(Number(getConfigValue(config, "maxInvoicesPerSync") ?? 100), 1),
-    500
-  );
-
-  const invoices = await listSalesInvoices(integration.companyId);
-  const eligibleStatuses = new Set(["approved", "sent", "partially_paid", "paid"]);
-
-  const filtered = invoices
-    .filter((invoice) => eligibleStatuses.has(invoice.status))
-    .filter((invoice) => {
-      if (!incrementalEnabled || !integration.lastSyncAt) return true;
-      return invoice.createdAt.getTime() > integration.lastSyncAt.getTime();
-    })
-    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-    .slice(0, maxInvoices);
-
-  const drafts = [];
-  for (const invoice of filtered) {
-    const customer = invoice.customerId ? await getCustomerById(invoice.customerId) : null;
-    const draft = mapInvoiceToZatcaDraft({
-        uuid: `${integration.id}:${invoice.id}`,
-        invoice,
-        company,
-        customer,
-      });
-    drafts.push({
-      ...draft,
-      sourceInvoiceId: invoice.id,
-      sourceInvoiceNumber: invoice.invoiceNumber,
-    });
-  }
-
-  return {
-    source: "saudi-waqef",
-    connector: "zatca",
-    companyId: integration.companyId,
-    environment: integration.environment,
-    triggeredAt: new Date().toISOString(),
-    incremental: incrementalEnabled,
-    lastSyncAt: integration.lastSyncAt ? integration.lastSyncAt.toISOString() : null,
-    invoiceCount: drafts.length,
-    invoices: drafts,
-  };
 };
 
 const shouldRetry = (status: number, attempt: number, retries: number, retryOn: number[]) => {

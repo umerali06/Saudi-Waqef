@@ -15,12 +15,8 @@ export async function POST(request: Request) {
   }) => {
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
     const integrationId = text(body.integrationId);
-    const invoiceId = text(body.invoiceId);
-    if (!integrationId || !invoiceId) {
-      return NextResponse.json(
-        { error: "integrationId and invoiceId are required" },
-        { status: 400 }
-      );
+    if (!integrationId) {
+      return NextResponse.json({ error: "integrationId is required" }, { status: 400 });
     }
 
     const integration = await getZatcaIntegrationForCompany({ integrationId, companyId });
@@ -30,7 +26,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const result = await verifyZatcaCompliance({ integration, invoiceId });
+    const result = await verifyZatcaCompliance({ integration });
     return NextResponse.json(result, { status: result.ok ? 200 : 422 });
   });
 }
