@@ -6,8 +6,16 @@ import { executeZatcaSubmission } from "@/lib/integrations/zatca/service";
 import { notifyCompanyRoles } from "@/lib/notifications/service";
 import { logger } from "@/lib/ops/logger";
 
-/** Alert once a B2C (reporting) document is within 4h of its 24h ZATCA deadline. */
-const WARNING_WINDOW_MS = 4 * 60 * 60 * 1000;
+/**
+ * Alert once a B2C (reporting) document is within this window of its 24h
+ * ZATCA deadline. Vercel's Hobby plan only allows cron jobs to run once per
+ * day (see vercel.json), so this job only gets one shot every ~24h -- the
+ * window is set to 26h (24h + a buffer) rather than a tight few hours, so an
+ * artifact due before the *next* run is still caught on *this* run. If this
+ * job is ever moved to a shorter interval (e.g. after upgrading to Vercel
+ * Pro), shrink this back down to a few hours for tighter, less noisy alerts.
+ */
+const WARNING_WINDOW_MS = 26 * 60 * 60 * 1000;
 
 const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 

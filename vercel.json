@@ -1,6 +1,6 @@
 {
   "crons": [
     { "path": "/api/cron/zatca/certificate-expiry", "schedule": "0 6 * * *" },
-    { "path": "/api/cron/zatca/reporting-sla", "schedule": "*/30 * * * *" }
+    { "path": "/api/cron/zatca/reporting-sla", "schedule": "30 6 * * *" }
   ]
 }
