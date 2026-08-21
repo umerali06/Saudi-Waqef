@@ -13,11 +13,14 @@ export type ZatcaFailureBucket =
   | "internal_error"
   | "sync_interrupted"
   | "certificate_expired"
+  | "company_info_incomplete"
+  | "seller_address_incomplete"
   | "unknown";
 
 export type ZatcaFailureInfo = {
   bucket: ZatcaFailureBucket;
   messageKey: string;
+  fields?: string[];
 };
 
 const UNAVAILABLE_CODES = new Set(["API_CONN_ERR", "API_TIMEOUT_ERR"]);
@@ -72,7 +75,30 @@ function normalize(input: unknown): NormalizedError {
 
 export function classifyZatcaFailure(input: unknown): ZatcaFailureInfo {
   const err = normalize(input);
-  const message = (err.message ?? "").toLowerCase();
+  const originalMessage = (err.message ?? "").trim();
+  const message = originalMessage.toLowerCase();
+
+  const fieldsAfterColon = () => {
+    const colonIndex = originalMessage.indexOf(":");
+    if (colonIndex < 0) return undefined;
+    const fields = originalMessage.slice(colonIndex + 1).split(",").map((field) => field.trim()).filter(Boolean);
+    return fields.length ? fields : undefined;
+  };
+
+  if (message.startsWith("zatca_seller_address_incomplete")) {
+    return {
+      bucket: "seller_address_incomplete",
+      messageKey: "integrations.zatca.errors.sellerAddressIncomplete",
+      fields: fieldsAfterColon(),
+    };
+  }
+  if (message.startsWith("zatca_company_information_incomplete")) {
+    return {
+      bucket: "company_info_incomplete",
+      messageKey: "integrations.zatca.errors.companyInfoIncomplete",
+      fields: fieldsAfterColon(),
+    };
+  }
 
   if (message.includes("zatca_lock_lost") || message.includes("zatca_lock_held")) {
     return { bucket: "sync_interrupted", messageKey: "integrations.zatca.errors.syncInterrupted" };
