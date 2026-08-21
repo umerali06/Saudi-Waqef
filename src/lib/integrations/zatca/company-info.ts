@@ -27,7 +27,14 @@ export function buildZatcaSupplierAddress(
   return result;
 }
 
-export function assertZatcaCompanyReady(company: CompanyRecord, config: Record<string, unknown> = {}) {
+export function assertZatcaCompanyReady(
+  company: CompanyRecord,
+  config: Record<string, unknown> = {}
+): asserts company is CompanyRecord & {
+  legalName: string;
+  crNumber: string;
+  vatNumber: string;
+} {
   const missing: string[] = [];
   if (!company.legalName?.trim()) missing.push("legalName");
   if (!company.crNumber?.trim()) missing.push("crNumber");
