@@ -799,6 +799,19 @@ export default function IntegrationsPage() {
             </label>
           </div>
 
+          {form.connector === "zatca" ? (
+            <div className="mt-4 rounded-2xl border border-border bg-surface/60 p-4 text-sm">
+              <p className="font-medium">{t("integrations.zatca.setupCalloutTitle")}</p>
+              <p className="mt-1 text-xs text-muted">{t("integrations.zatca.setupCalloutBody")}</p>
+              <a
+                href="/settings/integrations/zatca"
+                className="mt-3 inline-block rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast"
+              >
+                {t("integrations.zatca.setupCalloutCta")}
+              </a>
+            </div>
+          ) : (
+            <>
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             <label className={`text-sm ${alignClass}`}>
               <span className="mb-1 block text-xs text-muted">{t("integrations.status")}</span>
@@ -1083,33 +1096,8 @@ export default function IntegrationsPage() {
               />
             </label>
           </div>
-
-          {form.connector === "zatca" ? (
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <label className={`text-sm ${alignClass}`}>
-                <span className="mb-1 block text-xs text-muted">{t("integrations.certificate")}</span>
-                <textarea
-                  className="min-h-[110px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
-                  value={form.certificatePem}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, certificatePem: event.target.value }))
-                  }
-                  placeholder={t("integrations.certificatePlaceholder")}
-                />
-              </label>
-              <label className={`text-sm ${alignClass}`}>
-                <span className="mb-1 block text-xs text-muted">{t("integrations.privateKey")}</span>
-                <textarea
-                  className="min-h-[110px] w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
-                  value={form.privateKeyPem}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, privateKeyPem: event.target.value }))
-                  }
-                  placeholder={t("integrations.privateKeyPlaceholder")}
-                />
-              </label>
-            </div>
-          ) : null}
+            </>
+          )}
 
           <button
             type="submit"
