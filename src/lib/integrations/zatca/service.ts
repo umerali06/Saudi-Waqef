@@ -252,7 +252,7 @@ async function runZatcaSubmissionLoop(params: {
     const alerts = result.zatcaResult.alerts ?? [];
     const hasWarnings = alerts.some((alert) => {
       if (!alert || typeof alert !== "object") return false;
-      const row = alert as Record<string, unknown>;
+      const row = alert as unknown as Record<string, unknown>;
       return String(row.type ?? row.status ?? row.category ?? "").toLowerCase().includes("warn");
     });
     const technicalStatus = !accepted
