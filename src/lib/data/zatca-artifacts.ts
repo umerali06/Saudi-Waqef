@@ -10,7 +10,13 @@ export type ZatcaArtifact = {
   hash: string;
   qr: string;
   payload: Record<string, unknown>;
-  status?: "pending" | "submitted" | "accepted" | "rejected";
+  status?: "pending" | "submitted" | "accepted" | "warning" | "rejected";
+  environment?: "sandbox" | "production";
+  documentType?: "standard" | "simplified";
+  operation?: "clearance" | "reporting";
+  technicalStatus?: ZatcaTechnicalStatus;
+  attemptCount?: number;
+  nextRetryAt?: Date | null;
   providerReference?: string | null;
   lastSubmittedAt?: Date | null;
   lastResponse?: Record<string, unknown> | null;
@@ -21,9 +27,22 @@ export type ZatcaArtifact = {
   createdAt: Date;
 };
 
-export async function getZatcaArtifactByInvoiceId(invoiceId: string) {
+export type ZatcaTechnicalStatus =
+  | "draft"
+  | "pending_submission"
+  | "submitted"
+  | "reported"
+  | "cleared"
+  | "accepted"
+  | "warning"
+  | "rejected"
+  | "retry_pending"
+  | "integration_unavailable";
+
+export async function getZatcaArtifactByInvoiceId(companyId: string, invoiceId: string) {
   const snapshot = await db
     .collection("zatca_artifacts")
+    .where("companyId", "==", companyId)
     .where("invoiceId", "==", invoiceId)
     .limit(1)
     .get();
@@ -43,6 +62,12 @@ export async function getZatcaArtifactByInvoiceId(invoiceId: string) {
     qr: data.qr,
     payload: data.payload ?? {},
     status: data.status ?? "pending",
+    environment: data.environment,
+    documentType: data.documentType,
+    operation: data.operation,
+    technicalStatus: data.technicalStatus ?? data.status ?? "pending_submission",
+    attemptCount: data.attemptCount ?? 0,
+    nextRetryAt: data.nextRetryAt?.toDate ? data.nextRetryAt.toDate() : null,
     providerReference: data.providerReference ?? null,
     lastSubmittedAt: data.lastSubmittedAt?.toDate ? data.lastSubmittedAt.toDate() : null,
     lastResponse:
@@ -60,7 +85,11 @@ export async function createZatcaArtifact(params: {
   hash: string;
   qr: string;
   payload: Record<string, unknown>;
-  status?: "pending" | "submitted" | "accepted" | "rejected";
+  status?: "pending" | "submitted" | "accepted" | "warning" | "rejected";
+  environment: "sandbox" | "production";
+  documentType: "standard" | "simplified";
+  operation: "clearance" | "reporting";
+  technicalStatus?: ZatcaTechnicalStatus;
   reportingDueAt?: Date | null;
 }) {
   const id = uuidv4();
@@ -72,6 +101,12 @@ export async function createZatcaArtifact(params: {
     qr: params.qr,
     payload: params.payload,
     status: params.status ?? "pending",
+    environment: params.environment,
+    documentType: params.documentType,
+    operation: params.operation,
+    technicalStatus: params.technicalStatus ?? "pending_submission",
+    attemptCount: 0,
+    nextRetryAt: null,
     providerReference: null,
     lastSubmittedAt: null,
     lastResponse: null,
@@ -105,6 +140,12 @@ export async function getZatcaArtifactByUuid(companyId: string, uuid: string) {
     qr: data.qr,
     payload: data.payload ?? {},
     status: data.status ?? "pending",
+    environment: data.environment,
+    documentType: data.documentType,
+    operation: data.operation,
+    technicalStatus: data.technicalStatus ?? data.status ?? "pending_submission",
+    attemptCount: data.attemptCount ?? 0,
+    nextRetryAt: data.nextRetryAt?.toDate ? data.nextRetryAt.toDate() : null,
     providerReference: data.providerReference ?? null,
     lastSubmittedAt: data.lastSubmittedAt?.toDate ? data.lastSubmittedAt.toDate() : null,
     lastResponse:
@@ -118,7 +159,10 @@ export async function getZatcaArtifactByUuid(companyId: string, uuid: string) {
 export async function updateZatcaArtifactStatus(
   artifactId: string,
   updates: {
-    status?: "pending" | "submitted" | "accepted" | "rejected";
+    status?: "pending" | "submitted" | "accepted" | "warning" | "rejected";
+    technicalStatus?: ZatcaTechnicalStatus;
+    attemptCount?: number;
+    nextRetryAt?: Date | null;
     providerReference?: string | null;
     lastSubmittedAt?: Date | null;
     lastResponse?: Record<string, unknown> | null;
@@ -130,6 +174,11 @@ export async function updateZatcaArtifactStatus(
   };
   if (updates.status) {
     payload.status = updates.status;
+  }
+  if (updates.technicalStatus) payload.technicalStatus = updates.technicalStatus;
+  if (updates.attemptCount !== undefined) payload.attemptCount = updates.attemptCount;
+  if (updates.nextRetryAt !== undefined) {
+    payload.nextRetryAt = updates.nextRetryAt ? Timestamp.fromDate(updates.nextRetryAt) : null;
   }
   if (updates.providerReference !== undefined) {
     payload.providerReference = updates.providerReference;
@@ -146,6 +195,29 @@ export async function updateZatcaArtifactStatus(
     payload.slaAlertedAt = updates.slaAlertedAt ? Timestamp.fromDate(updates.slaAlertedAt) : null;
   }
   await db.collection("zatca_artifacts").doc(artifactId).set(payload, { merge: true });
+}
+
+/** Append-only submission evidence. Keeping attempts outside the mutable
+ * artifact prevents a later retry from erasing the original ZATCA response. */
+export async function recordZatcaSubmissionAttempt(params: {
+  artifactId: string;
+  companyId: string;
+  invoiceId: string;
+  uuid: string;
+  environment: "sandbox" | "production";
+  operation: "clearance" | "reporting";
+  attempt: number;
+  httpStatus?: number | null;
+  technicalStatus: ZatcaTechnicalStatus;
+  response?: Record<string, unknown> | null;
+}) {
+  const id = uuidv4();
+  await db.collection("zatca_artifacts").doc(params.artifactId).collection("attempts").doc(id).set({
+    ...params,
+    response: params.response ?? null,
+    createdAt: Timestamp.now(),
+  });
+  return id;
 }
 
 /**
@@ -173,6 +245,12 @@ export async function listAtRiskReportingArtifacts(withinMs: number) {
         qr: data.qr,
         payload: data.payload ?? {},
         status: data.status ?? "pending",
+        environment: data.environment,
+        documentType: data.documentType,
+        operation: data.operation,
+        technicalStatus: data.technicalStatus ?? data.status ?? "pending_submission",
+        attemptCount: data.attemptCount ?? 0,
+        nextRetryAt: data.nextRetryAt?.toDate ? data.nextRetryAt.toDate() : null,
         providerReference: data.providerReference ?? null,
         lastSubmittedAt: data.lastSubmittedAt?.toDate ? data.lastSubmittedAt.toDate() : null,
         lastResponse:
@@ -202,6 +280,12 @@ export async function listZatcaArtifactsByCompany(companyId: string, limitCount 
       qr: data.qr,
       payload: data.payload ?? {},
       status: data.status ?? "pending",
+      environment: data.environment,
+      documentType: data.documentType,
+      operation: data.operation,
+      technicalStatus: data.technicalStatus ?? data.status ?? "pending_submission",
+      attemptCount: data.attemptCount ?? 0,
+      nextRetryAt: data.nextRetryAt?.toDate ? data.nextRetryAt.toDate() : null,
       providerReference: data.providerReference ?? null,
       lastSubmittedAt: data.lastSubmittedAt?.toDate ? data.lastSubmittedAt.toDate() : null,
       lastResponse:

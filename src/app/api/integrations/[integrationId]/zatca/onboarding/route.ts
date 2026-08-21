@@ -8,13 +8,14 @@ import { zatcaOtpConfirmSchema } from "@/lib/validators/zatca-wizard";
 import {
   requestZatcaComplianceCsid,
   requestZatcaProductionCsid,
+  renewZatcaCertificate,
   verifyZatcaCompliance,
 } from "@/lib/integrations/zatca/onboarding";
 
 export const runtime = "nodejs";
 
 type Context = { params: Promise<{ integrationId: string }> };
-type Action = "compliance-csid" | "verify-compliance" | "production-csid";
+type Action = "compliance-csid" | "verify-compliance" | "production-csid" | "renew-certificate";
 
 const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
 
@@ -32,12 +33,16 @@ export async function POST(request: Request, context: Context) {
   const action = text(body.action) as Action;
 
   try {
-    if (action === "compliance-csid") {
+    if (action === "compliance-csid" || action === "renew-certificate") {
       const parsed = zatcaOtpConfirmSchema.safeParse({ otp: body.otp });
       if (!parsed.success) {
         return NextResponse.json({ error: "A valid one-time code is required." }, { status: 400 });
       }
-      await requestZatcaComplianceCsid({ integration, otp: parsed.data.otp });
+      if (action === "renew-certificate") {
+        await renewZatcaCertificate({ integration, otp: parsed.data.otp });
+      } else {
+        await requestZatcaComplianceCsid({ integration, otp: parsed.data.otp });
+      }
     } else if (action === "verify-compliance") {
       const result = await verifyZatcaCompliance({ integration });
       if (!result.ok) return NextResponse.json(result, { status: 422 });

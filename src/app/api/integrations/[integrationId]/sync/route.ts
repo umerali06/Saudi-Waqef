@@ -173,6 +173,9 @@ export async function POST(_: Request, context: RouteContext) {
           qr,
           payload: invoice,
           status: artifactStatus,
+          environment: integration.environment,
+          documentType: invoice.profileId === "reporting:1.0" ? "simplified" : "standard",
+          operation: invoice.profileId === "reporting:1.0" ? "reporting" : "clearance",
         });
         await updateZatcaArtifactStatus(artifactId, {
           providerReference,

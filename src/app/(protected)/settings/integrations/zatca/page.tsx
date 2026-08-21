@@ -29,7 +29,14 @@ type ArtifactRow = {
   id: string;
   invoiceId: string;
   uuid: string;
-  status: "pending" | "submitted" | "accepted" | "rejected";
+  invoiceNumber?: string;
+  customerName?: string;
+  status: "pending" | "submitted" | "accepted" | "warning" | "rejected";
+  documentType?: "standard" | "simplified";
+  environment?: "sandbox" | "production";
+  operation?: "clearance" | "reporting";
+  technicalStatus?: string;
+  lastResponse?: Record<string, unknown> | null;
   providerReference?: string | null;
   lastSubmittedAt?: string | null;
   createdAt: string;
@@ -65,6 +72,15 @@ export default function ZatcaWizardPage() {
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string; details?: Record<string, unknown> } | null>(null);
   const [showLogs, setShowLogs] = useState(false);
   const [artifacts, setArtifacts] = useState<ArtifactRow[]>([]);
+  const [renewOtp, setRenewOtp] = useState("");
+  const [renewing, setRenewing] = useState(false);
+  const [renewResult, setRenewResult] = useState<string | null>(null);
+  const [logStatus, setLogStatus] = useState("");
+  const [logType, setLogType] = useState("");
+  const [logEnvironment, setLogEnvironment] = useState("");
+  const [logOperation, setLogOperation] = useState("");
+  const [logFrom, setLogFrom] = useState("");
+  const [logTo, setLogTo] = useState("");
   const autoResumedRef = useRef(false);
 
   const load = useCallback(async () => {
@@ -93,7 +109,7 @@ export default function ZatcaWizardPage() {
       : "";
 
   const callOnboardingAction = useCallback(
-    async (action: "compliance-csid" | "verify-compliance" | "production-csid", body: Record<string, unknown> = {}) => {
+    async (action: "compliance-csid" | "verify-compliance" | "production-csid" | "renew-certificate", body: Record<string, unknown> = {}) => {
       if (!integration) throw new Error("No ZATCA integration to act on.");
       const res = await fetch(`/api/integrations/${integration.id}/zatca/onboarding`, {
         method: "POST",
@@ -245,6 +261,16 @@ export default function ZatcaWizardPage() {
     }
   };
 
+  const handleRenew = async () => {
+    if (!integration || renewOtp.trim().length < 4) return;
+    setRenewing(true); setRenewResult(null);
+    try {
+      await callOnboardingAction("renew-certificate", { otp: renewOtp.trim() });
+      setRenewOtp(""); setRenewResult("Certificate renewed successfully."); await load();
+    } catch (error) { setRenewResult(t(classifyZatcaFailure(error).messageKey)); }
+    finally { setRenewing(false); }
+  };
+
   if (!isAdmin) {
     return (
       <section className={`app-card p-6 card-modern ${alignClass}`}>
@@ -262,6 +288,12 @@ export default function ZatcaWizardPage() {
   }
 
   const isFailedPersisted = onboardingStatus === "compliance_failed";
+  const filteredArtifacts = artifacts.filter((artifact) => {
+    const day = (artifact.lastSubmittedAt ?? artifact.createdAt).slice(0, 10);
+    return (!logStatus || artifact.status === logStatus) && (!logType || artifact.documentType === logType) &&
+      (!logEnvironment || artifact.environment === logEnvironment) && (!logOperation || artifact.operation === logOperation) &&
+      (!logFrom || day >= logFrom) && (!logTo || day <= logTo);
+  });
   let step: 1 | 2 | 3 | 4;
   if (!integration) {
     step = 1;
@@ -447,13 +479,33 @@ export default function ZatcaWizardPage() {
             </div>
           ) : null}
 
+          {onboardingStatus === "production_ready" ? (
+            <div className="rounded-2xl border border-border p-4 space-y-3">
+              <h3 className="text-sm font-semibold">Renew certificate</h3>
+              <p className="text-xs text-muted">Existing credentials remain active unless renewal succeeds.</p>
+              <div className="flex flex-wrap gap-2">
+                <input value={renewOtp} onChange={(event) => setRenewOtp(event.target.value)} inputMode="numeric" className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm" placeholder="OTP" />
+                <button type="button" onClick={handleRenew} disabled={renewing || renewOtp.trim().length < 4} className="rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast disabled:opacity-50">{renewing ? "Renewing…" : "Renew certificate"}</button>
+              </div>
+              {renewResult ? <p className="text-xs">{renewResult}</p> : null}
+            </div>
+          ) : null}
+
           {showLogs ? (
             <div className="rounded-2xl border border-border p-3 text-xs">
+              <div className="mb-3 grid gap-2 md:grid-cols-3">
+                <input type="date" value={logFrom} onChange={(e) => setLogFrom(e.target.value)} className="rounded-xl border border-border bg-surface p-2" />
+                <input type="date" value={logTo} onChange={(e) => setLogTo(e.target.value)} className="rounded-xl border border-border bg-surface p-2" />
+                <select value={logStatus} onChange={(e) => setLogStatus(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">All statuses</option><option value="accepted">Accepted</option><option value="warning">Warning</option><option value="rejected">Rejected</option></select>
+                <select value={logType} onChange={(e) => setLogType(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">All types</option><option value="standard">Standard (B2B)</option><option value="simplified">Simplified (B2C)</option></select>
+                <select value={logEnvironment} onChange={(e) => setLogEnvironment(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">All environments</option><option value="sandbox">Sandbox</option><option value="production">Production</option></select>
+                <select value={logOperation} onChange={(e) => setLogOperation(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">All operations</option><option value="clearance">Clearance</option><option value="reporting">Reporting</option></select>
+              </div>
               {artifacts.length === 0 ? (
                 <p className="text-muted">{t("integrations.zatca.wizard.step4.noArtifacts")}</p>
               ) : (
                 <div className="space-y-2">
-                  {artifacts.map((artifact) => (
+                  {filteredArtifacts.map((artifact) => (
                     <div key={artifact.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
                       <span className="font-mono">{artifact.uuid}</span>
                       <span
@@ -467,6 +519,11 @@ export default function ZatcaWizardPage() {
                       >
                         {artifact.status}
                       </span>
+                      <span>{artifact.invoiceNumber} · {artifact.customerName} · {artifact.documentType} · {artifact.environment} · {artifact.operation}</span>
+                      <details className="w-full rounded-xl bg-surface-muted p-2">
+                        <summary className="cursor-pointer font-semibold">Technical detail</summary>
+                        <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap">{JSON.stringify(artifact.lastResponse ?? {}, null, 2)}</pre>
+                      </details>
                     </div>
                   ))}
                 </div>
