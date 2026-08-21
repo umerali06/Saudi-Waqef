@@ -276,13 +276,19 @@ export async function renewZatcaCertificate(params: {
   const client = new ZatcaApiClient({ environment: integration.environment, timeout: 30000 });
   const compliance = await client.requestComplianceCSID(csr.csr, params.otp);
   if (compliance.status !== "ACCEPTED") throw new ZatcaError(compliance.error?.message || "Compliance CSID rejected.", ZatcaErrorCode.API_ERROR, compliance.error);
+  const complianceToken = text(compliance.binarySecurityToken);
+  const complianceSecret = text(compliance.secret);
+  const complianceRequestId = text(compliance.requestId);
+  if (!complianceToken || !complianceSecret || !complianceRequestId) {
+    throw new Error("ZATCA returned an incomplete compliance CSID response.");
+  }
   const pending = {
     privateKeyPem: csr.privateKey,
     publicKeyPem: csr.publicKey,
-    complianceToken: compliance.binarySecurityToken,
-    complianceSecret: compliance.secret,
-    complianceCertificatePem: certificatePemFromToken(compliance.binarySecurityToken),
-    complianceRequestId: compliance.requestId,
+    complianceToken,
+    complianceSecret,
+    complianceCertificatePem: certificatePemFromToken(complianceToken),
+    complianceRequestId,
   };
   const supplier = buildZatcaSupplierInfo(company, config);
   const checks = [];
@@ -296,8 +302,13 @@ export async function renewZatcaCertificate(params: {
   }
   const production = await client.requestProductionCSID({ binarySecurityToken: pending.complianceToken, secret: pending.complianceSecret }, pending.complianceRequestId);
   if (production.status !== "ACCEPTED") throw new ZatcaError(production.error?.message || "Production CSID rejected.", ZatcaErrorCode.API_ERROR, production.error);
+  const productionToken = text(production.binarySecurityToken);
+  const productionSecret = text(production.secret);
+  if (!productionToken || !productionSecret) {
+    throw new Error("ZATCA returned an incomplete production CSID response.");
+  }
   await updateIntegration(integration.id, {
-    credentials: { ...(integration.credentials ?? {}), ...pending, binarySecurityToken: production.binarySecurityToken, secret: production.secret, certificatePem: certificatePemFromToken(production.binarySecurityToken) },
+    credentials: { ...(integration.credentials ?? {}), ...pending, binarySecurityToken: productionToken, secret: productionSecret, certificatePem: certificatePemFromToken(productionToken) },
     config: { ...(integration.config ?? {}), zatcaCertExpiryLastAlertTier: null, certificateRenewedAt: new Date().toISOString(), productionCsidIssuedAt: new Date().toISOString() },
     status: "active",
   });
