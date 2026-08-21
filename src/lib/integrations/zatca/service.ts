@@ -14,9 +14,11 @@ import { getCompanyById } from "@/lib/data/companies";
 import { getCustomerById } from "@/lib/data/customers";
 import { listSalesInvoices, type SalesInvoice } from "@/lib/data/sales-invoices";
 import { listSalesCreditNotes } from "@/lib/data/credit-notes";
+import { listSalesDebitNotes } from "@/lib/data/debit-notes";
 import {
   createZatcaArtifact,
   getZatcaArtifactByInvoiceId,
+  recordZatcaSubmissionAttempt,
   updateZatcaArtifactStatus,
 } from "@/lib/data/zatca-artifacts";
 import {
@@ -25,6 +27,7 @@ import {
 } from "@/lib/integrations/zatca/submission-lock";
 import { logger } from "@/lib/ops/logger";
 import { redactSecrets } from "@/lib/security/redact";
+import { assertZatcaCompanyReady, buildZatcaSupplierAddress } from "@/lib/integrations/zatca/company-info";
 
 const UUID_NAMESPACE = "f1c74ab4-9968-48f5-a919-6f6f01d93086";
 
@@ -73,6 +76,7 @@ export const mapSalesInvoiceToZatca = async (params: {
     : rootConfig;
   const customerVat = customer?.vatNumber || params.invoice.customerVatNumber || "";
   const isStandard = Boolean(customerVat);
+  assertZatcaCompanyReady(company, config);
 
   const taxGroups = new Map<string, { taxableAmount: number; taxAmount: number; percent: number; taxCategoryId: TaxCategoryId }>();
   const invoiceLines = params.invoice.lines.map((line, index) => {
@@ -121,7 +125,7 @@ export const mapSalesInvoiceToZatca = async (params: {
       nameEn: company.legalName || company.name,
       vatNumber: company.vatNumber || "",
       crNumber: company.crNumber,
-      address: parseAddress(config.sellerAddress, company.address),
+      address: buildZatcaSupplierAddress(company, config),
     },
     ...(isStandard ? {
       customer: {
@@ -180,17 +184,20 @@ async function runZatcaSubmissionLoop(params: {
   const invoices = (await listSalesInvoices(integration.companyId))
     .filter((invoice) => ["approved", "sent", "partially_paid", "paid"].includes(invoice.status))
     .map((invoice) => ({ kind: "invoice" as const, createdAt: invoice.createdAt, invoice }));
-  const invoiceById = new Map(invoices.map((item) => [item.invoice.id, item.invoice]));
+  const invoiceById = new Map<string, SalesInvoice>(invoices.map((item) => [item.invoice.id, item.invoice]));
   const creditNotes = (await listSalesCreditNotes(integration.companyId))
     .filter((note) => note.status === "issued")
     .map((note) => ({ kind: "credit" as const, createdAt: note.createdAt, note }));
-  const documents = [...invoices, ...creditNotes].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  const debitNotes = (await listSalesDebitNotes(integration.companyId))
+    .filter((note) => note.status === "issued")
+    .map((note) => ({ kind: "debit" as const, createdAt: note.createdAt, note }));
+  const documents = [...invoices, ...creditNotes, ...debitNotes].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   const results: Array<Record<string, unknown>> = [];
 
   for (const source of documents) {
     const sourceId = source.kind === "invoice" ? source.invoice.id : source.note.id;
-    const existing = await getZatcaArtifactByInvoiceId(sourceId);
-    if (existing?.status === "accepted") continue;
+    const existing = await getZatcaArtifactByInvoiceId(integration.companyId, sourceId);
+    if (existing?.status === "accepted" || existing?.status === "warning") continue;
     let document: InvoiceData | CreditNoteData;
     if (source.kind === "invoice") {
       document = await mapSalesInvoiceToZatca({ integration, invoice: source.invoice, chain });
@@ -202,7 +209,7 @@ async function runZatcaSubmissionLoop(params: {
         invoice: {
           ...original,
           id: source.note.id,
-          invoiceNumber: source.note.creditNumber,
+        invoiceNumber: source.kind === "credit" ? source.note.creditNumber : source.note.debitNumber,
           invoiceDate: source.note.issueDate,
           subtotal: source.note.subtotal,
           discountTotal: source.note.discountTotal,
@@ -216,11 +223,11 @@ async function runZatcaSubmissionLoop(params: {
       const originalUuid = uuidv5(`${integration.companyId}:${original.id}`, UUID_NAMESPACE);
       document = {
         ...mapped,
-        invoiceTypeCode: "381",
+        invoiceTypeCode: source.kind === "credit" ? "381" : "383",
         originalInvoiceNumber: original.invoiceNumber,
         originalInvoiceUuid: originalUuid,
         originalInvoiceDate: original.invoiceDate,
-        reason: source.note.reason || "Credit note",
+        reason: source.note.reason || (source.kind === "credit" ? "Credit note" : "Debit note"),
       };
     }
     const result = await submitInvoice({
@@ -242,6 +249,19 @@ async function runZatcaSubmissionLoop(params: {
       clearedInvoice: response?.clearedInvoice ?? null,
     };
     const isReporting = document.profileId === "reporting:1.0";
+    const alerts = result.zatcaResult.alerts ?? [];
+    const hasWarnings = alerts.some((alert) => {
+      if (!alert || typeof alert !== "object") return false;
+      const row = alert as Record<string, unknown>;
+      return String(row.type ?? row.status ?? row.category ?? "").toLowerCase().includes("warn");
+    });
+    const technicalStatus = !accepted
+      ? "rejected" as const
+      : hasWarnings
+        ? "warning" as const
+        : isReporting
+          ? "reported" as const
+          : "cleared" as const;
     const reportingDueAt = isReporting
       ? new Date(new Date(`${document.issueDate}T${document.issueTime}Z`).getTime() + 24 * 60 * 60 * 1000)
       : null;
@@ -254,22 +274,42 @@ async function runZatcaSubmissionLoop(params: {
         hash: result.invoiceHash,
         qr: result.qrCodeBase64,
         payload: { document, signedXml: result.signedXml },
-        status: accepted ? "accepted" : "rejected",
+        status: accepted ? (hasWarnings ? "warning" : "accepted") : "rejected",
+        technicalStatus,
         reportingDueAt,
+        environment: integration.environment,
+        documentType: isReporting ? "simplified" : "standard",
+        operation: isReporting ? "reporting" : "clearance",
       });
     }
+    if (!artifactId) throw new Error("ZATCA_ARTIFACT_CREATE_FAILED");
     // This artifact write is independent of the hash-chain lock below and must
     // always happen: ZATCA really did accept/reject this document regardless
     // of whether we can still safely persist the updated chain state.
     await updateZatcaArtifactStatus(artifactId, {
-      status: accepted ? "accepted" : "rejected",
+      status: accepted ? (hasWarnings ? "warning" : "accepted") : "rejected",
+      technicalStatus,
+      attemptCount: (existing?.attemptCount ?? 0) + 1,
+      nextRetryAt: null,
       providerReference: document.uuid,
       lastSubmittedAt: new Date(),
       lastResponse: responseRecord,
     });
+    await recordZatcaSubmissionAttempt({
+      artifactId,
+      companyId: integration.companyId,
+      invoiceId: sourceId,
+      uuid: document.uuid,
+      environment: integration.environment,
+      operation: isReporting ? "reporting" : "clearance",
+      attempt: (existing?.attemptCount ?? 0) + 1,
+      httpStatus: result.zatcaResult.httpStatus,
+      technicalStatus,
+      response: responseRecord,
+    });
     results.push({
       uuid: document.uuid,
-      status: accepted ? "accepted" : "rejected",
+      status: technicalStatus,
       providerReference: document.uuid,
       message: accepted ? "Accepted by ZATCA" : "Rejected by ZATCA",
       ...responseRecord,
@@ -305,7 +345,7 @@ async function runZatcaSubmissionLoop(params: {
     }
   }
 
-  const ok = results.every((result) => result.status === "accepted");
+  const ok = results.every((result) => ["accepted", "reported", "cleared", "warning"].includes(String(result.status)));
   return {
     ok,
     status: ok ? 200 : 422,

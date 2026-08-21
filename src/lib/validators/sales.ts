@@ -99,3 +99,8 @@ export const creditNoteUpdateSchema = z.object({
   status: z.enum(["draft", "issued", "canceled"]).optional(),
   lines: z.array(creditNoteLineSchema).min(1).optional(),
 });
+
+// Debit notes use the same editable fields and line validation as credit notes.
+export const debitNoteLineSchema = creditNoteLineSchema;
+export const debitNoteSchema = creditNoteSchema;
+export const debitNoteUpdateSchema = creditNoteUpdateSchema;

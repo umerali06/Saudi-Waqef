@@ -41,6 +41,10 @@ export default function SalesPage() {
             {t("sales.creditNotesCardDescription")}
           </p>
         </Link>
+        <Link href="/sales/debit-notes" className="app-card p-6 transition hover:-translate-y-0.5 hover:shadow-lg card-modern">
+          <h2 className="text-lg font-semibold">{t("debitNote.title")}</h2>
+          <p className="mt-2 text-sm text-muted page-subtitle">{t("debitNote.subtitle")}</p>
+        </Link>
         <Link
           href="/sales/recurring"
           className="app-card p-6 transition hover:-translate-y-0.5 hover:shadow-lg card-modern"

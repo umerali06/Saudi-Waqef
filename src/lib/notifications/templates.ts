@@ -135,16 +135,16 @@ export const notificationTemplates: Record<NotificationType, Template> = {
       "Your ZATCA certificate expires in {daysUntilExpiry} days"
     ),
     body: template(
-      "شهادة زاتكا للفوترة الإلكترونية ستنتهي صلاحيتها في {expiryDate} (بعد {daysUntilExpiry} يومًا). يرجى التواصل مع الدعم لتجديدها قبل الانتهاء.",
-      "Your ZATCA e-invoicing certificate expires on {expiryDate} ({daysUntilExpiry} days from now). Please contact support to renew it before it expires."
+      "شهادة زاتكا للفوترة الإلكترونية ستنتهي صلاحيتها في {expiryDate} (بعد {daysUntilExpiry} يومًا). جدّدها من الإعدادات ← التكاملات ← زاتكا قبل انتهاء الصلاحية: /settings/integrations/zatca",
+      "Your ZATCA e-invoicing certificate expires on {expiryDate} ({daysUntilExpiry} days from now). Renew it from Settings → Integrations → ZATCA before it expires: /settings/integrations/zatca"
     ),
   },
   zatca_certificate_expired: {
     title: template("انتهت صلاحية شهادة زاتكا", "ZATCA certificate expired"),
     subject: template("انتهت صلاحية شهادة زاتكا", "Your ZATCA certificate has expired"),
     body: template(
-      "انتهت صلاحية شهادة زاتكا للفوترة الإلكترونية في {expiryDate}. لن يتم إرسال أي فواتير جديدة إلى زاتكا حتى يتم تجديد الشهادة. يرجى التواصل مع الدعم فورًا.",
-      "Your ZATCA e-invoicing certificate expired on {expiryDate}. New invoices cannot be sent to ZATCA until it is renewed. Please contact support right away."
+      "انتهت صلاحية شهادة زاتكا للفوترة الإلكترونية في {expiryDate}. لن يتم إرسال أي فواتير جديدة إلى زاتكا حتى يتم تجديد الشهادة. جدّدها الآن من الإعدادات ← التكاملات ← زاتكا: /settings/integrations/zatca",
+      "Your ZATCA e-invoicing certificate expired on {expiryDate}. New invoices cannot be sent to ZATCA until it is renewed. Renew it now from Settings → Integrations → ZATCA: /settings/integrations/zatca"
     ),
   },
   zatca_reporting_sla_risk: {
