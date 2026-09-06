@@ -15,11 +15,19 @@ vi.mock("@/lib/data/companies", () => ({
     vatNumber: "300000000000003", crNumber: "1010000000", address: "King Road", createdAt: new Date(),
   }),
 }));
-vi.mock("@/lib/data/customers", () => ({
-  getCustomerById: vi.fn().mockResolvedValue({
+const buyer = vi.hoisted(() => ({
+  current: {
     id: "customer-1", name: "Buyer", legalName: "Buyer LLC", vatNumber: "310000000000003",
-    billingAddress: "Buyer Road", createdAt: new Date(),
-  }),
+    billingAddress: "Buyer Road",
+    billingAddressDetails: {
+      street: "Buyer Road", building: "4321", district: "Al Malaz", city: "Riyadh",
+      postalCode: "11564", countryCode: "SA",
+    } as Record<string, string> | null,
+    createdAt: new Date(),
+  },
+}));
+vi.mock("@/lib/data/customers", () => ({
+  getCustomerById: vi.fn(async () => buyer.current),
 }));
 vi.mock("@/lib/data/sales-invoices", () => ({ listSalesInvoices: vi.fn() }));
 vi.mock("@/lib/data/credit-notes", () => ({ listSalesCreditNotes: vi.fn() }));
@@ -56,6 +64,42 @@ describe("ZATCA invoice mapping", () => {
     expect(document.invoiceCounter).toBe(5);
     expect(document.previousInvoiceHash).toBe("previous");
     expect(document.supplier.address.postalCode).toBe("12211");
+    expect(document.customer?.address).toEqual({
+      street: "Buyer Road", building: "4321", district: "Al Malaz", city: "Riyadh",
+      postalCode: "11564", countryCode: "SA",
+    });
     expect(document.taxSubtotals).toEqual([{ taxableAmount: 100, taxAmount: 15, percent: 15, taxCategoryId: "S" }]);
+  });
+
+  it("refuses to submit a standard invoice when the buyer address is incomplete", async () => {
+    const original = buyer.current.billingAddressDetails;
+    buyer.current.billingAddressDetails = null;
+    try {
+      await expect(
+        mapSalesInvoiceToZatca({
+          integration: {
+            id: "integration-1", companyId: "company-1", name: "ZATCA", connector: "zatca",
+            status: "active", environment: "sandbox", createdAt: new Date(),
+            config: { mapping: { sellerNameAr: "البائع", sellerAddress: {
+              street: "King Road", building: "1234", district: "Olaya", city: "Riyadh", postalCode: "12211", countryCode: "SA",
+            } } },
+          },
+          invoice: {
+            id: "invoice-2", companyId: "company-1", customerId: "customer-1", customerName: "Buyer",
+            customerVatNumber: "310000000000003", invoiceNumber: "INV-2", status: "approved",
+            invoiceDate: "2026-06-20", dueDate: "2026-07-20", currency: "SAR", subtotal: 100,
+            discountTotal: 0, taxTotal: 15, total: 115, amountPaid: 0, amountCredited: 0, balance: 115,
+            createdAt: new Date("2026-06-20T10:00:00Z"), lines: [{
+              id: "line-1", description: "Service", quantity: 1, unit: "C62", unitPrice: 100,
+              discountRate: 0, discountAmount: 0, taxCategoryId: "S", taxRate: 15,
+              taxAmount: 15, netAmount: 100, totalAmount: 115, baseQuantity: 1,
+            }],
+          },
+          chain: { lastHash: "previous", lastUuid: "old", counter: 4, updatedAt: new Date().toISOString() },
+        })
+      ).rejects.toThrow(/ZATCA_BUYER_ADDRESS_INCOMPLETE/);
+    } finally {
+      buyer.current.billingAddressDetails = original;
+    }
   });
 });

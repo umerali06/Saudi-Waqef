@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAdminAccess, requireCompanyRole } from "@/lib/access";
-import { integrationUpdateSchema } from "@/lib/validators/integrations";
+import { integrationUpdateSchema, PRODUCTION_ACTIVATION_PHRASE } from "@/lib/validators/integrations";
 import { getIntegrationById, updateIntegration } from "@/lib/data/integrations";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 
@@ -87,8 +87,38 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // Credentials are issued by ZATCA per environment. Once a CSID exists, the
+  // environment is fixed: switching it would point sandbox credentials at the
+  // live core portal and break the invoice hash chain, which is not
+  // environment-scoped. A new environment requires a new integration.
+  if (
+    parsed.data.environment &&
+    parsed.data.environment !== integration.environment &&
+    integration.connector === "zatca" &&
+    (integration.config?.onboardingStatus ?? "not_started") !== "not_started"
+  ) {
+    return NextResponse.json({ error: "ZATCA_ENVIRONMENT_LOCKED" }, { status: 400 });
+  }
+
+  // Moving to production means real invoices start reaching ZATCA. Require the
+  // administrator to confirm explicitly rather than infer intent from a saved
+  // form. `confirmProductionActivation` is validated against a fixed phrase.
+  if (
+    parsed.data.environment === "production" &&
+    integration.environment !== "production" &&
+    !parsed.data.confirmProductionActivation
+  ) {
+    return NextResponse.json(
+      { error: "PRODUCTION_ACTIVATION_NOT_CONFIRMED", confirmationPhrase: PRODUCTION_ACTIVATION_PHRASE },
+      { status: 400 }
+    );
+  }
+
+  // A control flag for this request, not a field to persist on the integration.
+  const updates = { ...parsed.data };
+  delete updates.confirmProductionActivation;
   await updateIntegration(integrationId, {
-    ...parsed.data,
+    ...updates,
     ...(parsed.data.config ? { config: { ...(integration.config ?? {}), ...parsed.data.config } } : {}),
     ...(parsed.data.credentials ? {
       credentials: { ...(integration.credentials ?? {}), ...parsed.data.credentials },

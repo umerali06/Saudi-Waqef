@@ -31,6 +31,7 @@ export async function POST(request: Request, context: Context) {
   if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const body = await request.json().catch(() => ({})) as Record<string, unknown>;
   const action = text(body.action) as Action;
+  let renewalMetadata: Awaited<ReturnType<typeof renewZatcaCertificate>> | null = null;
 
   try {
     if (action === "compliance-csid" || action === "renew-certificate") {
@@ -39,7 +40,7 @@ export async function POST(request: Request, context: Context) {
         return NextResponse.json({ error: "A valid one-time code is required." }, { status: 400 });
       }
       if (action === "renew-certificate") {
-        await renewZatcaCertificate({ integration, otp: parsed.data.otp });
+        renewalMetadata = await renewZatcaCertificate({ integration, otp: parsed.data.otp });
       } else {
         await requestZatcaComplianceCsid({ integration, otp: parsed.data.otp });
       }
@@ -60,9 +61,33 @@ export async function POST(request: Request, context: Context) {
       action: `integration.zatca.${action}`,
       entity: "integration",
       entityId: integration.id,
+      metadata: renewalMetadata
+        ? {
+            outcome: "success",
+            renewedAt: renewalMetadata.renewedAt,
+            previousCertificateExpiry: renewalMetadata.previousCertificateExpiry,
+            newCertificateExpiry: renewalMetadata.newCertificateExpiry,
+            zatcaRequestId: renewalMetadata.requestId,
+          }
+        : undefined,
     });
     return NextResponse.json({ ok: true });
   } catch (error) {
+    // A failed attempt is as auditable as a successful one -- especially for
+    // renewals, where the operator needs to see that live credentials were left
+    // in place.
+    await recordAuditEvent({
+      companyId: integration.companyId,
+      userId: user.id,
+      userEmail: user.email ?? undefined,
+      action: `integration.zatca.${action}`,
+      entity: "integration",
+      entityId: integration.id,
+      metadata: {
+        outcome: "failed",
+        reason: error instanceof Error ? error.message : String(error),
+      },
+    }).catch(() => undefined);
     if (error instanceof ZatcaError) {
       return NextResponse.json(
         { error: error.message, code: error.code, details: error.details },

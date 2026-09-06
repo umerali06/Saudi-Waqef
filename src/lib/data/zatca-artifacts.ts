@@ -220,6 +220,67 @@ export async function recordZatcaSubmissionAttempt(params: {
   return id;
 }
 
+/** Single artifact by id. Callers must check `companyId` before exposing it. */
+export async function getZatcaArtifactById(artifactId: string) {
+  const doc = await db.collection("zatca_artifacts").doc(artifactId).get();
+  if (!doc.exists) {
+    return null;
+  }
+  const data = doc.data()!;
+  return {
+    id: doc.id,
+    companyId: data.companyId,
+    invoiceId: data.invoiceId,
+    uuid: data.uuid,
+    status: data.status ?? "pending",
+    technicalStatus: data.technicalStatus ?? data.status ?? "pending_submission",
+  };
+}
+
+export type ZatcaSubmissionAttempt = {
+  id: string;
+  artifactId: string;
+  companyId: string;
+  invoiceId: string;
+  uuid: string;
+  environment: "sandbox" | "production";
+  operation: "clearance" | "reporting";
+  attempt: number;
+  httpStatus: number | null;
+  technicalStatus: ZatcaTechnicalStatus;
+  response: Record<string, unknown> | null;
+  createdAt: Date;
+};
+
+/** Reads the append-only attempt history for one artifact, oldest first. */
+export async function listZatcaSubmissionAttempts(artifactId: string) {
+  const snapshot = await db
+    .collection("zatca_artifacts")
+    .doc(artifactId)
+    .collection("attempts")
+    .get();
+
+  return snapshot.docs
+    .map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        artifactId: data.artifactId,
+        companyId: data.companyId,
+        invoiceId: data.invoiceId,
+        uuid: data.uuid,
+        environment: data.environment,
+        operation: data.operation,
+        attempt: data.attempt ?? 0,
+        httpStatus: data.httpStatus ?? null,
+        technicalStatus: data.technicalStatus ?? "pending_submission",
+        response: data.response && typeof data.response === "object" ? data.response : null,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+      } as ZatcaSubmissionAttempt;
+    })
+    .sort((a, b) => a.attempt - b.attempt || a.createdAt.getTime() - b.createdAt.getTime());
+}
+
 /**
  * Artifacts whose 24h ZATCA B2C reporting deadline falls within `withinMs`
  * from now and haven't been alerted on yet. Filters in-memory after a status

@@ -20,6 +20,22 @@ const validateVatNumber = (
   }
 };
 
+/**
+ * Structured buyer address. ZATCA requires every field for standard (B2B)
+ * tax invoices, so a partially-filled address is rejected rather than stored.
+ */
+const customerAddressSchema = z
+  .object({
+    street: z.string().trim().min(1),
+    building: z.string().trim().regex(/^\d{4}$/, "Building number must be 4 digits"),
+    district: z.string().trim().min(1),
+    city: z.string().trim().min(1),
+    postalCode: z.string().trim().regex(/^\d{5}$/, "Postal code must be 5 digits"),
+    countryCode: z.string().trim().length(2).default("SA"),
+  })
+  .optional()
+  .nullable();
+
 const customerBaseSchema = z.object({
   companyId: z.string().min(1),
   name: z.string().min(2),
@@ -30,6 +46,7 @@ const customerBaseSchema = z.object({
   email: z.string().email().optional().nullable(),
   phone: optionalString,
   billingAddress: optionalString,
+  billingAddressDetails: customerAddressSchema,
   shippingAddress: optionalString,
   paymentTermId: optionalString,
   creditLimit: z.number().min(0).optional().nullable(),

@@ -7,6 +7,7 @@ import {
   generateCSR,
   generateInvoiceXml,
   generatePhase2TLV,
+  parseCertificate,
   signInvoice,
 } from "@talha7k/zatca";
 import { getCompanyById } from "@/lib/data/companies";
@@ -28,6 +29,17 @@ export const certificatePemFromToken = (token: string) => {
   }
   const normalized = token.replace(/\s/g, "");
   return `-----BEGIN CERTIFICATE-----\n${normalized.match(/.{1,64}/g)?.join("\n") ?? normalized}\n-----END CERTIFICATE-----`;
+};
+
+/** Certificate expiry for audit metadata; never throws on a malformed PEM. */
+const certificateExpiryOf = (pem: string): string | null => {
+  if (!pem) return null;
+  try {
+    const info = parseCertificate(pem);
+    return info.validTo ? new Date(info.validTo).toISOString() : null;
+  } catch {
+    return null;
+  }
 };
 
 const mergedZatcaConfig = (integration: IntegrationRecord) => {
@@ -307,12 +319,38 @@ export async function renewZatcaCertificate(params: {
   if (!productionToken || !productionSecret) {
     throw new Error("ZATCA returned an incomplete production CSID response.");
   }
+  const previousCredentials = integration.credentials ?? {};
+  const newCertificatePem = certificatePemFromToken(productionToken);
+  const renewedAt = new Date().toISOString();
   await updateIntegration(integration.id, {
-    credentials: { ...(integration.credentials ?? {}), ...pending, binarySecurityToken: productionToken, secret: productionSecret, certificatePem: certificatePemFromToken(productionToken) },
-    config: { ...(integration.config ?? {}), zatcaCertExpiryLastAlertTier: null, certificateRenewedAt: new Date().toISOString(), productionCsidIssuedAt: new Date().toISOString() },
+    credentials: {
+      ...previousCredentials,
+      ...pending,
+      binarySecurityToken: productionToken,
+      secret: productionSecret,
+      certificatePem: newCertificatePem,
+      // Keep the superseded credential so a replacement that turns out to be
+      // unusable can be rolled back without a fresh OTP round-trip. Overwritten
+      // by the next renewal, so only one generation is ever retained.
+      previousBinarySecurityToken: text(previousCredentials.binarySecurityToken) || null,
+      previousSecret: text(previousCredentials.secret) || null,
+      previousCertificatePem: text(previousCredentials.certificatePem) || null,
+      previousPrivateKeyPem: text(previousCredentials.privateKeyPem) || null,
+      previousCredentialRetiredAt: renewedAt,
+    },
+    config: { ...(integration.config ?? {}), zatcaCertExpiryLastAlertTier: null, certificateRenewedAt: renewedAt, productionCsidIssuedAt: renewedAt },
     status: "active",
+    // The integration was likely flagged with ZATCA_CERTIFICATE_EXPIRED; the
+    // replacement credential resolves it, so the stale error must not persist.
+    lastError: null,
   });
-  return { status: production.status, requestId: production.requestId };
+  return {
+    status: production.status,
+    requestId: production.requestId,
+    renewedAt,
+    previousCertificateExpiry: certificateExpiryOf(text(previousCredentials.certificatePem)),
+    newCertificateExpiry: certificateExpiryOf(newCertificatePem),
+  };
 }
 
 export async function signZatcaInvoice(params: {

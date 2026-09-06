@@ -66,12 +66,13 @@ see a short checklist update in real time:
 
 1. "Generating your digital certificate" -- creates a private key and
    certificate request behind the scenes.
-2. "Running compliance checks (11 test documents)" -- sends 11 sample
+2. "Running compliance checks" -- sends the currently configured sample
    invoices/credit notes/debit notes to ZATCA's sandbox to prove the setup
    is correct. This is required by ZATCA before it will trust your real
    certificate.
 3. "Requesting your production certificate" -- once all required checks
-   pass, the app requests your real, 3-year ZATCA certificate.
+   pass, the app requests the applicable ZATCA credential. Its encoded expiry
+   is authoritative; the application does not assume a fixed validity period.
 
 This normally finishes in under a minute. Don't refresh the page while it's
 running -- if you do, it will safely pick up wherever it left off.
@@ -109,7 +110,7 @@ each message you might see actually means:
 | "Some of the required compliance test documents did not pass..." | One of the 11 automatic test documents failed ZATCA's review. | This usually needs a technical look -- contact support with the integration ID. |
 | "We couldn't reach ZATCA's service right now..." | ZATCA's own systems are temporarily unreachable. | Wait a few minutes and click Retry. This is not something wrong on your side. |
 | "Another sync was already running..." | The app was already talking to ZATCA (e.g. an automatic background check) when you tried something else. | Wait a minute and try again -- this protects your invoice numbering, it's not a failure. |
-| "Your ZATCA certificate has expired..." | Your 3-year production certificate ran out. | Contact support to renew it -- new invoices can't be sent to ZATCA until it's renewed. |
+| "Your ZATCA certificate has expired..." | The issued production credential is past its encoded expiry. | An authorized administrator must renew it before new submissions. |
 
 If none of these match exactly, click **Retry** once; if it still fails,
 contact support and include:

@@ -5,6 +5,19 @@ import { normalizeSearch } from "@/lib/utils/search";
 
 export type CustomerStatus = "active" | "inactive" | "blacklisted";
 
+/**
+ * Structured buyer address. Required by ZATCA for standard (B2B) tax invoices;
+ * `billingAddress` free text is not sufficient for the UBL BuyerPostalAddress.
+ */
+export type CustomerAddress = {
+  street: string;
+  building: string;
+  district: string;
+  city: string;
+  postalCode: string;
+  countryCode: string;
+};
+
 export type CustomerRecord = {
   id: string;
   companyId: string;
@@ -16,6 +29,7 @@ export type CustomerRecord = {
   email?: string;
   phone?: string;
   billingAddress?: string;
+  billingAddressDetails?: CustomerAddress | null;
   shippingAddress?: string;
   paymentTermId?: string | null;
   creditLimit?: number | null;
@@ -24,6 +38,22 @@ export type CustomerRecord = {
   tags: string[];
   status: CustomerStatus;
   createdAt: Date;
+};
+
+const readAddress = (value: unknown): CustomerAddress | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const raw = value as Record<string, unknown>;
+  const text = (key: string) => (typeof raw[key] === "string" ? (raw[key] as string).trim() : "");
+  return {
+    street: text("street"),
+    building: text("building"),
+    district: text("district"),
+    city: text("city"),
+    postalCode: text("postalCode"),
+    countryCode: text("countryCode") || "SA",
+  };
 };
 
 export async function listCustomers(companyId: string) {
@@ -45,6 +75,7 @@ export async function listCustomers(companyId: string) {
       email: data.email ?? undefined,
       phone: data.phone ?? undefined,
       billingAddress: data.billingAddress ?? undefined,
+      billingAddressDetails: readAddress(data.billingAddressDetails),
       shippingAddress: data.shippingAddress ?? undefined,
       paymentTermId: data.paymentTermId ?? null,
       creditLimit: data.creditLimit ?? null,
@@ -76,6 +107,7 @@ export async function getCustomerById(customerId: string) {
     email: data.email ?? undefined,
     phone: data.phone ?? undefined,
     billingAddress: data.billingAddress ?? undefined,
+    billingAddressDetails: readAddress(data.billingAddressDetails),
     shippingAddress: data.shippingAddress ?? undefined,
     paymentTermId: data.paymentTermId ?? null,
     creditLimit: data.creditLimit ?? null,
@@ -97,6 +129,7 @@ export async function createCustomer(params: {
   email?: string | null;
   phone?: string | null;
   billingAddress?: string | null;
+  billingAddressDetails?: CustomerAddress | null;
   shippingAddress?: string | null;
   paymentTermId?: string | null;
   creditLimit?: number | null;
@@ -118,6 +151,7 @@ export async function createCustomer(params: {
     email: params.email ?? null,
     phone: params.phone ?? null,
     billingAddress: params.billingAddress ?? null,
+    billingAddressDetails: params.billingAddressDetails ?? null,
     shippingAddress: params.shippingAddress ?? null,
     paymentTermId: params.paymentTermId ?? null,
     creditLimit: params.creditLimit ?? null,
@@ -141,6 +175,7 @@ export async function updateCustomer(
     email: string | null;
     phone: string | null;
     billingAddress: string | null;
+    billingAddressDetails: CustomerAddress | null;
     shippingAddress: string | null;
     paymentTermId: string | null;
     creditLimit: number | null;

@@ -136,6 +136,15 @@ type CreditNoteSummary = {
   currency: string;
 };
 
+type DebitNoteSummary = {
+  id: string;
+  debitNumber: string;
+  status: "draft" | "issued" | "canceled";
+  issueDate: string;
+  total: number;
+  currency: string;
+};
+
 type Attachment = {
   id: string;
   name: string;
@@ -218,6 +227,7 @@ export default function InvoiceDetailPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [payments, setPayments] = useState<InvoicePayment[]>([]);
   const [creditNotes, setCreditNotes] = useState<CreditNoteSummary[]>([]);
+  const [debitNotes, setDebitNotes] = useState<DebitNoteSummary[]>([]);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [customerId, setCustomerId] = useState("");
   const [invoiceDate, setInvoiceDate] = useState("");
@@ -380,6 +390,23 @@ export default function InvoiceDetailPage() {
     setCreditNotes(data.creditNotes ?? []);
   }, [activeCompanyId, invoiceId]);
 
+  const loadDebitNotes = useCallback(async () => {
+    if (!activeCompanyId) {
+      return;
+    }
+    const params = new URLSearchParams({
+      companyId: activeCompanyId,
+      invoiceId,
+    });
+    const response = await fetch(`/api/debit-notes?${params.toString()}`);
+    if (!response.ok) {
+      setDebitNotes([]);
+      return;
+    }
+    const data = await response.json();
+    setDebitNotes(data.debitNotes ?? []);
+  }, [activeCompanyId, invoiceId]);
+
   useEffect(() => {
     if (!invoiceId) {
       return;
@@ -398,7 +425,8 @@ export default function InvoiceDetailPage() {
       return;
     }
     loadCreditNotes();
-  }, [invoiceId, activeCompanyId, loadCreditNotes]);
+    loadDebitNotes();
+  }, [invoiceId, activeCompanyId, loadCreditNotes, loadDebitNotes]);
 
   useEffect(() => {
     if (!paymentDate) {
@@ -1447,6 +1475,53 @@ export default function InvoiceDetailPage() {
             </div>
           ) : (
             <p className="mt-4 text-sm text-muted page-subtitle">{t("invoice.creditNotesEmpty")}</p>
+          )}
+        </div>
+
+        <div className="app-card p-6 card-modern">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">{t("invoice.debitNotesTitle")}</h2>
+            <Link
+              href={`/sales/debit-notes/new?invoiceId=${invoiceId}`}
+              className="text-xs font-semibold text-primary"
+            >
+              {t("invoice.createDebitNote")}
+            </Link>
+          </div>
+          {debitNotes.length > 0 ? (
+            <div className="mt-4 overflow-x-auto">
+              <table className="min-w-full text-sm table-modern">
+                <thead className="bg-surface-muted text-muted thead-modern">
+                  <tr>
+                    <th className={`px-3 py-2 ${alignClass}`}>{t("debitNote.number")}</th>
+                    <th className={`px-3 py-2 ${alignClass}`}>{t("debitNote.issueDate")}</th>
+                    <th className={`px-3 py-2 ${alignClass}`}>{t("common.amount")}</th>
+                    <th className={`px-3 py-2 ${alignClass}`}>{t("common.status")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {debitNotes.map((note) => (
+                    <tr key={note.id}>
+                      <td className="px-3 py-2">
+                        <Link
+                          href={`/sales/debit-notes/${note.id}`}
+                          className="text-primary underline decoration-dotted"
+                        >
+                          {note.debitNumber}
+                        </Link>
+                      </td>
+                      <td className="px-3 py-2">{formatDate(note.issueDate)}</td>
+                      <td className="px-3 py-2">{formatCurrency(note.total, note.currency)}</td>
+                      <td className="px-3 py-2">
+                        {t(`debitNote.status.${note.status ?? "draft"}`)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-muted page-subtitle">{t("invoice.debitNotesEmpty")}</p>
           )}
         </div>
       </div>
