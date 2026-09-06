@@ -3,6 +3,7 @@ import { listAllActiveZatcaIntegrations, type IntegrationRecord } from "@/lib/da
 import { listAtRiskReportingArtifacts, updateZatcaArtifactStatus } from "@/lib/data/zatca-artifacts";
 import { getSalesInvoiceById } from "@/lib/data/sales-invoices";
 import { executeZatcaSubmission } from "@/lib/integrations/zatca/service";
+import { checkZatcaIntegrationHealth } from "@/lib/integrations/zatca/health";
 import { notifyCompanyRoles } from "@/lib/notifications/service";
 import { logger } from "@/lib/ops/logger";
 
@@ -37,6 +38,7 @@ export async function runZatcaReportingSlaCheck() {
     atRisk: 0,
     breached: 0,
     alerted: 0,
+    healthAlerts: 0,
   };
 
   for (const integration of integrations) {
@@ -45,6 +47,20 @@ export async function runZatcaReportingSlaCheck() {
     } catch (error) {
       summary.submissionErrors += 1;
       logger.warn("ZATCA reporting-SLA cron: catch-up submission failed for an integration", {
+        integrationId: integration.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  // Health is evaluated after the catch-up attempt so a queue that just
+  // drained is not reported as stalled.
+  for (const integration of integrations) {
+    try {
+      const health = await checkZatcaIntegrationHealth(integration);
+      summary.healthAlerts += health.fired.length;
+    } catch (error) {
+      logger.warn("ZATCA reporting-SLA cron: health check failed for an integration", {
         integrationId: integration.id,
         error: error instanceof Error ? error.message : String(error),
       });

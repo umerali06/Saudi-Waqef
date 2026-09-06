@@ -9,6 +9,7 @@ import { deleteOpenItem } from "@/lib/data/open-items";
 import { listItems, applyItemStockDeltas } from "@/lib/data/items";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { findFiledVatPeriod } from "@/lib/data/vat-periods";
+import { isZatcaFinalized } from "@/lib/integrations/zatca/finality";
 
 export const runtime = "nodejs";
 
@@ -51,6 +52,10 @@ export async function POST(_: Request, context: RouteContext) {
   );
   if (lockedPeriod) {
     return NextResponse.json({ error: "VAT period is filed" }, { status: 400 });
+  }
+
+  if (await isZatcaFinalized(invoice.companyId, invoice.id)) {
+    return NextResponse.json({ error: "ZATCA_DOCUMENT_FINALIZED" }, { status: 400 });
   }
 
   const items = await listItems(invoice.companyId);

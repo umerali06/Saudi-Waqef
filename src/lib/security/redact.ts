@@ -10,6 +10,9 @@ const SENSITIVE_KEYS = new Set([
   "apiKey",
   "webhookSecret",
   "webhookSecretPrevious",
+  "previousSecret",
+  "previousBinarySecurityToken",
+  "previousPrivateKeyPem",
   "credentials",
   "credentialsEnc",
 ]);

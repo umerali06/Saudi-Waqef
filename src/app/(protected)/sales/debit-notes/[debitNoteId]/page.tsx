@@ -41,7 +41,6 @@ type DebitNote = {
   discountTotal: number;
   taxTotal: number;
   total: number;
-  refundedAmount?: number;
   lines: DebitNoteLine[];
 };
 
@@ -79,20 +78,6 @@ type CompanyDefaults = {
 
 type CompanyConfig = {
   taxInclusive: boolean;
-};
-
-type CashAccount = {
-  id: string;
-  name: string;
-  currency?: string | null;
-};
-
-type DebitNoteRefund = {
-  id: string;
-  refundDate: string;
-  amount: number;
-  accountId: string;
-  reference?: string | null;
 };
 
 type LineForm = {
@@ -137,10 +122,6 @@ const mapDebitNoteError = (error?: string) => {
       return "debitNote.missingVatOutputAccount";
     case "Missing discount account":
       return "debitNote.missingDiscountAccount";
-    case "Invalid payment account":
-      return "debitNote.invalidPaymentAccount";
-    case "Refund exceeds credit note":
-      return "debitNote.refundExceeds";
     case "VAT period is filed":
       return "vat.periodLocked";
     default:
@@ -159,20 +140,13 @@ export default function DebitNoteDetailPage() {
   const [taxCategories, setTaxCategories] = useState<TaxCategory[]>([]);
   const [defaults, setDefaults] = useState<CompanyDefaults | null>(null);
   const [config, setConfig] = useState<CompanyConfig | null>(null);
-  const [cashAccounts, setCashAccounts] = useState<CashAccount[]>([]);
-  const [refunds, setRefunds] = useState<DebitNoteRefund[]>([]);
   const [loadingNote, setLoadingNote] = useState(false);
-  const [loadingRefunds, setLoadingRefunds] = useState(false);
   const [issueDate, setIssueDate] = useState("");
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<LineForm[]>([]);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [noticeKey, setNoticeKey] = useState<string | null>(null);
-  const [refundAmount, setRefundAmount] = useState("");
-  const [refundDate, setRefundDate] = useState("");
-  const [refundAccountId, setRefundAccountId] = useState("");
-  const [refundReference, setRefundReference] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const itemMap = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
@@ -237,9 +211,8 @@ export default function DebitNoteDetailPage() {
       fetch(`/api/tax-categories?companyId=${companyId}`).then((res) => res.json()),
       fetch(`/api/company-defaults?companyId=${companyId}`).then((res) => res.json()),
       fetch(`/api/companies/${companyId}/config`).then((res) => res.json()),
-      fetch(`/api/cash-bank-accounts?companyId=${companyId}`).then((res) => res.json()),
     ])
-      .then(([itemData, taxData, defaultsData, configData, cashData]) => {
+      .then(([itemData, taxData, defaultsData, configData]) => {
         setItems(itemData.items ?? []);
         setTaxCategories(
           (taxData.categories ?? []).filter(
@@ -248,7 +221,6 @@ export default function DebitNoteDetailPage() {
         );
         setDefaults(defaultsData.defaults ?? null);
         setConfig({ taxInclusive: Boolean(configData?.config?.taxInclusive) });
-        setCashAccounts(cashData.accounts ?? []);
       })
       .catch(() => setErrorKey("error.loadFailed"));
   }, []);
@@ -263,19 +235,6 @@ export default function DebitNoteDetailPage() {
     setInvoice(data.invoice ?? null);
   }, []);
 
-  const loadRefunds = useCallback(async () => {
-    setLoadingRefunds(true);
-    const response = await fetch(`/api/debit-notes/${debitNoteId}/refunds`);
-    if (!response.ok) {
-      setRefunds([]);
-      setLoadingRefunds(false);
-      return;
-    }
-    const data = await response.json();
-    setRefunds(data.refunds ?? []);
-    setLoadingRefunds(false);
-  }, [debitNoteId]);
-
   useEffect(() => {
     loadNote();
   }, [loadNote]);
@@ -287,13 +246,6 @@ export default function DebitNoteDetailPage() {
     loadReferenceData(note.companyId);
     loadInvoice(note.invoiceId);
   }, [note?.companyId, note?.invoiceId, loadInvoice, loadReferenceData]);
-
-  useEffect(() => {
-    if (!note?.id) {
-      return;
-    }
-    loadRefunds();
-  }, [note?.id, loadRefunds]);
 
   useEffect(() => {
     if (!invoice || lines.length === 0) {
@@ -469,44 +421,6 @@ export default function DebitNoteDetailPage() {
         return;
       }
       setNoticeKey("debitNote.sent");
-    });
-  };
-
-  const handleRefund = () => {
-    if (!note) {
-      return;
-    }
-    const amount = Number(refundAmount);
-    if (!refundDate || !refundAccountId || !amount || Number.isNaN(amount)) {
-      setErrorKey("error.saveFailed");
-      return;
-    }
-    startTransition(async () => {
-      setErrorKey(null);
-      setNoticeKey(null);
-      const response = await fetch(`/api/debit-notes/${debitNoteId}/refund`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          companyId: note.companyId,
-          refundDate,
-          amount,
-          accountId: refundAccountId,
-          reference: refundReference || null,
-        }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setErrorKey(mapDebitNoteError(data?.error));
-        return;
-      }
-      setRefundAmount("");
-      setRefundDate("");
-      setRefundAccountId("");
-      setRefundReference("");
-      setNoticeKey("debitNote.refunded");
-      await loadNote();
-      await loadRefunds();
     });
   };
 
@@ -700,117 +614,6 @@ export default function DebitNoteDetailPage() {
           </>
         )}
       </div>
-
-      {!isDraft ? (
-        <div className="app-card p-6 card-modern">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{t("debitNote.refundTitle")}</h2>
-            <span className="text-xs text-muted">
-              {t("debitNote.refundAvailable", {
-                amount: String(
-                  Math.max((note.total ?? 0) - (note.refundedAmount ?? 0), 0)
-                ),
-              })}
-            </span>
-          </div>
-          <div className="mt-4 grid gap-4 md:grid-cols-4">
-            <label className={`text-sm ${alignClass}`}>
-              <span className="mb-1 block text-xs text-muted">{t("debitNote.refundDate")}</span>
-              <input
-                type="date"
-                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
-                value={refundDate}
-                onChange={(event) => setRefundDate(event.target.value)}
-              />
-            </label>
-            <label className={`text-sm ${alignClass}`}>
-              <span className="mb-1 block text-xs text-muted">{t("debitNote.refundAmount")}</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
-                value={refundAmount}
-                onChange={(event) => setRefundAmount(event.target.value)}
-              />
-            </label>
-            <label className={`text-sm ${alignClass}`}>
-              <span className="mb-1 block text-xs text-muted">{t("debitNote.refundAccount")}</span>
-              <select
-                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
-                value={refundAccountId}
-                onChange={(event) => setRefundAccountId(event.target.value)}
-              >
-                <option value="">{t("common.select")}</option>
-                {cashAccounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={`text-sm ${alignClass}`}>
-              <span className="mb-1 block text-xs text-muted">{t("common.reference")}</span>
-              <input
-                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
-                value={refundReference}
-                onChange={(event) => setRefundReference(event.target.value)}
-              />
-            </label>
-          </div>
-          <button
-            type="button"
-            onClick={handleRefund}
-            className="mt-4 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
-            disabled={isPending}
-          >
-            {t("debitNote.refund")}
-          </button>
-          <div className="mt-6 border-t border-border/60 pt-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold">{t("debitNote.refundHistory")}</h3>
-              <span className="text-xs text-muted">{refunds.length}</span>
-            </div>
-            {loadingRefunds ? (
-              <div className="space-y-2">
-                {Array.from({ length: 3 }).map((_, idx) => (
-                  <SkeletonBlock key={idx} className="h-5 w-full" />
-                ))}
-              </div>
-            ) : refunds.length ? (
-              <div className="overflow-hidden rounded-2xl border border-border/60">
-                <table className="w-full text-sm">
-                  <thead className="bg-surface-muted text-xs text-muted thead-modern">
-                    <tr>
-                      <th className={`px-3 py-2 ${alignClass}`}>{t("debitNote.refundDate")}</th>
-                      <th className={`px-3 py-2 ${alignClass}`}>{t("debitNote.refundAmount")}</th>
-                      <th className={`px-3 py-2 ${alignClass}`}>{t("debitNote.refundAccount")}</th>
-                      <th className={`px-3 py-2 ${alignClass}`}>{t("common.reference")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {refunds.map((refund) => (
-                      <tr key={refund.id} className="border-t border-border/60">
-                        <td className="px-3 py-2">{formatDate(refund.refundDate)}</td>
-                        <td className="px-3 py-2">
-                          {formatCurrency(refund.amount, note?.currency)}
-                        </td>
-                        <td className="px-3 py-2">
-                          {cashAccounts.find((account) => account.id === refund.accountId)
-                            ?.name ?? "-"}
-                        </td>
-                        <td className="px-3 py-2">{refund.reference || "-"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-sm text-muted page-subtitle">{t("debitNote.refundHistoryEmpty")}</p>
-            )}
-          </div>
-        </div>
-      ) : null}
 
       <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">

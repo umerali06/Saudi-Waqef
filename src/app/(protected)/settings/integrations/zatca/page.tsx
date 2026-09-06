@@ -59,6 +59,19 @@ type ArtifactRow = {
   createdAt: string;
 };
 
+type AttemptRow = {
+  id: string;
+  attempt: number;
+  httpStatus: number | null;
+  technicalStatus: string;
+  operation: string;
+  environment: string;
+  response?: Record<string, unknown> | null;
+  createdAt: string;
+};
+
+const LOG_PAGE_SIZE = 25;
+
 type StepKey = "csid" | "compliance" | "production";
 type StepStatus = "pending" | "running" | "done" | "failed";
 
@@ -116,6 +129,10 @@ export default function ZatcaWizardPage() {
   const [logFrom, setLogFrom] = useState("");
   const [logTo, setLogTo] = useState("");
   const [selectedArtifact, setSelectedArtifact] = useState<ArtifactRow | null>(null);
+  const [logSearch, setLogSearch] = useState("");
+  const [logPage, setLogPage] = useState(0);
+  const [attempts, setAttempts] = useState<AttemptRow[] | null>(null);
+  const [loadingAttempts, setLoadingAttempts] = useState(false);
   const autoResumedRef = useRef(false);
 
   const load = useCallback(async () => {
@@ -305,8 +322,7 @@ export default function ZatcaWizardPage() {
     }
   };
 
-  const loadArtifacts = useCallback(async () => {
-    if (!integration || !showLogs) return;
+  const logFilterParams = useCallback(() => {
     const params = new URLSearchParams();
     if (logFrom) params.set("from", logFrom);
     if (logTo) params.set("to", logTo);
@@ -314,15 +330,64 @@ export default function ZatcaWizardPage() {
     if (logType) params.set("documentType", logType);
     if (logEnvironment) params.set("environment", logEnvironment);
     if (logOperation) params.set("operation", logOperation);
+    return params;
+  }, [logFrom, logTo, logStatus, logType, logEnvironment, logOperation]);
+
+  const loadArtifacts = useCallback(async () => {
+    if (!integration || !showLogs) return;
+    const params = logFilterParams();
     const suffix = params.size ? `?${params.toString()}` : "";
     const res = await fetch(`/api/integrations/${integration.id}/artifacts${suffix}`);
     const json = await res.json().catch(() => ({}));
     setArtifacts(res.ok ? json.artifacts ?? [] : []);
-  }, [integration, showLogs, logFrom, logTo, logStatus, logType, logEnvironment, logOperation]);
+  }, [integration, showLogs, logFilterParams]);
 
   useEffect(() => {
     loadArtifacts();
   }, [loadArtifacts]);
+
+  // Search is client-side over the already-filtered page of artifacts.
+  const searchedArtifacts = (() => {
+    const query = logSearch.trim().toLowerCase();
+    if (!query) return artifacts;
+    return artifacts.filter((artifact) =>
+      [artifact.invoiceNumber, artifact.uuid, artifact.customerName]
+        .some((field) => (field ?? "").toLowerCase().includes(query))
+    );
+  })();
+  const pageCount = Math.max(1, Math.ceil(searchedArtifacts.length / LOG_PAGE_SIZE));
+  const currentPage = Math.min(logPage, pageCount - 1);
+  const visibleArtifacts = searchedArtifacts.slice(
+    currentPage * LOG_PAGE_SIZE,
+    currentPage * LOG_PAGE_SIZE + LOG_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    setLogPage(0);
+  }, [logSearch, logFrom, logTo, logStatus, logType, logEnvironment, logOperation]);
+
+  useEffect(() => {
+    if (!integration || !selectedArtifact) {
+      setAttempts(null);
+      return;
+    }
+    let cancelled = false;
+    setLoadingAttempts(true);
+    fetch(`/api/integrations/${integration.id}/artifacts/${selectedArtifact.id}/attempts`)
+      .then((res) => (res.ok ? res.json() : { attempts: [] }))
+      .then((json) => {
+        if (!cancelled) setAttempts(json.attempts ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setAttempts([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingAttempts(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [integration, selectedArtifact]);
 
   const handleToggleLogs = () => {
     setShowLogs((current) => !current);
@@ -334,7 +399,7 @@ export default function ZatcaWizardPage() {
     setRenewing(true); setRenewResult(null); setRenewFailure(null);
     try {
       await callOnboardingAction("renew-certificate", { otp: renewOtp.trim() });
-      setRenewOtp(""); setRenewResult("Certificate renewed successfully."); await load();
+      setRenewOtp(""); setRenewResult(t("integrations.zatca.renewal.success")); await load();
     } catch (error) { setRenewFailure(classifyZatcaFailure(error)); }
     finally { setRenewing(false); }
   };
@@ -610,11 +675,11 @@ export default function ZatcaWizardPage() {
 
           {onboardingStatus === "production_ready" ? (
             <div className="rounded-2xl border border-border p-4 space-y-3">
-              <h3 className="text-sm font-semibold">Renew certificate</h3>
-              <p className="text-xs text-muted">Existing credentials remain active unless renewal succeeds.</p>
+              <h3 className="text-sm font-semibold">{t("integrations.zatca.renewal.title")}</h3>
+              <p className="text-xs text-muted">{t("integrations.zatca.renewal.description")}</p>
               <div className="flex flex-wrap gap-2">
-                <input value={renewOtp} onChange={(event) => setRenewOtp(event.target.value)} inputMode="numeric" className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm" placeholder="OTP" />
-                <button type="button" onClick={handleRenew} disabled={renewing || renewOtp.trim().length < 4} className="rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast disabled:opacity-50">{renewing ? "Renewing…" : "Renew certificate"}</button>
+                <input value={renewOtp} onChange={(event) => setRenewOtp(event.target.value)} inputMode="numeric" className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm" placeholder={t("integrations.zatca.renewal.otpPlaceholder")} />
+                <button type="button" onClick={handleRenew} disabled={renewing || renewOtp.trim().length < 4} className="rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast disabled:opacity-50">{renewing ? t("integrations.zatca.renewal.submitting") : t("integrations.zatca.renewal.submit")}</button>
               </div>
               {renewResult ? <p className="text-xs text-green-600">{renewResult}</p> : null}
               {renewFailure ? failureDetails(renewFailure) : null}
@@ -626,12 +691,32 @@ export default function ZatcaWizardPage() {
               <div className="mb-3 grid gap-2 md:grid-cols-3">
                 <label className="grid gap-1"><span className="text-muted">{t("integrations.zatca.logs.from")}</span><input type="date" value={logFrom} onChange={(e) => setLogFrom(e.target.value)} className="rounded-xl border border-border bg-surface p-2" /></label>
                 <label className="grid gap-1"><span className="text-muted">{t("integrations.zatca.logs.to")}</span><input type="date" value={logTo} onChange={(e) => setLogTo(e.target.value)} className="rounded-xl border border-border bg-surface p-2" /></label>
-                <select value={logStatus} onChange={(e) => setLogStatus(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">All statuses</option><option value="accepted">Accepted</option><option value="warning">Warning</option><option value="rejected">Rejected</option></select>
-                <select value={logType} onChange={(e) => setLogType(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">All types</option><option value="standard">Standard (B2B)</option><option value="simplified">Simplified (B2C)</option></select>
-                <select value={logEnvironment} onChange={(e) => setLogEnvironment(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">All environments</option><option value="sandbox">Sandbox</option><option value="production">Production</option></select>
-                <select value={logOperation} onChange={(e) => setLogOperation(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">All operations</option><option value="clearance">Clearance</option><option value="reporting">Reporting</option></select>
+                <select value={logStatus} onChange={(e) => setLogStatus(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">{t("integrations.zatca.logs.allStatuses")}</option><option value="pending">{t("integrations.zatca.status.pending")}</option><option value="submitted">{t("integrations.zatca.status.submitted")}</option><option value="accepted">{t("integrations.zatca.status.accepted")}</option><option value="warning">{t("integrations.zatca.status.warning")}</option><option value="rejected">{t("integrations.zatca.status.rejected")}</option></select>
+                <select value={logType} onChange={(e) => setLogType(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">{t("integrations.zatca.logs.allTypes")}</option><option value="standard">{t("integrations.zatca.logs.types.standard")}</option><option value="simplified">{t("integrations.zatca.logs.types.simplified")}</option></select>
+                <select value={logEnvironment} onChange={(e) => setLogEnvironment(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">{t("integrations.zatca.logs.allEnvironments")}</option><option value="sandbox">{t("integrations.zatca.environment.sandbox")}</option><option value="production">{t("integrations.zatca.environment.production")}</option></select>
+                <select value={logOperation} onChange={(e) => setLogOperation(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">{t("integrations.zatca.logs.allOperations")}</option><option value="clearance">{t("integrations.zatca.operation.clearance")}</option><option value="reporting">{t("integrations.zatca.operation.reporting")}</option></select>
+                <input
+                  value={logSearch}
+                  onChange={(e) => setLogSearch(e.target.value)}
+                  placeholder={t("integrations.zatca.logs.searchPlaceholder")}
+                  className="rounded-xl border border-border bg-surface p-2 md:col-span-2"
+                />
               </div>
-              {artifacts.length === 0 ? (
+              {integration && artifacts.length > 0 ? (
+                <div className="mb-3 flex justify-end">
+                  <a
+                    href={`/api/integrations/${integration.id}/artifacts/export?${(() => {
+                      const params = logFilterParams();
+                      params.set("format", "csv");
+                      return params.toString();
+                    })()}`}
+                    className="rounded-2xl border border-border px-3 py-2 font-semibold"
+                  >
+                    {t("integrations.zatca.logs.export")}
+                  </a>
+                </div>
+              ) : null}
+              {searchedArtifacts.length === 0 ? (
                 <p className="text-muted">{t("integrations.zatca.wizard.step4.noArtifacts")}</p>
               ) : (
                 <div className="overflow-x-auto">
@@ -640,27 +725,92 @@ export default function ZatcaWizardPage() {
                       <tr>{(["date", "invoice", "uuid", "customer", "type", "environment", "operation", "status", "result"] as const).map((column) => <th key={column} className={`px-3 py-2 font-semibold ${alignClass}`}>{t(`integrations.zatca.logs.columns.${column}`)}</th>)}</tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {artifacts.map((artifact) => (
+                      {visibleArtifacts.map((artifact) => (
                         <tr key={artifact.id} tabIndex={0} role="button" onClick={() => setSelectedArtifact(artifact)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") setSelectedArtifact(artifact); }} className="cursor-pointer transition hover:bg-surface-muted focus:bg-surface-muted focus:outline-none">
                           <td className="whitespace-nowrap px-3 py-2">{new Date(artifact.lastSubmittedAt ?? artifact.createdAt).toLocaleDateString(locale)}</td>
                           <td className="whitespace-nowrap px-3 py-2 font-semibold">{artifact.invoiceNumber || "—"}</td>
                           <td className="max-w-52 truncate px-3 py-2 font-mono" title={artifact.uuid}>{artifact.uuid}</td>
                           <td className="px-3 py-2">{artifact.customerName || "—"}</td>
                           <td className="whitespace-nowrap px-3 py-2">{artifact.documentType === "simplified" ? t("integrations.zatca.logs.types.simplified") : t("integrations.zatca.logs.types.standard")}</td>
-                          <td className="px-3 py-2">{artifact.environment || "—"}</td>
-                          <td className="px-3 py-2">{artifact.operation || "—"}</td>
-                          <td className="px-3 py-2"><span className={`inline-flex rounded-full px-2 py-1 font-semibold ${artifactStatusClass(artifact.status)}`}>{artifact.status}</span></td>
+                          <td className="px-3 py-2">{artifact.environment ? t(`integrations.zatca.environment.${artifact.environment}`) : "—"}</td>
+                          <td className="px-3 py-2">{artifact.operation ? t(`integrations.zatca.operation.${artifact.operation}`) : "—"}</td>
+                          <td className="px-3 py-2"><span className={`inline-flex rounded-full px-2 py-1 font-semibold ${artifactStatusClass(artifact.status)}`}>{t(`integrations.zatca.status.${artifact.status}`)}</span></td>
                           <td className="px-3 py-2">{artifactZatcaResult(artifact)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  {pageCount > 1 ? (
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        disabled={currentPage === 0}
+                        onClick={() => setLogPage((page) => Math.max(page - 1, 0))}
+                        className="rounded-xl border border-border px-3 py-1 disabled:opacity-40"
+                      >
+                        {t("common.previous")}
+                      </button>
+                      <span className="text-muted">
+                        {t("integrations.zatca.logs.pageOf", {
+                          page: String(currentPage + 1),
+                          pages: String(pageCount),
+                          total: String(searchedArtifacts.length),
+                        })}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={currentPage >= pageCount - 1}
+                        onClick={() => setLogPage((page) => Math.min(page + 1, pageCount - 1))}
+                        className="rounded-xl border border-border px-3 py-1 disabled:opacity-40"
+                      >
+                        {t("common.next")}
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               )}
               {selectedArtifact ? (
                 <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={() => setSelectedArtifact(null)}>
                   <aside className="h-full w-full max-w-2xl overflow-y-auto bg-surface p-5 shadow-xl" onClick={(event) => event.stopPropagation()}>
                     <div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">{t("integrations.zatca.logs.detail")}</h3><button type="button" onClick={() => setSelectedArtifact(null)} className="rounded-xl border border-border px-3 py-1">{t("common.close")}</button></div>
+                    <dl className="mb-4 grid grid-cols-2 gap-2">
+                      <dt className="text-muted">{t("integrations.zatca.logs.columns.invoice")}</dt>
+                      <dd className="font-semibold">{selectedArtifact.invoiceNumber || "—"}</dd>
+                      <dt className="text-muted">{t("integrations.zatca.logs.columns.customer")}</dt>
+                      <dd>{selectedArtifact.customerName || "—"}</dd>
+                      <dt className="text-muted">{t("integrations.zatca.logs.columns.uuid")}</dt>
+                      <dd className="break-all font-mono">{selectedArtifact.uuid}</dd>
+                      <dt className="text-muted">{t("integrations.zatca.logs.columns.status")}</dt>
+                      <dd>{t(`integrations.zatca.status.${selectedArtifact.status}`)}</dd>
+                      <dt className="text-muted">{t("integrations.zatca.logs.columns.environment")}</dt>
+                      <dd>{selectedArtifact.environment ? t(`integrations.zatca.environment.${selectedArtifact.environment}`) : "—"}</dd>
+                      <dt className="text-muted">{t("integrations.zatca.logs.columns.operation")}</dt>
+                      <dd>{selectedArtifact.operation ? t(`integrations.zatca.operation.${selectedArtifact.operation}`) : "—"}</dd>
+                    </dl>
+
+                    <h4 className="mb-2 text-sm font-semibold">{t("integrations.zatca.logs.attempts")}</h4>
+                    {loadingAttempts ? (
+                      <p className="text-muted">{t("common.loading")}</p>
+                    ) : attempts && attempts.length > 0 ? (
+                      <ol className="mb-4 space-y-2">
+                        {attempts.map((entry) => (
+                          <li key={entry.id} className="rounded-xl border border-border/60 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="font-semibold">#{entry.attempt}</span>
+                              <span className="text-muted">{new Date(entry.createdAt).toLocaleString(locale)}</span>
+                            </div>
+                            <div className="mt-1 flex flex-wrap gap-3 text-muted">
+                              <span>{entry.technicalStatus}</span>
+                              <span>HTTP {entry.httpStatus ?? "—"}</span>
+                            </div>
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <p className="mb-4 text-muted">{t("integrations.zatca.logs.attemptsEmpty")}</p>
+                    )}
+
+                    <h4 className="mb-2 text-sm font-semibold">{t("integrations.zatca.logs.lastResponse")}</h4>
                     <pre className="overflow-auto whitespace-pre-wrap break-words rounded-xl bg-surface-muted p-4 font-mono text-xs">{JSON.stringify(selectedArtifact.lastResponse ?? {}, null, 2)}</pre>
                   </aside>
                 </div>

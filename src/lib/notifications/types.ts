@@ -17,6 +17,9 @@ export const NOTIFICATION_TYPES = [
   "zatca_certificate_expired",
   "zatca_reporting_sla_risk",
   "zatca_reporting_sla_breached",
+  "zatca_rejection_spike",
+  "zatca_submission_stalled",
+  "zatca_integration_unhealthy",
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];

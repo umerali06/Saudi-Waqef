@@ -169,6 +169,39 @@ export const notificationTemplates: Record<NotificationType, Template> = {
       "Invoice {invoiceNumber} was not reported to ZATCA within 24 hours of issuance (deadline was {dueDate}). Please review and contact support if needed."
     ),
   },
+  zatca_rejection_spike: {
+    title: template("زاتكا ترفض عدة فواتير", "ZATCA is rejecting multiple invoices"),
+    subject: template(
+      "تم رفض {rejectedCount} مستندات من زاتكا",
+      "{rejectedCount} documents were rejected by ZATCA"
+    ),
+    body: template(
+      "رفضت زاتكا {rejectedCount} مستندات خلال آخر {windowHours} ساعة. غالبًا ما يشير هذا إلى خطأ في بيانات المنشأة أو العميل أو الضريبة. راجع السجلات: /settings/integrations/zatca",
+      "ZATCA rejected {rejectedCount} documents in the last {windowHours} hours. This usually points to incorrect company, customer, or tax data. Review the logs: /settings/integrations/zatca"
+    ),
+  },
+  zatca_submission_stalled: {
+    title: template("توقف إرسال الفواتير إلى زاتكا", "ZATCA submissions are stalled"),
+    subject: template(
+      "{pendingCount} مستندات في انتظار الإرسال إلى زاتكا",
+      "{pendingCount} documents are waiting to be sent to ZATCA"
+    ),
+    body: template(
+      "هناك {pendingCount} مستندات لم تُرسل إلى زاتكا بعد، أقدمها منذ {oldestHours} ساعة. تحقق من الاتصال وحالة التكامل: /settings/integrations/zatca",
+      "{pendingCount} documents have not reached ZATCA yet, the oldest is {oldestHours} hours old. Check connectivity and integration status: /settings/integrations/zatca"
+    ),
+  },
+  zatca_integration_unhealthy: {
+    title: template("تكامل زاتكا يحتاج إلى تدخل", "The ZATCA integration needs attention"),
+    subject: template(
+      "تكامل زاتكا متوقف: {reason}",
+      "ZATCA integration halted: {reason}"
+    ),
+    body: template(
+      "توقف تكامل زاتكا عن العمل ({reason}). لن يتم إرسال فواتير جديدة حتى تتم المعالجة. راجع الإعدادات ← التكاملات ← زاتكا: /settings/integrations/zatca",
+      "The ZATCA integration stopped working ({reason}). New invoices will not be sent until this is resolved. Review Settings → Integrations → ZATCA: /settings/integrations/zatca"
+    ),
+  },
 };
 
 export const templateSamples: Record<NotificationType, Record<string, string>> = {
@@ -249,6 +282,17 @@ export const templateSamples: Record<NotificationType, Record<string, string>> =
   zatca_reporting_sla_breached: {
     invoiceNumber: "INV-1024",
     dueDate: "2026-08-15T10:00:00Z",
+  },
+  zatca_rejection_spike: {
+    rejectedCount: "7",
+    windowHours: "24",
+  },
+  zatca_submission_stalled: {
+    pendingCount: "12",
+    oldestHours: "36",
+  },
+  zatca_integration_unhealthy: {
+    reason: "ZATCA_LOCK_LOST",
   },
 };
 

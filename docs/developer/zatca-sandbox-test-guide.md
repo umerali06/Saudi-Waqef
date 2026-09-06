@@ -181,7 +181,7 @@ Expected:
 
 If OTP is wrong or expired, ZATCA will reject the request. Generate a new OTP and retry.
 
-## Test 5: Run the ZATCA compliance test batch (11 scenarios)
+## Test 5: Run the current configured ZATCA compliance test batch
 
 This builds and submits 11 self-contained signed sample documents to ZATCA Sandbox
 (no real invoice needed -- the endpoint no longer takes an `invoiceId`):

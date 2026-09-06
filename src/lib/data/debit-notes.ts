@@ -42,7 +42,6 @@ export type DebitNote = {
   discountTotal: number;
   taxTotal: number;
   total: number;
-  refundedAmount?: number;
   lines: DebitNoteLine[];
   journalEntryId?: string | null;
   createdAt: Date;
@@ -82,7 +81,6 @@ export async function listSalesDebitNotes(companyId: string) {
       discountTotal: data.discountTotal ?? 0,
       taxTotal: data.taxTotal ?? 0,
       total: data.total ?? 0,
-      refundedAmount: data.refundedAmount ?? 0,
       lines: data.lines ?? [],
       journalEntryId: data.journalEntryId ?? null,
       createdAt: data.createdAt.toDate(),
@@ -113,7 +111,6 @@ export async function getSalesDebitNoteById(debitNoteId: string) {
     discountTotal: data.discountTotal ?? 0,
     taxTotal: data.taxTotal ?? 0,
     total: data.total ?? 0,
-    refundedAmount: data.refundedAmount ?? 0,
     lines: data.lines ?? [],
     journalEntryId: data.journalEntryId ?? null,
     createdAt: data.createdAt.toDate(),
@@ -194,7 +191,6 @@ export async function createSalesDebitNote(params: {
       discountTotal: params.discountTotal,
       taxTotal: params.taxTotal,
       total: params.total,
-      refundedAmount: 0,
       lines: params.lines,
       journalEntryId: params.journalEntryId ?? null,
       createdAt: Timestamp.now(),
@@ -225,7 +221,6 @@ export async function updateSalesDebitNote(
     discountTotal: number;
     taxTotal: number;
     total: number;
-    refundedAmount: number;
     lines: DebitNoteLine[];
     journalEntryId: string | null;
   }>

@@ -19,6 +19,14 @@ type Customer = {
   email?: string;
   phone?: string;
   billingAddress?: string;
+  billingAddressDetails?: {
+    street?: string;
+    building?: string;
+    district?: string;
+    city?: string;
+    postalCode?: string;
+    countryCode?: string;
+  } | null;
   shippingAddress?: string;
   paymentTermId?: string | null;
   creditLimit?: number | null;
@@ -108,6 +116,11 @@ type CustomerFormState = {
   email: string;
   phone: string;
   billingAddress: string;
+  billingStreet: string;
+  billingBuilding: string;
+  billingDistrict: string;
+  billingCity: string;
+  billingPostalCode: string;
   shippingAddress: string;
   paymentTermId: string;
   creditLimit: string;
@@ -208,6 +221,11 @@ export default function CustomerDetailPage() {
         email: data.customer.email ?? "",
         phone: data.customer.phone ?? "",
         billingAddress: data.customer.billingAddress ?? "",
+        billingStreet: data.customer.billingAddressDetails?.street ?? "",
+        billingBuilding: data.customer.billingAddressDetails?.building ?? "",
+        billingDistrict: data.customer.billingAddressDetails?.district ?? "",
+        billingCity: data.customer.billingAddressDetails?.city ?? "",
+        billingPostalCode: data.customer.billingAddressDetails?.postalCode ?? "",
         shippingAddress: data.customer.shippingAddress ?? "",
         paymentTermId: data.customer.paymentTermId ?? "",
         creditLimit:
@@ -324,6 +342,22 @@ export default function CustomerDetailPage() {
           email: form.email || null,
           phone: form.phone || null,
           billingAddress: form.billingAddress || null,
+          billingAddressDetails: [
+            form.billingStreet,
+            form.billingBuilding,
+            form.billingDistrict,
+            form.billingCity,
+            form.billingPostalCode,
+          ].some((value) => value.trim())
+            ? {
+                street: form.billingStreet.trim(),
+                building: form.billingBuilding.trim(),
+                district: form.billingDistrict.trim(),
+                city: form.billingCity.trim(),
+                postalCode: form.billingPostalCode.trim(),
+                countryCode: "SA",
+              }
+            : null,
           shippingAddress: form.shippingAddress || null,
           paymentTermId: form.paymentTermId || null,
           creditLimit: creditValue,
@@ -784,6 +818,72 @@ export default function CustomerDetailPage() {
                 }
               />
             </label>
+          </div>
+        ) : null}
+        {form ? (
+          <div className="mt-6 rounded-2xl border border-border/60 p-4">
+            <h3 className="text-sm font-semibold">{t("customers.zatcaAddressTitle")}</h3>
+            <p className="mt-1 text-xs text-muted">{t("customers.zatcaAddressHint")}</p>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <label className={`text-sm ${alignClass}`}>
+                <span className="mb-1 block text-xs text-muted">{t("customers.addressStreet")}</span>
+                <input
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+                  value={form.billingStreet}
+                  onChange={(event) =>
+                    setForm((prev) => (prev ? { ...prev, billingStreet: event.target.value } : prev))
+                  }
+                />
+              </label>
+              <label className={`text-sm ${alignClass}`}>
+                <span className="mb-1 block text-xs text-muted">{t("customers.addressBuilding")}</span>
+                <input
+                  inputMode="numeric"
+                  maxLength={4}
+                  placeholder="1234"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+                  value={form.billingBuilding}
+                  onChange={(event) =>
+                    setForm((prev) => (prev ? { ...prev, billingBuilding: event.target.value } : prev))
+                  }
+                />
+              </label>
+              <label className={`text-sm ${alignClass}`}>
+                <span className="mb-1 block text-xs text-muted">{t("customers.addressDistrict")}</span>
+                <input
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+                  value={form.billingDistrict}
+                  onChange={(event) =>
+                    setForm((prev) => (prev ? { ...prev, billingDistrict: event.target.value } : prev))
+                  }
+                />
+              </label>
+              <label className={`text-sm ${alignClass}`}>
+                <span className="mb-1 block text-xs text-muted">{t("customers.addressCity")}</span>
+                <input
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+                  value={form.billingCity}
+                  onChange={(event) =>
+                    setForm((prev) => (prev ? { ...prev, billingCity: event.target.value } : prev))
+                  }
+                />
+              </label>
+              <label className={`text-sm ${alignClass}`}>
+                <span className="mb-1 block text-xs text-muted">{t("customers.addressPostalCode")}</span>
+                <input
+                  inputMode="numeric"
+                  maxLength={5}
+                  placeholder="12211"
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+                  value={form.billingPostalCode}
+                  onChange={(event) =>
+                    setForm((prev) =>
+                      prev ? { ...prev, billingPostalCode: event.target.value } : prev
+                    )
+                  }
+                />
+              </label>
+            </div>
           </div>
         ) : null}
         {form ? (

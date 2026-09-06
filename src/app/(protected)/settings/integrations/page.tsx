@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import Link from "next/link";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
+import { PRODUCTION_ACTIVATION_PHRASE } from "@/lib/validators/integrations";
 
 type Integration = {
   id: string;
@@ -522,13 +523,26 @@ export default function IntegrationsPage() {
         if (credentials) {
           payload.credentials = credentials;
         }
+        // Going live starts filing real documents, so confirm before sending.
+        const current = integrations.find((item) => item.id === editingId) ?? null;
+        if (editForm.environment === "production" && current?.environment !== "production") {
+          if (!window.confirm(t("integrations.productionActivationConfirm"))) {
+            return;
+          }
+          payload.confirmProductionActivation = PRODUCTION_ACTIVATION_PHRASE;
+        }
         const response = await fetch(`/api/integrations/${editingId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
         if (!response.ok) {
-          setErrorKey("integrations.saveFailed");
+          const data = await response.json().catch(() => ({}));
+          setErrorKey(
+            data?.error === "ZATCA_ENVIRONMENT_LOCKED"
+              ? "integrations.environmentLocked"
+              : "integrations.saveFailed"
+          );
           return;
         }
         setEditingId(null);

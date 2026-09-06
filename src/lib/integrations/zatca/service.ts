@@ -5,7 +5,6 @@ import {
   type HashChainState,
   type CreditNoteData,
   type InvoiceData,
-  type PostalAddress,
   type TaxCategoryId,
 } from "@talha7k/zatca";
 import type { IntegrationRecord } from "@/lib/data/integrations";
@@ -26,8 +25,14 @@ import {
   releaseZatcaSubmissionLock,
 } from "@/lib/integrations/zatca/submission-lock";
 import { logger } from "@/lib/ops/logger";
+import { notifyCompanyRoles } from "@/lib/notifications/service";
+import { classifyZatcaSubmissionFailure } from "@/lib/integrations/zatca/failure-classification";
 import { redactSecrets } from "@/lib/security/redact";
-import { assertZatcaCompanyReady, buildZatcaSupplierAddress } from "@/lib/integrations/zatca/company-info";
+import {
+  assertZatcaCompanyReady,
+  buildZatcaCustomerAddress,
+  buildZatcaSupplierAddress,
+} from "@/lib/integrations/zatca/company-info";
 
 const UUID_NAMESPACE = "f1c74ab4-9968-48f5-a919-6f6f01d93086";
 
@@ -40,19 +45,9 @@ const pemFromToken = (token: string) => {
   return `-----BEGIN CERTIFICATE-----\n${lines}\n-----END CERTIFICATE-----`;
 };
 
-const parseAddress = (value: unknown, fallback?: string): PostalAddress => {
-  const address = value && typeof value === "object" && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : {};
-  return {
-    street: stringValue(address.street) || fallback || "Not provided",
-    building: stringValue(address.building) || "0000",
-    district: stringValue(address.district) || "Not provided",
-    city: stringValue(address.city) || "Riyadh",
-    postalCode: stringValue(address.postalCode) || "00000",
-    countryCode: stringValue(address.countryCode) || "SA",
-  };
-};
+/** Exponential backoff for transport failures, capped at 6 hours. */
+const retryBackoffMs = (attempt: number) =>
+  Math.min(5 * 60 * 1000 * 2 ** Math.max(attempt - 1, 0), 6 * 60 * 60 * 1000);
 
 const taxCategory = (value: unknown, rate: number): TaxCategoryId => {
   const normalized = stringValue(value).toUpperCase();
@@ -131,7 +126,11 @@ export const mapSalesInvoiceToZatca = async (params: {
       customer: {
         name: customer?.legalName || customer?.name || params.invoice.customerName,
         vatNumber: customerVat,
-        address: parseAddress(config.customerAddress, customer?.billingAddress || params.invoice.billingAddress),
+        address: buildZatcaCustomerAddress(
+          customer?.billingAddressDetails,
+          customer?.billingAddress || params.invoice.billingAddress,
+          config.customerAddress
+        ),
       },
     } : {}),
     lineExtensionAmount: params.invoice.subtotal,
@@ -198,6 +197,17 @@ async function runZatcaSubmissionLoop(params: {
     const sourceId = source.kind === "invoice" ? source.invoice.id : source.note.id;
     const existing = await getZatcaArtifactByInvoiceId(integration.companyId, sourceId);
     if (existing?.status === "accepted" || existing?.status === "warning") continue;
+    if (existing?.nextRetryAt && existing.nextRetryAt.getTime() > Date.now()) {
+      // Backoff has not elapsed. Documents are processed in creation order and
+      // this one's chain position is still undecided, so stop rather than let a
+      // later document overtake it.
+      results.push({
+        uuid: existing.uuid,
+        status: "retry_pending",
+        message: `Waiting until ${existing.nextRetryAt.toISOString()} before retrying.`,
+      });
+      break;
+    }
     let document: InvoiceData | CreditNoteData;
     if (source.kind === "invoice") {
       document = await mapSalesInvoiceToZatca({ integration, invoice: source.invoice, chain });
@@ -230,15 +240,74 @@ async function runZatcaSubmissionLoop(params: {
         reason: source.note.reason || (source.kind === "credit" ? "Credit note" : "Debit note"),
       };
     }
-    const result = await submitInvoice({
-      invoice: document,
-      privateKeyPem,
-      certificatePem,
-      certificateSignature: extractCertificateSignature(certificatePem),
-      credentials: { binarySecurityToken, secret },
-      apiConfig: { environment: integration.environment, timeout: 30000, clearanceStatus: "1" },
-      hashChainState: chain,
-    });
+    let result: Awaited<ReturnType<typeof submitInvoice>>;
+    try {
+      result = await submitInvoice({
+        invoice: document,
+        privateKeyPem,
+        certificatePem,
+        certificateSignature: extractCertificateSignature(certificatePem),
+        credentials: { binarySecurityToken, secret },
+        apiConfig: { environment: integration.environment, timeout: 30000, clearanceStatus: "1" },
+        hashChainState: chain,
+      });
+    } catch (error) {
+      // A transport-level failure means ZATCA never returned a verdict, so we
+      // cannot know whether it saw the document. Persist the attempt as
+      // unavailable and stop: the chain must not advance past an unknown
+      // outcome, and the next run re-submits with the identical UUID.
+      const message = error instanceof Error ? error.message : String(error);
+      const attempt = (existing?.attemptCount ?? 0) + 1;
+      const unavailableResponse = { httpStatus: null, alerts: [], error: message };
+      let artifactId = existing?.id;
+      if (!artifactId) {
+        artifactId = await createZatcaArtifact({
+          companyId: integration.companyId,
+          invoiceId: sourceId,
+          uuid: document.uuid,
+          hash: "",
+          qr: "",
+          payload: { document },
+          status: "pending",
+          technicalStatus: "integration_unavailable",
+          reportingDueAt: null,
+          environment: integration.environment,
+          documentType: document.profileId === "reporting:1.0" ? "simplified" : "standard",
+          operation: document.profileId === "reporting:1.0" ? "reporting" : "clearance",
+        });
+      }
+      await updateZatcaArtifactStatus(artifactId, {
+        status: "pending",
+        technicalStatus: "integration_unavailable",
+        attemptCount: attempt,
+        nextRetryAt: new Date(Date.now() + retryBackoffMs(attempt)),
+        lastResponse: unavailableResponse,
+      });
+      await recordZatcaSubmissionAttempt({
+        artifactId,
+        companyId: integration.companyId,
+        invoiceId: sourceId,
+        uuid: document.uuid,
+        environment: integration.environment,
+        operation: document.profileId === "reporting:1.0" ? "reporting" : "clearance",
+        attempt,
+        httpStatus: null,
+        technicalStatus: "integration_unavailable",
+        response: unavailableResponse,
+      });
+      logger.warn("ZATCA submission could not reach the service; document left pending for retry.", {
+        integrationId: integration.id,
+        uuid: document.uuid,
+        attempt,
+        error: message,
+      });
+      results.push({
+        uuid: document.uuid,
+        status: "integration_unavailable",
+        message: "ZATCA was unreachable; the document stays queued for retry.",
+      });
+      break;
+    }
     const accepted = result.success;
     const response = result.zatcaResult.response;
     const responseRecord = {
@@ -255,13 +324,32 @@ async function runZatcaSubmissionLoop(params: {
       const row = alert as unknown as Record<string, unknown>;
       return String(row.type ?? row.status ?? row.category ?? "").toLowerCase().includes("warn");
     });
-    const technicalStatus = !accepted
-      ? "rejected" as const
-      : hasWarnings
-        ? "warning" as const
+    const failureKind = accepted
+      ? null
+      : classifyZatcaSubmissionFailure({
+          httpStatus: result.zatcaResult.httpStatus,
+          alerts: result.zatcaResult.alerts,
+          response,
+        });
+    // A retryable failure is not a verdict on the document, so it must not be
+    // recorded as "rejected" — that would strand a valid invoice.
+    const technicalStatus = accepted
+      ? hasWarnings
+        ? ("warning" as const)
         : isReporting
-          ? "reported" as const
-          : "cleared" as const;
+          ? ("reported" as const)
+          : ("cleared" as const)
+      : failureKind === "permanent"
+        ? ("rejected" as const)
+        : ("integration_unavailable" as const);
+    const artifactStatus = accepted
+      ? hasWarnings
+        ? ("warning" as const)
+        : ("accepted" as const)
+      : failureKind === "permanent"
+        ? ("rejected" as const)
+        : ("pending" as const);
+    const attemptNumber = (existing?.attemptCount ?? 0) + 1;
     const reportingDueAt = isReporting
       ? new Date(new Date(`${document.issueDate}T${document.issueTime}Z`).getTime() + 24 * 60 * 60 * 1000)
       : null;
@@ -274,7 +362,7 @@ async function runZatcaSubmissionLoop(params: {
         hash: result.invoiceHash,
         qr: result.qrCodeBase64,
         payload: { document, signedXml: result.signedXml },
-        status: accepted ? (hasWarnings ? "warning" : "accepted") : "rejected",
+        status: artifactStatus,
         technicalStatus,
         reportingDueAt,
         environment: integration.environment,
@@ -287,10 +375,14 @@ async function runZatcaSubmissionLoop(params: {
     // always happen: ZATCA really did accept/reject this document regardless
     // of whether we can still safely persist the updated chain state.
     await updateZatcaArtifactStatus(artifactId, {
-      status: accepted ? (hasWarnings ? "warning" : "accepted") : "rejected",
+      status: artifactStatus,
       technicalStatus,
-      attemptCount: (existing?.attemptCount ?? 0) + 1,
-      nextRetryAt: null,
+      attemptCount: attemptNumber,
+      // Only a document we intend to send again carries a next-attempt time.
+      nextRetryAt:
+        failureKind === "retryable" || failureKind === "blocked"
+          ? new Date(Date.now() + retryBackoffMs(attemptNumber))
+          : null,
       providerReference: document.uuid,
       lastSubmittedAt: new Date(),
       lastResponse: responseRecord,
@@ -302,7 +394,7 @@ async function runZatcaSubmissionLoop(params: {
       uuid: document.uuid,
       environment: integration.environment,
       operation: isReporting ? "reporting" : "clearance",
-      attempt: (existing?.attemptCount ?? 0) + 1,
+      attempt: attemptNumber,
       httpStatus: result.zatcaResult.httpStatus,
       technicalStatus,
       response: responseRecord,
@@ -311,10 +403,40 @@ async function runZatcaSubmissionLoop(params: {
       uuid: document.uuid,
       status: technicalStatus,
       providerReference: document.uuid,
-      message: accepted ? "Accepted by ZATCA" : "Rejected by ZATCA",
+      message: accepted
+        ? "Accepted by ZATCA"
+        : failureKind === "permanent"
+          ? "Rejected by ZATCA"
+          : "ZATCA could not process the document; it stays queued for retry.",
       ...responseRecord,
     });
-    if (!accepted) break;
+    if (!accepted) {
+      if (failureKind === "blocked") {
+        // Credentials/certificate are unusable, so every following document
+        // would fail the same way. Halt and surface it to administrators.
+        await updateIntegration(integration.id, {
+          status: "error",
+          lastError: "ZATCA_AUTHENTICATION_FAILED",
+        });
+        await notifyCompanyRoles({
+          companyId: integration.companyId,
+          roles: ["owner", "admin"],
+          type: "zatca_integration_unhealthy",
+          data: { reason: "ZATCA_AUTHENTICATION_FAILED" },
+        }).catch(() => undefined);
+        break;
+      }
+      if (failureKind === "retryable") {
+        // No verdict was reached, so the chain position this document would
+        // occupy is still undecided. Stop rather than let a later document
+        // take it.
+        break;
+      }
+      // A permanently rejected document never entered the hash chain, so the
+      // chain state is unchanged and the next document legitimately takes this
+      // position. Continue so one bad invoice cannot block every later one.
+      continue;
+    }
     if (result.newHashChainState) {
       chain = result.newHashChainState;
       try {
@@ -340,6 +462,12 @@ async function runZatcaSubmissionLoop(params: {
           status: "error",
           lastError: "ZATCA_LOCK_LOST",
         });
+        await notifyCompanyRoles({
+          companyId: integration.companyId,
+          roles: ["owner", "admin"],
+          type: "zatca_integration_unhealthy",
+          data: { reason: "ZATCA_LOCK_LOST" },
+        }).catch(() => undefined);
         break;
       }
     }
