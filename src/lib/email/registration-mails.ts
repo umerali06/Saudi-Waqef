@@ -256,3 +256,56 @@ export function registrationRejectedMail(params: {
     }),
   };
 }
+
+export function passwordResetMail(params: {
+  locale: EmailLocale;
+  name: string;
+  ttlMinutes: number;
+  resetUrl: string;
+}) {
+  const ar = params.locale === "ar";
+  const subject = ar ? "إعادة تعيين كلمة المرور" : "Reset your password";
+  return {
+    subject,
+    body: renderEmail({
+      locale: params.locale,
+      heading: subject,
+      paragraphs: ar
+        ? [
+            `مرحبًا ${params.name}،`,
+            `وصلنا طلب لتعيين كلمة مرور حسابك. الرابط صالح لمدة ${params.ttlMinutes} دقيقة ويُستخدم مرة واحدة.`,
+            "إن لم تطلب ذلك فتجاهل هذه الرسالة، وتبقى كلمة مرورك كما هي.",
+          ]
+        : [
+            `Hello ${params.name},`,
+            `We received a request to set the password of your account. The link works once, for ${params.ttlMinutes} minutes.`,
+            "If you did not ask for this, ignore this message and your password stays the same.",
+          ],
+      action: { label: ar ? "تعيين كلمة المرور" : "Set password", url: params.resetUrl },
+    }),
+  };
+}
+
+/** Answers "forgot password" from someone whose account request is still waiting. */
+export function requestPendingMail(params: { locale: EmailLocale; companyName: string }) {
+  return {
+    subject: bilingualSubject(params.locale, "طلبك ما زال قيد المراجعة", "Your request is still under review"),
+    body: renderBilingualEmail({
+      first: params.locale,
+      ar: {
+        heading: "طلبك ما زال قيد المراجعة",
+        paragraphs: [
+          `طلبت إعادة تعيين كلمة المرور، لكن حسابك لم يُفتح بعد: طلبك الخاص بـ «${params.companyName}» قيد المراجعة.`,
+          "عند الموافقة يصلك بريد ببيانات الدخول.",
+        ],
+      },
+      en: {
+        heading: "Your request is still under review",
+        paragraphs: [
+          `You asked to reset your password, but your account is not open yet: your request for "${params.companyName}" is under review.`,
+          "You will get an email with your sign-in details once it is approved.",
+        ],
+      },
+    }),
+  };
+}
