@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
 import { addDays } from "@/lib/utils/dates";
-import { calculateLineAmounts } from "@/lib/utils/invoice";
+import { calculateLineAmounts, resolveTaxRate } from "@/lib/utils/invoice";
 import { getUnitOptions } from "@/lib/utils/units";
 
 type Vendor = {
@@ -47,6 +47,7 @@ type CompanyDefaults = {
 
 type CompanyConfig = {
   taxInclusive: boolean;
+  vatEnabled: boolean;
 };
 
 type LineForm = {
@@ -83,6 +84,8 @@ const mapBillError = (error?: string) => {
       return "bill.vendorInactive";
     case "VAT period is filed":
       return "vat.periodLocked";
+    case "PERIOD_CLOSED":
+      return "error.periodClosed";
     default:
       return "error.saveFailed";
   }
@@ -143,7 +146,10 @@ export default function NewBillPage() {
         );
         setTerms(termData.terms ?? []);
         setDefaults(defaultsData.defaults ?? null);
-        setConfig({ taxInclusive: Boolean(configData?.config?.taxInclusive) });
+        setConfig({
+          taxInclusive: Boolean(configData?.config?.taxInclusive),
+          vatEnabled: configData?.config?.vatEnabled !== false,
+        });
       })
       .catch(() => setErrorKey("error.loadFailed"));
   }, [activeCompanyId]);
@@ -186,7 +192,7 @@ export default function NewBillPage() {
           defaults?.defaultPurchaseTaxCategoryId ||
           "";
         const taxCategory = taxCategoryId ? taxMap.get(taxCategoryId) : null;
-        const taxRate = taxCategory ? (taxCategory.rate ?? 0) / 100 : 0;
+        const taxRate = resolveTaxRate(taxCategory, config?.vatEnabled ?? true);
         const amounts = calculateLineAmounts({
           quantity,
           unitPrice,
@@ -278,7 +284,7 @@ export default function NewBillPage() {
           companyId: activeCompanyId,
           vendorId,
           billDate,
-          dueDate,
+          dueDate: dueDate || billDate,
           paymentTermId: paymentTermId || null,
           vendorBillNumber: vendorBillNumber || null,
           notes: notes || null,
@@ -380,7 +386,7 @@ export default function NewBillPage() {
               defaults?.defaultPurchaseTaxCategoryId ||
               "";
             const taxCategory = taxCategoryId ? taxMap.get(taxCategoryId) : null;
-            const taxRate = taxCategory ? (taxCategory.rate ?? 0) / 100 : 0;
+            const taxRate = resolveTaxRate(taxCategory, config?.vatEnabled ?? true);
             const amounts = calculateLineAmounts({
               quantity: Number(line.quantity) || 0,
               unitPrice: Number(line.unitPrice) || 0,

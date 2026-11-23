@@ -1,19 +1,12 @@
 import crypto from "crypto";
 import { NextResponse } from "next/server";
-import {
-  extractCertificateSignature,
-  extractRawPublicKey,
-  generateInvoiceXml,
-  generatePhase2TLV,
-  signInvoice,
-  type HashChainState,
-} from "@talha7k/zatca";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAdminAccess } from "@/lib/access";
 import { getCompanyById } from "@/lib/data/companies";
 import { getSalesInvoiceById } from "@/lib/data/sales-invoices";
 import { listIntegrations, type IntegrationRecord } from "@/lib/data/integrations";
-import { mapSalesInvoiceToZatca } from "@/lib/integrations/zatca/service";
+import { buildZatcaXml, signZatcaDocument } from "@/lib/integrations/zatca/document";
+import { mapSalesInvoiceToZatca, resolveZatcaCredentials } from "@/lib/integrations/zatca/service";
 
 export const runtime = "nodejs";
 
@@ -67,64 +60,36 @@ export async function GET(request: Request) {
       createdAt: new Date(),
     };
 
-  const emptyChain: HashChainState = {
-    lastHash: "",
-    lastUuid: "",
-    counter: 0,
-    updatedAt: new Date().toISOString(),
-  };
-  const document = await mapSalesInvoiceToZatca({
-    integration: zatcaIntegration,
-    invoice,
-    chain: emptyChain,
-  });
-  const xml = generateInvoiceXml(document);
+  let document: Awaited<ReturnType<typeof mapSalesInvoiceToZatca>>;
+  try {
+    document = await mapSalesInvoiceToZatca({ integration: zatcaIntegration, invoice, chain: null });
+  } catch (error) {
+    // Missing seller/buyer data is a setup problem to show, not a server fault.
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Preview failed" },
+      { status: 422 }
+    );
+  }
 
-  const credentials = zatcaIntegration.credentials ?? {};
-  const privateKeyPem = text(credentials.privateKeyPem);
-  const certificatePem = text(credentials.certificatePem) || text(credentials.complianceCertificatePem);
-
-  if (privateKeyPem && certificatePem) {
-    const timestamp = `${document.issueDate}T${document.issueTime}Z`;
-    const signed = signInvoice({
-      xml,
-      privateKeyPem,
-      certificatePem,
-      qrData: {
-        sellerName: document.supplier.nameEn,
-        vatNumber: document.supplier.vatNumber,
-        timestamp,
-        totalWithVat: document.taxInclusiveAmount.toFixed(2),
-        vatTotal: document.taxAmount.toFixed(2),
-        certificateSignature: extractCertificateSignature(certificatePem),
-      },
-    });
-    const qr = generatePhase2TLV({
-      sellerName: document.supplier.nameEn,
-      vatNumber: document.supplier.vatNumber,
-      timestamp,
-      totalWithVat: document.taxInclusiveAmount.toFixed(2),
-      vatTotal: document.taxAmount.toFixed(2),
-      invoiceHash: signed.invoiceHash,
-      signatureValue: signed.signatureValue,
-      publicKey: extractRawPublicKey(certificatePem),
-      certificateSignature: extractCertificateSignature(certificatePem),
-    });
+  const { privateKeyPem, certificate } = resolveZatcaCredentials(zatcaIntegration);
+  const signingCertificate = certificate || text(zatcaIntegration.credentials?.complianceToken);
+  if (privateKeyPem && signingCertificate) {
+    const signed = signZatcaDocument({ document, privateKeyPem, certificate: signingCertificate });
     return NextResponse.json({
       authoritative: true,
       uuid: document.uuid,
       invoiceHash: signed.invoiceHash,
-      qr,
+      qr: signed.qr,
       document,
+      totals: signed.totals,
     });
   }
 
-  const unsignedHash = crypto.createHash("sha256").update(xml).digest("hex");
   return NextResponse.json({
     authoritative: false,
     note: "Complete ZATCA onboarding to see the final signed hash and QR code. This is an unsigned preview only.",
     uuid: document.uuid,
-    invoiceHash: unsignedHash,
+    invoiceHash: crypto.createHash("sha256").update(buildZatcaXml(document)).digest("base64"),
     document,
   });
 }

@@ -6,6 +6,7 @@ import { SkeletonBlock } from "@/components/skeleton";
 import { useTranslations } from "@/i18n/provider";
 import { parseCsv } from "@/lib/utils/csv";
 import { normalizeSearch } from "@/lib/utils/search";
+import { sameMovement } from "@/lib/utils/reconciliation";
 
 type CashBankAccount = {
   id: string;
@@ -22,6 +23,15 @@ type StatementLine = {
   amount: number;
   status: "unmatched" | "matched" | "ignored";
   matchedCashTransactionId?: string | null;
+};
+
+type CashTransaction = {
+  id: string;
+  date: string;
+  amount: number;
+  direction: "in" | "out";
+  reference: string | null;
+  description: string | null;
 };
 
 type ImportError = {
@@ -85,6 +95,7 @@ export default function ReconciliationPage() {
   const [accounts, setAccounts] = useState<CashBankAccount[]>([]);
   const [accountId, setAccountId] = useState("");
   const [lines, setLines] = useState<StatementLine[]>([]);
+  const [transactions, setTransactions] = useState<CashTransaction[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [loadingLines, setLoadingLines] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -99,7 +110,7 @@ export default function ReconciliationPage() {
   );
 
   const formatAmount = (value: number) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       style: "decimal",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -110,7 +121,7 @@ export default function ReconciliationPage() {
       return "-";
     }
     const date = new Date(`${value}T00:00:00Z`);
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       dateStyle: "medium",
     }).format(date);
   };
@@ -130,9 +141,16 @@ export default function ReconciliationPage() {
   const loadLines = useCallback(() => {
     if (!activeCompanyId || !accountId) {
       setLines([]);
+      setTransactions([]);
       return;
     }
     setLoadingLines(true);
+    fetch(
+      `/api/reconciliation/transactions?companyId=${activeCompanyId}&accountId=${accountId}`
+    )
+      .then((res) => res.json())
+      .then((data) => setTransactions(data.transactions ?? []))
+      .catch(() => setTransactions([]));
     fetch(`/api/reconciliation/lines?companyId=${activeCompanyId}&accountId=${accountId}`)
       .then((res) => res.json())
       .then((data) => setLines(data.lines ?? []))
@@ -286,16 +304,23 @@ export default function ReconciliationPage() {
     });
   };
 
+  const matchesFor = (line: StatementLine) =>
+    transactions.filter((transaction) => sameMovement(line, transaction));
+
   const updateLine = (lineId: string, payload: Partial<StatementLine>) => {
     if (!activeCompanyId) {
       return;
     }
     startTransition(async () => {
-      await fetch(`/api/reconciliation/lines/${lineId}`, {
+      setErrorKey(null);
+      const response = await fetch(`/api/reconciliation/lines/${lineId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (!response.ok) {
+        setErrorKey("error.saveFailed");
+      }
       loadLines();
     });
   };
@@ -428,6 +453,26 @@ export default function ReconciliationPage() {
                     </td>
                     <td className="px-4 py-2">
                       <div className="flex flex-wrap gap-2 text-xs">
+                        {line.status === "unmatched" && matchesFor(line).length > 0 ? (
+                          <select
+                            className="rounded-2xl border border-border bg-surface px-2 py-1 text-xs"
+                            aria-label={t("reconciliation.matchTo")}
+                            value=""
+                            disabled={isPending}
+                            onChange={(event) =>
+                              updateLine(line.id, {
+                                matchedCashTransactionId: event.target.value,
+                              })
+                            }
+                          >
+                            <option value="">{t("reconciliation.matchTo")}</option>
+                            {matchesFor(line).map((transaction) => (
+                              <option key={transaction.id} value={transaction.id}>
+                                {formatDate(transaction.date)} - {transaction.reference ?? "-"}
+                              </option>
+                            ))}
+                          </select>
+                        ) : null}
                         {line.status === "unmatched" ? (
                           <button
                             type="button"

@@ -9,7 +9,7 @@ import { listTaxCategories } from "@/lib/data/tax-categories";
 import { getCompanyDefaults } from "@/lib/data/company-defaults";
 import { getCompanyConfig } from "@/lib/data/company-config";
 import { listChartAccounts } from "@/lib/data/chart-accounts";
-import { calculateLineAmounts } from "@/lib/utils/invoice";
+import { calculateLineAmounts, resolveTaxRate } from "@/lib/utils/invoice";
 import { normalizeSearch } from "@/lib/utils/search";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { findFiledVatPeriod } from "@/lib/data/vat-periods";
@@ -178,7 +178,7 @@ export async function POST(request: Request) {
   const taxCategoryId =
     parsed.data.taxCategoryId ?? defaults.defaultPurchaseTaxCategoryId ?? null;
   const taxCategory = taxCategoryId ? taxMap.get(taxCategoryId) : null;
-  const taxRate = taxCategory ? (taxCategory.rate ?? 0) / 100 : 0;
+  const taxRate = resolveTaxRate(taxCategory, config.vatEnabled);
 
   const amounts = calculateLineAmounts({
     quantity: 1,

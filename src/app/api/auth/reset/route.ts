@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { acceptInviteSchema } from "@/lib/validators/auth";
+import { clearAllLoginAttempts } from "@/lib/security/login-guard";
 import { getUserById, updateUserPassword } from "@/lib/data/users";
 import {
   getPasswordResetByToken,
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
 
   await updateUserPassword(user.id, parsed.data.password);
   await markPasswordResetUsed(reset.id);
+  await clearAllLoginAttempts(user.email);
 
   return NextResponse.json({ ok: true });
 }

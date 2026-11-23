@@ -4,8 +4,9 @@ import { requireAccountingAccess } from "@/lib/access";
 import { getCustomerById } from "@/lib/data/customers";
 import { listSalesInvoices } from "@/lib/data/sales-invoices";
 import { listSalesCreditNotes } from "@/lib/data/credit-notes";
-import { listInvoicePayments } from "@/lib/data/invoice-payments";
 import { toCsv } from "@/lib/utils/csv";
+import { roundMoney } from "@/lib/utils/invoice";
+import { outstandingBalance } from "@/lib/utils/settlement";
 
 export const runtime = "nodejs";
 
@@ -38,34 +39,26 @@ export async function GET(_: Request, context: RouteContext) {
     listSalesCreditNotes(customer.companyId),
   ]);
 
-  const customerInvoices = invoices.filter((inv) => inv.customerId === customerId);
-  const customerCredits = credits.filter((note) => note.customerId === customerId);
-
-  const paymentMap = new Map<string, number>();
-  for (const invoice of customerInvoices) {
-    const payments = await listInvoicePayments(invoice.id);
-    paymentMap.set(
-      invoice.id,
-      payments.reduce((sum, p) => sum + p.amount, 0)
-    );
-  }
+  const customerInvoices = invoices.filter(
+    (inv) => inv.customerId === customerId && !["draft", "canceled"].includes(inv.status)
+  );
+  const customerCredits = credits.filter(
+    (note) => note.customerId === customerId && note.status === "issued"
+  );
 
   const rows: string[][] = [];
 
   customerInvoices.forEach((invoice) => {
-    const paid = paymentMap.get(invoice.id) ?? 0;
-    const credited = invoice.amountCredited ?? 0;
-    const balance = Math.max(invoice.total - paid - credited, 0);
     rows.push([
       "invoice",
       invoice.invoiceNumber,
       invoice.invoiceDate,
       invoice.dueDate,
       invoice.status,
-      String(invoice.total),
-      String(paid),
-      String(credited),
-      String(balance),
+      String(roundMoney(invoice.total + invoice.amountDebited)),
+      String(invoice.amountPaid),
+      String(invoice.amountCredited),
+      String(outstandingBalance(invoice)),
       invoice.currency ?? "SAR",
     ]);
   });

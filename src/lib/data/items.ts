@@ -1,4 +1,4 @@
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp, type Transaction } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase/admin";
 import { normalizeSearch } from "@/lib/utils/search";
@@ -221,12 +221,13 @@ export async function applyItemStockDeltas(
     itemId: string;
     stockReservedDelta?: number;
     stockOnHandDelta?: number;
-  }>
+  }>,
+  tx?: Transaction
 ) {
   if (updates.length === 0) {
     return;
   }
-  const batch = db.batch();
+  const batch = tx ? null : db.batch();
   updates.forEach((update) => {
     const payload: Record<string, unknown> = {
       updatedAt: Timestamp.now(),
@@ -237,7 +238,12 @@ export async function applyItemStockDeltas(
     if (update.stockOnHandDelta) {
       payload.stockOnHand = FieldValue.increment(update.stockOnHandDelta);
     }
-    batch.set(db.collection("items").doc(update.itemId), payload, { merge: true });
+    const ref = db.collection("items").doc(update.itemId);
+    if (tx) {
+      tx.set(ref, payload, { merge: true });
+    } else {
+      batch?.set(ref, payload, { merge: true });
+    }
   });
-  await batch.commit();
+  await batch?.commit();
 }

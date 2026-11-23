@@ -9,7 +9,12 @@ import {
 import { getEmployeeByUserId } from "@/lib/data/employees";
 import { getAttendanceSettings } from "@/lib/data/attendance-settings";
 import { listAttendanceHolidays } from "@/lib/data/attendance-holidays";
-import { computeAttendanceMetrics } from "@/lib/utils/attendance";
+import {
+  computeAttendanceMetrics,
+  isOvernightShift,
+  isRestDay,
+} from "@/lib/utils/attendance";
+import { addDays } from "@/lib/utils/dates";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 
 export const runtime = "nodejs";
@@ -61,24 +66,37 @@ export async function POST(request: Request) {
     listAttendanceHolidays(companyId),
   ]);
 
-  const isHoliday = holidays.some((holiday) => holiday.date === date);
-  const existing = await findAttendanceRecord({
+  let existing = await findAttendanceRecord({
     companyId,
     employeeId: employee.id,
     date,
   });
+  if (!existing?.checkIn && isOvernightShift(settings)) {
+    // A night shift that started yesterday is closed on yesterday's record.
+    const previous = await findAttendanceRecord({
+      companyId,
+      employeeId: employee.id,
+      date: addDays(date, -1),
+    });
+    if (previous?.checkIn && !previous.checkOut) {
+      existing = previous;
+    }
+  }
+
+  const restDay = isRestDay(existing?.date ?? date, settings.weekendDays, holidays);
+  const metrics = computeAttendanceMetrics({
+    checkIn: existing?.checkIn ?? null,
+    checkOut: time,
+    shiftStart: settings.shiftStart,
+    shiftEnd: settings.shiftEnd,
+    graceMinutes: settings.graceMinutes,
+    roundingMinutes: settings.roundingMinutes,
+    overtimeThresholdMinutes: settings.overtimeThresholdMinutes,
+    isRestDay: restDay,
+  });
+  const status = restDay ? "holiday" : metrics.status;
 
   if (existing) {
-    const metrics = computeAttendanceMetrics({
-      checkIn: existing.checkIn ?? null,
-      checkOut: time,
-      shiftStart: settings.shiftStart,
-      shiftEnd: settings.shiftEnd,
-      graceMinutes: settings.graceMinutes,
-      roundingMinutes: settings.roundingMinutes,
-      overtimeThresholdMinutes: settings.overtimeThresholdMinutes,
-    });
-    const status = isHoliday ? "holiday" : metrics.status;
     await updateAttendanceRecord(existing.id, {
       checkOut: time,
       status,
@@ -90,23 +108,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, recordId: existing.id });
   }
 
-  const metrics = computeAttendanceMetrics({
-    checkIn: null,
-    checkOut: time,
-    shiftStart: settings.shiftStart,
-    shiftEnd: settings.shiftEnd,
-    graceMinutes: settings.graceMinutes,
-    roundingMinutes: settings.roundingMinutes,
-    overtimeThresholdMinutes: settings.overtimeThresholdMinutes,
-  });
-
   const recordId = await createAttendanceRecord({
     companyId,
     employeeId: employee.id,
     date,
     checkIn: null,
     checkOut: time,
-    status: isHoliday ? "holiday" : "absent",
+    status,
     totalMinutes: metrics.totalMinutes,
     overtimeMinutes: metrics.overtimeMinutes,
     lateMinutes: metrics.lateMinutes,

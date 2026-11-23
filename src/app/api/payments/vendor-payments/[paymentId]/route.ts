@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAccountingAccess } from "@/lib/access";
 import { getVendorPaymentById } from "@/lib/data/vendor-payments";
+import { findCreditOpenItemId } from "@/lib/accounting/credits";
 
 export const runtime = "nodejs";
 
@@ -26,6 +27,18 @@ export async function GET(_: Request, context: RouteContext) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  return NextResponse.json({ payment });
+  const creditOpenItemId =
+    payment.unappliedAmount > 0
+      ? await findCreditOpenItemId({
+          companyId: payment.companyId,
+          partyType: "vendor",
+          partyId: payment.vendorId,
+          docType: "vendor_payment_credit",
+          docNumber: payment.paymentNumber,
+          storedId: payment.creditOpenItemId,
+        })
+      : null;
+
+  return NextResponse.json({ payment: { ...payment, creditOpenItemId } });
 }
 

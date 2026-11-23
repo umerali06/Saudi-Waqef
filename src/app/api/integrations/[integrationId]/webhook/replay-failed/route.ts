@@ -9,7 +9,7 @@ import {
 } from "@/lib/data/integration-webhook-events";
 import {
   getZatcaArtifactByUuid,
-  updateZatcaArtifactStatus,
+  applyExternalZatcaStatus,
 } from "@/lib/data/zatca-artifacts";
 import { normalizeZatcaResults } from "@/lib/integrations/zatca/response-normalization";
 
@@ -56,12 +56,16 @@ export async function POST(_: Request, context: RouteContext) {
     let updated = 0;
     let missing = 0;
     for (const result of results) {
-      const artifact = await getZatcaArtifactByUuid(integration.companyId, result.uuid);
+      const artifact = await getZatcaArtifactByUuid(
+      integration.companyId,
+      result.uuid,
+      integration.environment
+    );
       if (!artifact) {
         missing += 1;
         continue;
       }
-      await updateZatcaArtifactStatus(artifact.id, {
+      const applied = await applyExternalZatcaStatus(artifact, {
         status: result.status,
         providerReference: result.providerReference ?? null,
         lastSubmittedAt: new Date(),
@@ -72,7 +76,7 @@ export async function POST(_: Request, context: RouteContext) {
           batchReplay: true,
         },
       });
-      updated += 1;
+      if (applied) updated += 1;
     }
 
     await updateWebhookEventResult(event.id, {

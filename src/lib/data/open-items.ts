@@ -1,6 +1,7 @@
-import { Timestamp } from "firebase-admin/firestore";
+import { Timestamp, type DocumentSnapshot, type Transaction } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase/admin";
+import { readDoc, writeDoc } from "@/lib/firebase/documents";
 
 export type PartyType = "customer" | "vendor";
 
@@ -11,6 +12,8 @@ export type OpenItem = {
   partyId: string;
   docType: string;
   docNumber: string;
+  /** Receipt, vendor payment or credit note the credit came from. */
+  sourceId?: string | null;
   issueDate: string;
   dueDate: string;
   amount: number;
@@ -31,6 +34,30 @@ export type AgingSummary = {
 const buildPartyKey = (companyId: string, partyType: PartyType, partyId: string) =>
   `${companyId}:${partyType}:${partyId}`;
 
+function mapOpenItem(doc: DocumentSnapshot) {
+  const data = doc.data()!;
+  return {
+    id: doc.id,
+    companyId: data.companyId,
+    partyType: data.partyType,
+    partyId: data.partyId,
+    docType: data.docType,
+    docNumber: data.docNumber,
+    sourceId: data.sourceId ?? null,
+    issueDate: data.issueDate,
+    dueDate: data.dueDate,
+    amount: data.amount ?? 0,
+    balance: data.balance ?? 0,
+    currency: data.currency ?? "SAR",
+    createdAt: data.createdAt.toDate(),
+  } as OpenItem;
+}
+
+export async function getOpenItemById(openItemId: string, tx?: Transaction) {
+  const doc = await readDoc(db.collection("open_items").doc(openItemId), tx);
+  return doc.exists ? mapOpenItem(doc) : null;
+}
+
 export async function listOpenItems(companyId: string, partyType: PartyType, partyId: string) {
   const partyKey = buildPartyKey(companyId, partyType, partyId);
   const snapshot = await db
@@ -38,23 +65,7 @@ export async function listOpenItems(companyId: string, partyType: PartyType, par
     .where("companyPartyKey", "==", partyKey)
     .get();
 
-  return snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      companyId: data.companyId,
-      partyType: data.partyType,
-      partyId: data.partyId,
-      docType: data.docType,
-      docNumber: data.docNumber,
-      issueDate: data.issueDate,
-      dueDate: data.dueDate,
-      amount: data.amount ?? 0,
-      balance: data.balance ?? 0,
-      currency: data.currency ?? "SAR",
-      createdAt: data.createdAt.toDate(),
-    } as OpenItem;
-  });
+  return snapshot.docs.map(mapOpenItem);
 }
 
 export async function listOpenItemsByCompany(companyId: string) {
@@ -63,23 +74,7 @@ export async function listOpenItemsByCompany(companyId: string) {
     .where("companyId", "==", companyId)
     .get();
 
-  return snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      companyId: data.companyId,
-      partyType: data.partyType,
-      partyId: data.partyId,
-      docType: data.docType,
-      docNumber: data.docNumber,
-      issueDate: data.issueDate,
-      dueDate: data.dueDate,
-      amount: data.amount ?? 0,
-      balance: data.balance ?? 0,
-      currency: data.currency ?? "SAR",
-      createdAt: data.createdAt.toDate(),
-    } as OpenItem;
-  });
+  return snapshot.docs.map(mapOpenItem);
 }
 
 export function buildAgingByParty(items: OpenItem[]) {
@@ -130,46 +125,60 @@ export function computeAging(items: OpenItem[], asOfDate = new Date()) {
 }
 
 export async function createOpenItem(params: {
+  id?: string;
   companyId: string;
   partyType: PartyType;
   partyId: string;
   docType: string;
   docNumber: string;
+  sourceId?: string | null;
   issueDate: string;
   dueDate: string;
   amount: number;
   balance: number;
   currency?: string;
-}) {
-  const id = uuidv4();
+}, tx?: Transaction) {
+  const id = params.id ?? uuidv4();
   const companyPartyKey = buildPartyKey(params.companyId, params.partyType, params.partyId);
-  await db.collection("open_items").doc(id).set({
-    companyId: params.companyId,
-    partyType: params.partyType,
-    partyId: params.partyId,
-    companyPartyKey,
-    docType: params.docType,
-    docNumber: params.docNumber,
-    issueDate: params.issueDate,
-    dueDate: params.dueDate,
-    amount: params.amount,
-    balance: params.balance,
-    currency: params.currency ?? "SAR",
-    createdAt: Timestamp.now(),
-  });
+  await writeDoc(
+    db.collection("open_items").doc(id),
+    {
+      companyId: params.companyId,
+      partyType: params.partyType,
+      partyId: params.partyId,
+      companyPartyKey,
+      docType: params.docType,
+      docNumber: params.docNumber,
+      sourceId: params.sourceId ?? null,
+      issueDate: params.issueDate,
+      dueDate: params.dueDate,
+      amount: params.amount,
+      balance: params.balance,
+      currency: params.currency ?? "SAR",
+      createdAt: Timestamp.now(),
+    },
+    { tx }
+  );
   return id;
 }
 
-export async function updateOpenItemBalance(openItemId: string, balance: number) {
-  await db.collection("open_items").doc(openItemId).set(
-    {
-      balance,
-      updatedAt: Timestamp.now(),
-    },
-    { merge: true }
+export async function updateOpenItemBalance(
+  openItemId: string,
+  balance: number,
+  tx?: Transaction
+) {
+  await writeDoc(
+    db.collection("open_items").doc(openItemId),
+    { balance, updatedAt: Timestamp.now() },
+    { merge: true, tx }
   );
 }
 
-export async function deleteOpenItem(openItemId: string) {
-  await db.collection("open_items").doc(openItemId).delete();
+export async function deleteOpenItem(openItemId: string, tx?: Transaction) {
+  const ref = db.collection("open_items").doc(openItemId);
+  if (tx) {
+    tx.delete(ref);
+    return;
+  }
+  await ref.delete();
 }

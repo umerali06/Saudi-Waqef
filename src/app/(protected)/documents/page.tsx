@@ -108,7 +108,7 @@ export default function DocumentsPage() {
       return "-";
     }
     const date = new Date(value);
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       dateStyle: "medium",
       timeStyle: "short",
     }).format(date);

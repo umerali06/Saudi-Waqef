@@ -240,6 +240,7 @@ export default function HrReportsPage() {
       endDate,
       report: "summary",
       format: "pdf",
+      locale,
     });
     if (departmentId !== "all") {
       params.set("departmentId", departmentId);

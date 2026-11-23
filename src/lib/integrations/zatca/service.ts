@@ -1,19 +1,15 @@
-import { v5 as uuidv5 } from "uuid";
-import {
-  extractCertificateSignature,
-  submitInvoice,
-  type HashChainState,
-  type CreditNoteData,
-  type InvoiceData,
-  type TaxCategoryId,
-} from "@talha7k/zatca";
 import type { IntegrationRecord } from "@/lib/data/integrations";
-import { updateIntegration, updateIntegrationZatcaChainInTransaction } from "@/lib/data/integrations";
-import { getCompanyById } from "@/lib/data/companies";
+import {
+  getIntegrationById,
+  updateIntegration,
+  updateIntegrationZatcaChainInTransaction,
+} from "@/lib/data/integrations";
+import { getCompanyById, type CompanyRecord } from "@/lib/data/companies";
 import { getCustomerById } from "@/lib/data/customers";
 import { listSalesInvoices, type SalesInvoice } from "@/lib/data/sales-invoices";
 import { listSalesCreditNotes } from "@/lib/data/credit-notes";
 import { listSalesDebitNotes } from "@/lib/data/debit-notes";
+import { listTaxCategories, type TaxCategory } from "@/lib/data/tax-categories";
 import {
   createZatcaArtifact,
   getZatcaArtifactByInvoiceId,
@@ -28,135 +24,170 @@ import { logger } from "@/lib/ops/logger";
 import { notifyCompanyRoles } from "@/lib/notifications/service";
 import { classifyZatcaSubmissionFailure } from "@/lib/integrations/zatca/failure-classification";
 import { redactSecrets } from "@/lib/security/redact";
+import { assertZatcaCompanyReady } from "@/lib/integrations/zatca/company-info";
+import { ZatcaApi } from "@/lib/integrations/zatca/api";
 import {
-  assertZatcaCompanyReady,
-  buildZatcaCustomerAddress,
-  buildZatcaSupplierAddress,
-} from "@/lib/integrations/zatca/company-info";
+  extractQrFromXml,
+  signZatcaDocument,
+  toSubmissionBody,
+  type ZatcaDocument,
+  type ZatcaHashChain,
+} from "@/lib/integrations/zatca/document";
+import {
+  buildZatcaDocument,
+  mergedZatcaConfig,
+  zatcaDocumentUuid,
+  type ZatcaSourceDocument,
+} from "@/lib/integrations/zatca/mapping";
+import { fromRiyadh, riyadhDateTime } from "@/lib/integrations/zatca/time";
+import { reportPlatformEvent } from "@/lib/notifications/platform-events";
 
-const UUID_NAMESPACE = "f1c74ab4-9968-48f5-a919-6f6f01d93086";
+const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
-const stringValue = (value: unknown) => (typeof value === "string" ? value.trim() : "");
-
-const pemFromToken = (token: string) => {
-  if (token.includes("BEGIN CERTIFICATE")) return token;
-  const normalized = token.replace(/\s/g, "");
-  const lines = normalized.match(/.{1,64}/g)?.join("\n") ?? normalized;
-  return `-----BEGIN CERTIFICATE-----\n${lines}\n-----END CERTIFICATE-----`;
-};
+const SUBMITTABLE_INVOICE_STATUSES = ["approved", "sent", "partially_paid", "paid"];
 
 /** Exponential backoff for transport failures, capped at 6 hours. */
 const retryBackoffMs = (attempt: number) =>
   Math.min(5 * 60 * 1000 * 2 ** Math.max(attempt - 1, 0), 6 * 60 * 60 * 1000);
 
-const taxCategory = (value: unknown, rate: number): TaxCategoryId => {
-  const normalized = stringValue(value).toUpperCase();
-  if (["S", "Z", "E", "O", "AE"].includes(normalized)) return normalized as TaxCategoryId;
-  return rate > 0 ? "S" : "Z";
+const readChain = (config: Record<string, unknown> | undefined): ZatcaHashChain | null => {
+  const stored = config?.zatcaHashChain;
+  if (!stored || typeof stored !== "object") return null;
+  const chain = stored as Partial<ZatcaHashChain>;
+  return chain.lastHash && chain.counter
+    ? {
+        lastHash: chain.lastHash,
+        lastUuid: chain.lastUuid ?? "",
+        counter: chain.counter,
+        updatedAt: chain.updatedAt ?? "",
+      }
+    : null;
 };
 
-export const mapSalesInvoiceToZatca = async (params: {
+/** Maps one stored invoice to the document that would be filed. No side effects. */
+export async function mapSalesInvoiceToZatca(params: {
   integration: IntegrationRecord;
   invoice: SalesInvoice;
-  chain: HashChainState;
-}): Promise<InvoiceData> => {
-  const company = await getCompanyById(params.integration.companyId);
+  chain: ZatcaHashChain | null;
+}): Promise<ZatcaDocument> {
+  const { integration, invoice, chain } = params;
+  const [company, customer, taxCategories] = await Promise.all([
+    getCompanyById(integration.companyId),
+    invoice.customerId ? getCustomerById(invoice.customerId) : Promise.resolve(null),
+    listTaxCategories(integration.companyId),
+  ]);
   if (!company) throw new Error("Company not found for ZATCA submission.");
-  const customer = params.invoice.customerId
-    ? await getCustomerById(params.invoice.customerId)
-    : null;
-  const rootConfig = params.integration.config ?? {};
-  const config = rootConfig.mapping && typeof rootConfig.mapping === "object" && !Array.isArray(rootConfig.mapping)
-    ? { ...rootConfig, ...(rootConfig.mapping as Record<string, unknown>) }
-    : rootConfig;
-  const customerVat = customer?.vatNumber || params.invoice.customerVatNumber || "";
-  const isStandard = Boolean(customerVat);
-  assertZatcaCompanyReady(company, config);
+  assertZatcaCompanyReady(company, mergedZatcaConfig(integration));
+  return buildZatcaDocument({ integration, company, customer, taxCategories, source: invoice, chain });
+}
 
-  const taxGroups = new Map<string, { taxableAmount: number; taxAmount: number; percent: number; taxCategoryId: TaxCategoryId }>();
-  const invoiceLines = params.invoice.lines.map((line, index) => {
-    const category = taxCategory(line.taxCategoryId, line.taxRate);
-    const key = `${category}:${line.taxRate}`;
-    const group = taxGroups.get(key) ?? { taxableAmount: 0, taxAmount: 0, percent: line.taxRate, taxCategoryId: category };
-    group.taxableAmount += line.netAmount;
-    group.taxAmount += line.taxAmount;
-    taxGroups.set(key, group);
-    return {
-      id: index + 1,
-      quantity: line.quantity,
-      unitCode: line.unit || "C62",
-      lineExtensionAmount: line.netAmount,
-      taxAmount: line.taxAmount,
-      itemName: line.description,
-      taxCategoryId: category,
-      taxPercent: line.taxRate,
-      priceAmount: line.unitPrice,
-      ...(line.discountAmount > 0 ? {
-        allowanceCharges: [{
-          chargeIndicator: false,
-          reason: "Discount",
-          amount: line.discountAmount,
-          taxCategoryId: category,
-          taxPercent: line.taxRate,
-        }],
-      } : {}),
-    };
-  });
-
-  const uuid = uuidv5(`${params.integration.companyId}:${params.invoice.id}`, UUID_NAMESPACE);
-  return {
-    invoiceNumber: params.invoice.invoiceNumber,
-    uuid,
-    issueDate: params.invoice.invoiceDate,
-    issueTime: params.invoice.approvedAt?.slice(11, 19) || "00:00:00",
-    invoiceTypeCode: "388",
-    invoiceTypeCodeName: isStandard ? "0100000" : "0200000",
-    profileId: isStandard ? "clearance:1.0" : "reporting:1.0",
-    currencyCode: params.invoice.currency || "SAR",
-    invoiceCounter: params.chain.counter + 1,
-    previousInvoiceHash: params.chain.lastHash || undefined,
-    supplier: {
-      nameAr: stringValue(config.sellerNameAr) || company.legalName || company.name,
-      nameEn: company.legalName || company.name,
-      vatNumber: company.vatNumber || "",
-      crNumber: company.crNumber,
-      address: buildZatcaSupplierAddress(company, config),
-    },
-    ...(isStandard ? {
-      customer: {
-        name: customer?.legalName || customer?.name || params.invoice.customerName,
-        vatNumber: customerVat,
-        address: buildZatcaCustomerAddress(
-          customer?.billingAddressDetails,
-          customer?.billingAddress || params.invoice.billingAddress,
-          config.customerAddress
-        ),
-      },
-    } : {}),
-    lineExtensionAmount: params.invoice.subtotal,
-    taxExclusiveAmount: params.invoice.subtotal - params.invoice.discountTotal,
-    taxInclusiveAmount: params.invoice.total,
-    allowanceTotalAmount: params.invoice.discountTotal || undefined,
-    payableAmount: params.invoice.total,
-    taxAmount: params.invoice.taxTotal,
-    taxSubtotals: Array.from(taxGroups.values()),
-    invoiceLines,
-  };
+/**
+ * Signing material and submission credentials. The developer sandbox hands every
+ * taxpayer one shared production certificate that cannot match our key, so there
+ * documents are signed with the compliance certificate; simulation and
+ * production sign with the real production CSID.
+ */
+export const resolveZatcaCredentials = (integration: IntegrationRecord) => {
+  const credentials = integration.credentials ?? {};
+  const binarySecurityToken = text(credentials.binarySecurityToken);
+  const secret = text(credentials.secret);
+  const privateKeyPem = text(credentials.privateKeyPem);
+  const certificate =
+    integration.environment === "sandbox"
+      ? text(credentials.complianceToken)
+      : binarySecurityToken || text(credentials.certificatePem);
+  return { binarySecurityToken, secret, privateKeyPem, certificate };
 };
 
+type SourceItem = {
+  kind: "invoice" | "credit" | "debit";
+  issuedAt: number;
+  customerId: string;
+  source: ZatcaSourceDocument;
+  originalInvoiceId?: string;
+  note?: { kind: "credit" | "debit"; reason: string; originalInvoiceNumber: string };
+};
+
+async function collectDocuments(integration: IntegrationRecord): Promise<SourceItem[]> {
+  const [invoices, creditNotes, debitNotes] = await Promise.all([
+    listSalesInvoices(integration.companyId),
+    listSalesCreditNotes(integration.companyId),
+    listSalesDebitNotes(integration.companyId),
+  ]);
+  const invoiceById = new Map(invoices.map((invoice) => [invoice.id, invoice]));
+  const items: SourceItem[] = invoices
+    .filter((invoice) => SUBMITTABLE_INVOICE_STATUSES.includes(invoice.status))
+    .map((invoice) => ({
+      kind: "invoice",
+      // Filing order is the order documents became final, not the order drafts were typed.
+      issuedAt: invoice.approvedAt ? Date.parse(invoice.approvedAt) : invoice.createdAt.getTime(),
+      customerId: invoice.customerId,
+      source: invoice,
+    }));
+
+  const pushNote = (
+    kind: "credit" | "debit",
+    note: (typeof creditNotes)[number] | (typeof debitNotes)[number],
+    number: string
+  ) => {
+    if (note.status !== "issued") return;
+    const original = invoiceById.get(note.invoiceId);
+    items.push({
+      kind,
+      issuedAt: note.createdAt.getTime(),
+      customerId: note.customerId,
+      source: {
+        id: note.id,
+        companyId: note.companyId,
+        invoiceNumber: number,
+        invoiceDate: note.issueDate,
+        currency: note.currency,
+        total: note.total,
+        lines: note.lines,
+        approvedAt: note.createdAt.toISOString(),
+        customerName: note.customerName,
+        customerVatNumber: original?.customerVatNumber,
+        billingAddress: original?.billingAddress,
+      },
+      originalInvoiceId: note.invoiceId,
+      note: {
+        kind,
+        reason: note.reason?.trim() || (kind === "credit" ? "إشعار دائن" : "إشعار مدين"),
+        originalInvoiceNumber: note.invoiceNumber,
+      },
+    });
+  };
+  creditNotes.forEach((note) => pushNote("credit", note, note.creditNumber));
+  debitNotes.forEach((note) => pushNote("debit", note, note.debitNumber));
+
+  // Documents issued before the taxpayer went live were never e-invoices and
+  // must not be filed retroactively.
+  const config = mergedZatcaConfig(integration);
+  const goLive =
+    text(config.submissionStartDate) ||
+    (integration.environment !== "sandbox" && text(config.productionCsidIssuedAt)
+      ? riyadhDateTime(new Date(text(config.productionCsidIssuedAt))).date
+      : "");
+  return items
+    .filter((item) => !goLive || item.source.invoiceDate >= goLive)
+    .sort((a, b) => a.issuedAt - b.issuedAt);
+}
+
 export async function executeZatcaSubmission(integration: IntegrationRecord) {
-  const credentials = integration.credentials ?? {};
-  const binarySecurityToken = stringValue(credentials.binarySecurityToken) || stringValue(credentials.apiKey);
-  const secret = stringValue(credentials.secret) || stringValue(credentials.password);
-  const privateKeyPem = stringValue(credentials.privateKeyPem);
-  const certificatePem = stringValue(credentials.certificatePem) || pemFromToken(binarySecurityToken);
-  if (!binarySecurityToken || !secret || !privateKeyPem || !certificatePem) {
-    throw new Error("ZATCA production CSID token, secret, certificate, and private key are required.");
+  const { binarySecurityToken, secret, privateKeyPem, certificate } =
+    resolveZatcaCredentials(integration);
+  if (!binarySecurityToken || !secret || !privateKeyPem || !certificate) {
+    throw new Error(
+      "ZATCA production CSID token, secret, certificate, and private key are required."
+    );
   }
 
   const runId = await acquireZatcaSubmissionLock(integration.id);
   try {
-    return await runZatcaSubmissionLoop({ integration, binarySecurityToken, secret, privateKeyPem, certificatePem, runId });
+    // Re-read under the lock: the caller's copy may hold a hash chain from
+    // before another run advanced it.
+    const fresh = (await getIntegrationById(integration.id)) ?? integration;
+    return await runSubmissionLoop(fresh, runId);
   } finally {
     await releaseZatcaSubmissionLock(integration.id, runId).catch((error) => {
       logger.warn("Failed to release ZATCA submission lock", {
@@ -167,313 +198,88 @@ export async function executeZatcaSubmission(integration: IntegrationRecord) {
   }
 }
 
-async function runZatcaSubmissionLoop(params: {
-  integration: IntegrationRecord;
-  binarySecurityToken: string;
-  secret: string;
-  privateKeyPem: string;
-  certificatePem: string;
-  runId: string;
-}) {
-  const { integration, binarySecurityToken, secret, privateKeyPem, certificatePem, runId } = params;
-  const storedChain = integration.config?.zatcaHashChain;
-  let chain: HashChainState = storedChain && typeof storedChain === "object"
-    ? storedChain as HashChainState
-    : { lastHash: "", lastUuid: "", counter: 0, updatedAt: new Date(0).toISOString() };
-  const invoices = (await listSalesInvoices(integration.companyId))
-    .filter((invoice) => ["approved", "sent", "partially_paid", "paid"].includes(invoice.status))
-    .map((invoice) => ({ kind: "invoice" as const, createdAt: invoice.createdAt, invoice }));
-  const invoiceById = new Map<string, SalesInvoice>(invoices.map((item) => [item.invoice.id, item.invoice]));
-  const creditNotes = (await listSalesCreditNotes(integration.companyId))
-    .filter((note) => note.status === "issued")
-    .map((note) => ({ kind: "credit" as const, createdAt: note.createdAt, note }));
-  const debitNotes = (await listSalesDebitNotes(integration.companyId))
-    .filter((note) => note.status === "issued")
-    .map((note) => ({ kind: "debit" as const, createdAt: note.createdAt, note }));
-  const documents = [...invoices, ...creditNotes, ...debitNotes].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+async function notifyUnhealthy(integration: IntegrationRecord, reason: string) {
+  await updateIntegration(integration.id, { status: "error", lastError: reason });
+  await notifyCompanyRoles({
+    companyId: integration.companyId,
+    roles: ["owner", "admin"],
+    type: "zatca_integration_unhealthy",
+    data: { reason },
+  }).catch(() => undefined);
+  await reportPlatformEvent({
+    kind: "zatca_unhealthy",
+    severity: "critical",
+    title: { ar: "توقف الربط مع هيئة الزكاة", en: "ZATCA filing stopped" },
+    message: {
+      ar: `توقف إرسال الفواتير لإحدى الشركات: ${reason}`,
+      en: `Invoice filing stopped for a company: ${reason}`,
+    },
+    path: "/admin/alerts",
+    entityId: integration.id,
+    companyId: integration.companyId,
+    quietMinutes: 360,
+  });
+}
+
+async function runSubmissionLoop(integration: IntegrationRecord, runId: string) {
+  const startedAt = Date.now();
+  const credentials = resolveZatcaCredentials(integration);
+  const api = new ZatcaApi(integration.environment);
+  const [company, taxCategories, documents] = await Promise.all([
+    getCompanyById(integration.companyId),
+    listTaxCategories(integration.companyId),
+    collectDocuments(integration),
+  ]);
+  if (!company) throw new Error("Company not found for ZATCA submission.");
+  assertZatcaCompanyReady(company, mergedZatcaConfig(integration));
+
+  let chain = readChain(integration.config);
   const results: Array<Record<string, unknown>> = [];
 
-  for (const source of documents) {
-    const sourceId = source.kind === "invoice" ? source.invoice.id : source.note.id;
-    const existing = await getZatcaArtifactByInvoiceId(integration.companyId, sourceId);
-    if (existing?.status === "accepted" || existing?.status === "warning") continue;
-    if (existing?.nextRetryAt && existing.nextRetryAt.getTime() > Date.now()) {
-      // Backoff has not elapsed. Documents are processed in creation order and
-      // this one's chain position is still undecided, so stop rather than let a
-      // later document overtake it.
-      results.push({
-        uuid: existing.uuid,
-        status: "retry_pending",
-        message: `Waiting until ${existing.nextRetryAt.toISOString()} before retrying.`,
-      });
+  for (const item of documents) {
+    const outcome = await submitOne({
+      integration,
+      company,
+      taxCategories,
+      item,
+      chain,
+      credentials,
+      api,
+    });
+    if (!outcome) continue; // already filed
+    results.push(outcome.result);
+
+    if (outcome.halt === "auth") {
+      await notifyUnhealthy(integration, "ZATCA_AUTHENTICATION_FAILED");
       break;
     }
-    let document: InvoiceData | CreditNoteData;
-    if (source.kind === "invoice") {
-      document = await mapSalesInvoiceToZatca({ integration, invoice: source.invoice, chain });
-    } else {
-      const original = invoiceById.get(source.note.invoiceId);
-      if (!original) throw new Error(`Original invoice ${source.note.invoiceNumber} is required for its ZATCA credit note.`);
-      const mapped = await mapSalesInvoiceToZatca({
-        integration,
-        invoice: {
-          ...original,
-          id: source.note.id,
-        invoiceNumber: source.kind === "credit" ? source.note.creditNumber : source.note.debitNumber,
-          invoiceDate: source.note.issueDate,
-          subtotal: source.note.subtotal,
-          discountTotal: source.note.discountTotal,
-          taxTotal: source.note.taxTotal,
-          total: source.note.total,
-          lines: source.note.lines,
-          createdAt: source.note.createdAt,
-        },
+    if (outcome.halt) break;
+    if (!outcome.newChain) continue;
+
+    chain = outcome.newChain;
+    try {
+      await updateIntegrationZatcaChainInTransaction({
+        integrationId: integration.id,
+        expectedLockRunId: runId,
         chain,
       });
-      const originalUuid = uuidv5(`${integration.companyId}:${original.id}`, UUID_NAMESPACE);
-      document = {
-        ...mapped,
-        invoiceTypeCode: source.kind === "credit" ? "381" : "383",
-        originalInvoiceNumber: original.invoiceNumber,
-        originalInvoiceUuid: originalUuid,
-        originalInvoiceDate: original.invoiceDate,
-        reason: source.note.reason || (source.kind === "credit" ? "Credit note" : "Debit note"),
-      };
-    }
-    let result: Awaited<ReturnType<typeof submitInvoice>>;
-    try {
-      result = await submitInvoice({
-        invoice: document,
-        privateKeyPem,
-        certificatePem,
-        certificateSignature: extractCertificateSignature(certificatePem),
-        credentials: { binarySecurityToken, secret },
-        apiConfig: { environment: integration.environment, timeout: 30000, clearanceStatus: "1" },
-        hashChainState: chain,
-      });
     } catch (error) {
-      // A transport-level failure means ZATCA never returned a verdict, so we
-      // cannot know whether it saw the document. Persist the attempt as
-      // unavailable and stop: the chain must not advance past an unknown
-      // outcome, and the next run re-submits with the identical UUID.
-      const message = error instanceof Error ? error.message : String(error);
-      const attempt = (existing?.attemptCount ?? 0) + 1;
-      const unavailableResponse = { httpStatus: null, alerts: [], error: message };
-      let artifactId = existing?.id;
-      if (!artifactId) {
-        artifactId = await createZatcaArtifact({
-          companyId: integration.companyId,
-          invoiceId: sourceId,
-          uuid: document.uuid,
-          hash: "",
-          qr: "",
-          payload: { document },
-          status: "pending",
-          technicalStatus: "integration_unavailable",
-          reportingDueAt: null,
-          environment: integration.environment,
-          documentType: document.profileId === "reporting:1.0" ? "simplified" : "standard",
-          operation: document.profileId === "reporting:1.0" ? "reporting" : "clearance",
-        });
-      }
-      await updateZatcaArtifactStatus(artifactId, {
-        status: "pending",
-        technicalStatus: "integration_unavailable",
-        attemptCount: attempt,
-        nextRetryAt: new Date(Date.now() + retryBackoffMs(attempt)),
-        lastResponse: unavailableResponse,
-      });
-      await recordZatcaSubmissionAttempt({
-        artifactId,
-        companyId: integration.companyId,
-        invoiceId: sourceId,
-        uuid: document.uuid,
-        environment: integration.environment,
-        operation: document.profileId === "reporting:1.0" ? "reporting" : "clearance",
-        attempt,
-        httpStatus: null,
-        technicalStatus: "integration_unavailable",
-        response: unavailableResponse,
-      });
-      logger.warn("ZATCA submission could not reach the service; document left pending for retry.", {
+      // ZATCA has already accepted the document and the artifact says so; that
+      // cannot be undone. The stored chain can no longer be trusted, so stop
+      // before a later document reuses a stale previous hash.
+      logger.error("ZATCA hash-chain lock lost mid-run; stopping sync. Manual recovery required.", {
         integrationId: integration.id,
-        uuid: document.uuid,
-        attempt,
-        error: message,
+        ...redactSecrets({ chain }),
+        error: error instanceof Error ? error.message : String(error),
       });
-      results.push({
-        uuid: document.uuid,
-        status: "integration_unavailable",
-        message: "ZATCA was unreachable; the document stays queued for retry.",
-      });
+      await notifyUnhealthy(integration, "ZATCA_LOCK_LOST");
       break;
-    }
-    const accepted = result.success;
-    const response = result.zatcaResult.response;
-    const responseRecord = {
-      httpStatus: result.zatcaResult.httpStatus,
-      alerts: result.zatcaResult.alerts ?? [],
-      reportingStatus: response?.reportingStatus ?? null,
-      clearanceStatus: response?.clearanceStatus ?? null,
-      clearedInvoice: response?.clearedInvoice ?? null,
-    };
-    const isReporting = document.profileId === "reporting:1.0";
-    const alerts = result.zatcaResult.alerts ?? [];
-    const hasWarnings = alerts.some((alert) => {
-      if (!alert || typeof alert !== "object") return false;
-      const row = alert as unknown as Record<string, unknown>;
-      return String(row.type ?? row.status ?? row.category ?? "").toLowerCase().includes("warn");
-    });
-    const failureKind = accepted
-      ? null
-      : classifyZatcaSubmissionFailure({
-          httpStatus: result.zatcaResult.httpStatus,
-          alerts: result.zatcaResult.alerts,
-          response,
-        });
-    // A retryable failure is not a verdict on the document, so it must not be
-    // recorded as "rejected" — that would strand a valid invoice.
-    const technicalStatus = accepted
-      ? hasWarnings
-        ? ("warning" as const)
-        : isReporting
-          ? ("reported" as const)
-          : ("cleared" as const)
-      : failureKind === "permanent"
-        ? ("rejected" as const)
-        : ("integration_unavailable" as const);
-    const artifactStatus = accepted
-      ? hasWarnings
-        ? ("warning" as const)
-        : ("accepted" as const)
-      : failureKind === "permanent"
-        ? ("rejected" as const)
-        : ("pending" as const);
-    const attemptNumber = (existing?.attemptCount ?? 0) + 1;
-    const reportingDueAt = isReporting
-      ? new Date(new Date(`${document.issueDate}T${document.issueTime}Z`).getTime() + 24 * 60 * 60 * 1000)
-      : null;
-    let artifactId = existing?.id;
-    if (!artifactId) {
-      artifactId = await createZatcaArtifact({
-        companyId: integration.companyId,
-        invoiceId: sourceId,
-        uuid: document.uuid,
-        hash: result.invoiceHash,
-        qr: result.qrCodeBase64,
-        payload: { document, signedXml: result.signedXml },
-        status: artifactStatus,
-        technicalStatus,
-        reportingDueAt,
-        environment: integration.environment,
-        documentType: isReporting ? "simplified" : "standard",
-        operation: isReporting ? "reporting" : "clearance",
-      });
-    }
-    if (!artifactId) throw new Error("ZATCA_ARTIFACT_CREATE_FAILED");
-    // This artifact write is independent of the hash-chain lock below and must
-    // always happen: ZATCA really did accept/reject this document regardless
-    // of whether we can still safely persist the updated chain state.
-    await updateZatcaArtifactStatus(artifactId, {
-      status: artifactStatus,
-      technicalStatus,
-      attemptCount: attemptNumber,
-      // Only a document we intend to send again carries a next-attempt time.
-      nextRetryAt:
-        failureKind === "retryable" || failureKind === "blocked"
-          ? new Date(Date.now() + retryBackoffMs(attemptNumber))
-          : null,
-      providerReference: document.uuid,
-      lastSubmittedAt: new Date(),
-      lastResponse: responseRecord,
-    });
-    await recordZatcaSubmissionAttempt({
-      artifactId,
-      companyId: integration.companyId,
-      invoiceId: sourceId,
-      uuid: document.uuid,
-      environment: integration.environment,
-      operation: isReporting ? "reporting" : "clearance",
-      attempt: attemptNumber,
-      httpStatus: result.zatcaResult.httpStatus,
-      technicalStatus,
-      response: responseRecord,
-    });
-    results.push({
-      uuid: document.uuid,
-      status: technicalStatus,
-      providerReference: document.uuid,
-      message: accepted
-        ? "Accepted by ZATCA"
-        : failureKind === "permanent"
-          ? "Rejected by ZATCA"
-          : "ZATCA could not process the document; it stays queued for retry.",
-      ...responseRecord,
-    });
-    if (!accepted) {
-      if (failureKind === "blocked") {
-        // Credentials/certificate are unusable, so every following document
-        // would fail the same way. Halt and surface it to administrators.
-        await updateIntegration(integration.id, {
-          status: "error",
-          lastError: "ZATCA_AUTHENTICATION_FAILED",
-        });
-        await notifyCompanyRoles({
-          companyId: integration.companyId,
-          roles: ["owner", "admin"],
-          type: "zatca_integration_unhealthy",
-          data: { reason: "ZATCA_AUTHENTICATION_FAILED" },
-        }).catch(() => undefined);
-        break;
-      }
-      if (failureKind === "retryable") {
-        // No verdict was reached, so the chain position this document would
-        // occupy is still undecided. Stop rather than let a later document
-        // take it.
-        break;
-      }
-      // A permanently rejected document never entered the hash chain, so the
-      // chain state is unchanged and the next document legitimately takes this
-      // position. Continue so one bad invoice cannot block every later one.
-      continue;
-    }
-    if (result.newHashChainState) {
-      chain = result.newHashChainState;
-      try {
-        await updateIntegrationZatcaChainInTransaction({
-          integrationId: integration.id,
-          expectedLockRunId: runId,
-          chain,
-        });
-      } catch (error) {
-        // The document above was already accepted by ZATCA and recorded in
-        // zatca_artifacts — that cannot and must not be undone. But we no
-        // longer trust our in-memory chain state to be the true tail, so we
-        // stop rather than risk submitting the next document with a stale
-        // previousInvoiceHash. Manual recovery: resync config.zatcaHashChain
-        // from the latest accepted zatca_artifacts document for this company.
-        logger.error("ZATCA hash-chain lock lost mid-run; stopping sync. Manual recovery required.", {
-          integrationId: integration.id,
-          lastAcceptedUuid: document.uuid,
-          ...redactSecrets({ chain }),
-          error: error instanceof Error ? error.message : String(error),
-        });
-        await updateIntegration(integration.id, {
-          status: "error",
-          lastError: "ZATCA_LOCK_LOST",
-        });
-        await notifyCompanyRoles({
-          companyId: integration.companyId,
-          roles: ["owner", "admin"],
-          type: "zatca_integration_unhealthy",
-          data: { reason: "ZATCA_LOCK_LOST" },
-        }).catch(() => undefined);
-        break;
-      }
     }
   }
 
-  const ok = results.every((result) => ["accepted", "reported", "cleared", "warning"].includes(String(result.status)));
+  const ok = results.every((result) =>
+    ["reported", "cleared", "warning"].includes(String(result.status))
+  );
   return {
     ok,
     status: ok ? 200 : 422,
@@ -481,8 +287,251 @@ async function runZatcaSubmissionLoop(params: {
     bodyPreview: JSON.stringify({ results }).slice(0, 2000),
     bodyJson: { results },
     requestUrl: `zatca://${integration.environment}`,
-    durationMs: 0,
+    durationMs: Date.now() - startedAt,
     attempt: 1,
     responseHeaders: {},
   };
+}
+
+async function submitOne(params: {
+  integration: IntegrationRecord;
+  company: CompanyRecord;
+  taxCategories: TaxCategory[];
+  item: SourceItem;
+  chain: ZatcaHashChain | null;
+  credentials: ReturnType<typeof resolveZatcaCredentials>;
+  api: ZatcaApi;
+}): Promise<{
+  result: Record<string, unknown>;
+  newChain?: ZatcaHashChain;
+  halt?: "auth" | "undecided";
+} | null> {
+  const { integration, company, taxCategories, item, chain, credentials, api } = params;
+  const sourceId = item.source.id;
+  const uuid = zatcaDocumentUuid(integration.companyId, sourceId);
+  const existing = await getZatcaArtifactByInvoiceId(
+    integration.companyId,
+    sourceId,
+    integration.environment
+  );
+  if (existing?.status === "accepted" || existing?.status === "warning") return null;
+  if (existing?.nextRetryAt && existing.nextRetryAt.getTime() > Date.now()) {
+    // This document's chain position is still undecided, so nothing may overtake it.
+    return {
+      result: {
+        uuid,
+        invoiceNumber: item.source.invoiceNumber,
+        status: "retry_pending",
+        message: `Waiting until ${existing.nextRetryAt.toISOString()} before retrying.`,
+      },
+      halt: "undecided",
+    };
+  }
+
+  const attempt = (existing?.attemptCount ?? 0) + 1;
+  const base = { uuid, invoiceNumber: item.source.invoiceNumber };
+
+  let document: ZatcaDocument;
+  let signed: ReturnType<typeof signZatcaDocument>;
+  try {
+    const customer = item.customerId ? await getCustomerById(item.customerId) : null;
+    document = buildZatcaDocument({
+      integration,
+      company,
+      customer,
+      taxCategories,
+      source: item.source,
+      chain,
+      note: item.note,
+    });
+    signed = signZatcaDocument({
+      document,
+      privateKeyPem: credentials.privateKeyPem,
+      certificate: credentials.certificate,
+    });
+  } catch (error) {
+    // The document itself cannot be built (missing buyer address, exemption
+    // reason...). Nothing was sent; report it and let the others through.
+    const message = error instanceof Error ? error.message : String(error);
+    const response = {
+      httpStatus: null,
+      alerts: [{ severity: "error", code: message.split(":")[0], category: "LOCAL", message }],
+    };
+    const artifactId =
+      existing?.id ??
+      (await createZatcaArtifact({
+        companyId: integration.companyId,
+        invoiceId: sourceId,
+        uuid,
+        hash: "",
+        qr: "",
+        payload: {},
+        status: "rejected",
+        technicalStatus: "rejected",
+        reportingDueAt: null,
+        environment: integration.environment,
+        documentType: "standard",
+        operation: "clearance",
+      }));
+    await updateZatcaArtifactStatus(artifactId, {
+      status: "rejected",
+      technicalStatus: "rejected",
+      attemptCount: attempt,
+      nextRetryAt: null,
+      lastResponse: response,
+    });
+    return { result: { ...base, status: "rejected", message, ...response } };
+  }
+
+  const operation = document.simplified ? ("reporting" as const) : ("clearance" as const);
+  const documentType = document.simplified ? ("simplified" as const) : ("standard" as const);
+  const artifactId =
+    existing?.id ??
+    (await createZatcaArtifact({
+      companyId: integration.companyId,
+      invoiceId: sourceId,
+      uuid,
+      hash: signed.invoiceHash,
+      qr: signed.qr,
+      payload: { document, signedXml: signed.signedXml },
+      status: "pending",
+      technicalStatus: "pending_submission",
+      reportingDueAt: document.simplified
+        ? new Date(fromRiyadh(document.issueDate, document.issueTime).getTime() + 24 * 3600 * 1000)
+        : null,
+      environment: integration.environment,
+      documentType,
+      operation,
+    }));
+
+  const recordAttempt = async (
+    technicalStatus: "reported" | "cleared" | "warning" | "rejected" | "integration_unavailable",
+    httpStatus: number | null,
+    response: Record<string, unknown>
+  ) =>
+    recordZatcaSubmissionAttempt({
+      artifactId,
+      companyId: integration.companyId,
+      invoiceId: sourceId,
+      uuid,
+      environment: integration.environment,
+      operation,
+      attempt,
+      httpStatus,
+      technicalStatus,
+      response,
+    });
+
+  let verdict: Awaited<ReturnType<ZatcaApi["submit"]>>;
+  try {
+    verdict = await api.submit(
+      operation,
+      { binarySecurityToken: credentials.binarySecurityToken, secret: credentials.secret },
+      toSubmissionBody(signed)
+    );
+  } catch (error) {
+    // No verdict was received, so we cannot know whether ZATCA saw it. The next
+    // run resubmits the identical UUID, which ZATCA treats as the same document.
+    const message = error instanceof Error ? error.message : String(error);
+    const response = { httpStatus: null, alerts: [], error: message };
+    await updateZatcaArtifactStatus(artifactId, {
+      status: "pending",
+      technicalStatus: "integration_unavailable",
+      attemptCount: attempt,
+      nextRetryAt: new Date(Date.now() + retryBackoffMs(attempt)),
+      lastResponse: response,
+    });
+    await recordAttempt("integration_unavailable", null, response);
+    return {
+      result: {
+        ...base,
+        status: "integration_unavailable",
+        message: "ZATCA was unreachable; the document stays queued for retry.",
+      },
+      halt: "undecided",
+    };
+  }
+
+  const hasWarnings = verdict.alerts.some((alert) => alert.severity === "warning");
+  const failureKind = verdict.accepted
+    ? null
+    : classifyZatcaSubmissionFailure({
+        httpStatus: verdict.httpStatus,
+        alerts: verdict.alerts,
+        response: null,
+      });
+  const technicalStatus = verdict.accepted
+    ? hasWarnings
+      ? ("warning" as const)
+      : verdict.operation === "reporting"
+        ? ("reported" as const)
+        : ("cleared" as const)
+    : failureKind === "permanent"
+      ? ("rejected" as const)
+      : ("integration_unavailable" as const);
+  const response = {
+    httpStatus: verdict.httpStatus,
+    alerts: verdict.alerts,
+    reportingStatus: verdict.reportingStatus,
+    clearanceStatus: verdict.clearanceStatus,
+    clearedInvoice: verdict.clearedInvoice,
+    alreadySubmitted: verdict.alreadySubmitted,
+  };
+  // A cleared invoice carries ZATCA's own stamp, and its QR is the one to print.
+  const clearedXml = verdict.clearedInvoice
+    ? Buffer.from(verdict.clearedInvoice, "base64").toString("utf8")
+    : "";
+
+  await updateZatcaArtifactStatus(artifactId, {
+    status: verdict.accepted
+      ? hasWarnings
+        ? "warning"
+        : "accepted"
+      : failureKind === "permanent"
+        ? "rejected"
+        : "pending",
+    technicalStatus,
+    attemptCount: attempt,
+    nextRetryAt:
+      failureKind === "retryable" || failureKind === "blocked"
+        ? new Date(Date.now() + retryBackoffMs(attempt))
+        : null,
+    providerReference: uuid,
+    lastSubmittedAt: new Date(),
+    lastResponse: response,
+    hash: signed.invoiceHash,
+    qr: extractQrFromXml(clearedXml) || signed.qr,
+    payload: { document, signedXml: signed.signedXml },
+    documentType,
+    operation,
+  });
+  await recordAttempt(technicalStatus, verdict.httpStatus, response);
+
+  const result = {
+    ...base,
+    status: technicalStatus,
+    providerReference: uuid,
+    message: verdict.accepted
+      ? "Accepted by ZATCA"
+      : failureKind === "permanent"
+        ? "Rejected by ZATCA"
+        : "ZATCA could not process the document; it stays queued for retry.",
+    ...response,
+  };
+  if (verdict.accepted) {
+    return {
+      result,
+      newChain: {
+        lastHash: signed.invoiceHash,
+        lastUuid: uuid,
+        counter: document.counter,
+        updatedAt: new Date().toISOString(),
+      },
+    };
+  }
+  if (failureKind === "blocked") return { result, halt: "auth" };
+  if (failureKind === "retryable") return { result, halt: "undecided" };
+  // A permanently rejected document never entered the chain; the next one
+  // legitimately takes its position.
+  return { result };
 }

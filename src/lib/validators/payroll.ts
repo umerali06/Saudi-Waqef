@@ -11,11 +11,16 @@ export const payrollSettingsSchema = z.object({
   gosiEnabled: z.boolean().optional(),
   gosiEmployeeRate: z.number().min(0).max(100).optional(),
   gosiEmployerRate: z.number().min(0).max(100).optional(),
+  gosiNonSaudiEmployerRate: z.number().min(0).max(100).optional(),
+  gosiMinBase: z.number().min(0).max(1000000).optional(),
+  gosiMaxBase: z.number().min(0).max(1000000).optional(),
   incomeTaxEnabled: z.boolean().optional(),
   incomeTaxRate: z.number().min(0).max(100).optional(),
   salaryExpenseAccountId: z.string().optional().nullable(),
   payrollPayableAccountId: z.string().optional().nullable(),
   salaryDeductionsAccountId: z.string().optional().nullable(),
+  gosiExpenseAccountId: z.string().optional().nullable(),
+  gosiPayableAccountId: z.string().optional().nullable(),
   paymentAccountId: z.string().optional().nullable(),
 });
 

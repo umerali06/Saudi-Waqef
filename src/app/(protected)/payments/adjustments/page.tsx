@@ -39,6 +39,10 @@ const mapAdjustmentError = (error?: string) => {
       return "adjustment.invalidAccount";
     case "Invalid offset account":
       return "adjustment.invalidOffset";
+    case "PERIOD_CLOSED":
+      return "error.periodClosed";
+    case "DUPLICATE_REQUEST":
+      return "error.duplicateRequest";
     default:
       return "error.saveFailed";
   }
@@ -60,6 +64,7 @@ export default function AdjustmentsPage() {
   const [reason, setReason] = useState("");
   const [memo, setMemo] = useState("");
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [isPending, startTransition] = useTransition();
 
   const activeAccounts = useMemo(
@@ -151,6 +156,7 @@ export default function AdjustmentsPage() {
           amount: numericAmount,
           reason: reason || null,
           memo: memo || null,
+          requestId,
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -158,6 +164,7 @@ export default function AdjustmentsPage() {
         setErrorKey(mapAdjustmentError(data?.error));
         return;
       }
+      setRequestId(crypto.randomUUID());
       setAmount("");
       setReason("");
       setMemo("");

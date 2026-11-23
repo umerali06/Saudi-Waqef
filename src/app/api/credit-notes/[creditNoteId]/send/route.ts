@@ -3,7 +3,9 @@ import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
 import { getSalesCreditNoteById } from "@/lib/data/credit-notes";
 import { getCustomerById } from "@/lib/data/customers";
-import { queueEmailWithDispatch } from "@/lib/email/queue";
+import { getCompanyById } from "@/lib/data/companies";
+import { renderDocumentEmail } from "@/lib/email/documents";
+import { sendDocumentEmail } from "@/lib/email/queue";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 
 export const runtime = "nodejs";
@@ -38,17 +40,38 @@ export async function POST(_: Request, context: RouteContext) {
     return NextResponse.json({ error: "Customer email missing" }, { status: 400 });
   }
 
-  const subject = `Credit note ${note.creditNumber}`;
-  const body = `<p>Your credit note ${note.creditNumber} is available.</p><p>Total: ${note.total} ${note.currency}</p>`;
-
-  await queueEmailWithDispatch({
+  if (note.status !== "issued") {
+    return NextResponse.json({ error: "Note must be issued" }, { status: 400 });
+  }
+  const company = await getCompanyById(note.companyId);
+  const seller = {
+    name: company?.legalName || company?.name || "",
+    vatNumber: company?.vatNumber ?? null,
+  };
+  const locale = company?.defaultLanguage ?? "ar";
+  const sent = await sendDocumentEmail({
     companyId: note.companyId,
     to: customer.email,
-    subject,
-    body,
+    subject:
+      locale === "ar"
+        ? `إشعار دائن رقم ${note.creditNumber} - ${seller.name}`
+        : `Credit note ${note.creditNumber} - ${seller.name}`,
+    body: renderDocumentEmail({
+      kind: "credit",
+      locale,
+      number: note.creditNumber,
+      issueDate: note.issueDate,
+      total: note.total,
+      currency: note.currency || "SAR",
+      seller,
+    }),
     sourceType: "credit_note",
     sourceId: note.id,
+    meta: { fromName: seller.name, replyTo: user.email ?? null },
   });
+  if (!sent.ok) {
+    return NextResponse.json({ error: "EMAIL_FAILED" }, { status: 502 });
+  }
 
   await recordAuditEvent({
     companyId: note.companyId,

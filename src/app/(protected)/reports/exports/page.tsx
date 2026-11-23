@@ -244,7 +244,7 @@ export default function ReportsExportCenterPage() {
     }
 
     setErrorKey(null);
-    const params = new URLSearchParams({ companyId: activeCompanyId, format });
+    const params = new URLSearchParams({ companyId: activeCompanyId, format, locale });
 
     let endpoint = "";
     if (reportType === "profit-loss") {
@@ -300,6 +300,7 @@ export default function ReportsExportCenterPage() {
     const params = new URLSearchParams({
       companyId: activeCompanyId,
       format: exportItem.format,
+      locale,
     });
     const getFilter = (key: string) => {
       const value = filters[key];

@@ -28,6 +28,7 @@ type JournalEntry = {
   status: "draft" | "posted" | "void";
   sourceType: string;
   isAdjusting?: boolean;
+  reversedAt?: string | null;
   totalDebit: number;
   totalCredit: number;
   lines: { accountId: string; debit: number; credit: number }[];
@@ -61,7 +62,7 @@ export default function JournalEntriesPage() {
   );
 
   const formatAmount = (value: number) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
@@ -184,10 +185,10 @@ export default function JournalEntriesPage() {
         return "journal.errors.invalidLine";
       case "Invalid account":
         return "journal.errors.invalidAccount";
-      case "Accounting period is closed":
+      case "PERIOD_CLOSED":
         return "journal.errors.closedPeriod";
-      case "Posting period is locked":
-        return "journal.errors.lockedPeriod";
+      case "Entry already reversed":
+        return "journal.errors.alreadyReversed";
       case "Entry is not editable":
         return "journal.errors.notEditable";
       case "Posted entries cannot be voided":
@@ -615,7 +616,9 @@ export default function JournalEntriesPage() {
                             </button>
                           </>
                         ) : null}
-                        {entry.sourceType === "manual" && entry.status === "posted" ? (
+                        {entry.sourceType === "manual" &&
+                        entry.status === "posted" &&
+                        !entry.reversedAt ? (
                           <button
                             type="button"
                             className="font-semibold text-primary"

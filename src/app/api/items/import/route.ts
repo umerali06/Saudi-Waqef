@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAccountingAccess, requireCompanyRole } from "@/lib/access";
-import { itemImportSchema, itemSchema } from "@/lib/validators/items";
+import { NUMERIC_UNIT, itemImportSchema, itemSchema } from "@/lib/validators/items";
 import { createItem, listItems } from "@/lib/data/items";
 import { listChartAccounts } from "@/lib/data/chart-accounts";
 import { listTaxCategories } from "@/lib/data/tax-categories";
@@ -146,6 +146,8 @@ type ImportError = {
 const mapIssueToError = (issue: { path: (string | number)[]; message: string }) => {
   const field = typeof issue.path[0] === "string" ? String(issue.path[0]) : undefined;
   switch (issue.message) {
+    case NUMERIC_UNIT:
+      return { field, code: "numeric_unit" };
     case "Pack size required":
       return { field: "packSize", code: "missing_pack_size" };
     case "Pack unit required":

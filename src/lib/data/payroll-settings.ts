@@ -12,11 +12,16 @@ export type PayrollSettings = {
   gosiEnabled: boolean;
   gosiEmployeeRate: number;
   gosiEmployerRate: number;
+  gosiNonSaudiEmployerRate: number;
+  gosiMinBase: number;
+  gosiMaxBase: number;
   incomeTaxEnabled: boolean;
   incomeTaxRate: number;
   salaryExpenseAccountId: string | null;
   payrollPayableAccountId: string | null;
   salaryDeductionsAccountId: string | null;
+  gosiExpenseAccountId: string | null;
+  gosiPayableAccountId: string | null;
   paymentAccountId: string | null;
   createdAt: Date;
   updatedAt?: Date;
@@ -31,13 +36,19 @@ const DEFAULT_SETTINGS: PayrollSettings = {
   eosbEnabled: true,
   eosbWageBasis: "actual",
   gosiEnabled: false,
-  gosiEmployeeRate: 0,
-  gosiEmployerRate: 0,
+  // Saudi: 9% annuities + 0.75% SANED (employee); plus 2% occupational hazards (employer).
+  gosiEmployeeRate: 9.75,
+  gosiEmployerRate: 11.75,
+  gosiNonSaudiEmployerRate: 2,
+  gosiMinBase: 1500,
+  gosiMaxBase: 45000,
   incomeTaxEnabled: false,
   incomeTaxRate: 0,
   salaryExpenseAccountId: null,
   payrollPayableAccountId: null,
   salaryDeductionsAccountId: null,
+  gosiExpenseAccountId: null,
+  gosiPayableAccountId: null,
   paymentAccountId: null,
   createdAt: new Date(),
 };
@@ -58,13 +69,19 @@ export async function getPayrollSettings(companyId: string) {
     eosbEnabled: data.eosbEnabled ?? true,
     eosbWageBasis: (data.eosbWageBasis ?? "actual") as "actual" | "basic",
     gosiEnabled: data.gosiEnabled ?? false,
-    gosiEmployeeRate: data.gosiEmployeeRate ?? 0,
-    gosiEmployerRate: data.gosiEmployerRate ?? 0,
+    gosiEmployeeRate: data.gosiEmployeeRate ?? DEFAULT_SETTINGS.gosiEmployeeRate,
+    gosiEmployerRate: data.gosiEmployerRate ?? DEFAULT_SETTINGS.gosiEmployerRate,
+    gosiNonSaudiEmployerRate:
+      data.gosiNonSaudiEmployerRate ?? DEFAULT_SETTINGS.gosiNonSaudiEmployerRate,
+    gosiMinBase: data.gosiMinBase ?? DEFAULT_SETTINGS.gosiMinBase,
+    gosiMaxBase: data.gosiMaxBase ?? DEFAULT_SETTINGS.gosiMaxBase,
     incomeTaxEnabled: data.incomeTaxEnabled ?? false,
     incomeTaxRate: data.incomeTaxRate ?? 0,
     salaryExpenseAccountId: data.salaryExpenseAccountId ?? null,
     payrollPayableAccountId: data.payrollPayableAccountId ?? null,
     salaryDeductionsAccountId: data.salaryDeductionsAccountId ?? null,
+    gosiExpenseAccountId: data.gosiExpenseAccountId ?? null,
+    gosiPayableAccountId: data.gosiPayableAccountId ?? null,
     paymentAccountId: data.paymentAccountId ?? null,
     createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
     updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : undefined,

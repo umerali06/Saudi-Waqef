@@ -1,54 +1,48 @@
-import {
-  ZatcaApiClient,
-  ZatcaError,
-  ZatcaErrorCode,
-  extractCertificateSignature,
-  extractRawPublicKey,
-  generateCSR,
-  generateInvoiceXml,
-  generatePhase2TLV,
-  parseCertificate,
-  signInvoice,
-} from "@talha7k/zatca";
+import { asCertificatePem, generateCsr, parseCertificate } from "@/lib/integrations/zatca/certificate";
 import { getCompanyById } from "@/lib/data/companies";
 import { getIntegrationById, updateIntegration, type IntegrationRecord } from "@/lib/data/integrations";
 import { getSalesInvoiceById } from "@/lib/data/sales-invoices";
-import { executeZatcaSubmission, mapSalesInvoiceToZatca } from "@/lib/integrations/zatca/service";
-import { assertZatcaCompanyReady, buildZatcaSupplierAddress, buildZatcaSupplierInfo } from "@/lib/integrations/zatca/company-info";
+import { ZatcaApi, type ZatcaAlert } from "@/lib/integrations/zatca/api";
 import {
-  GATING_SCENARIOS,
-  COMPLIANCE_SCENARIOS,
+  executeZatcaSubmission,
+  mapSalesInvoiceToZatca,
+  resolveZatcaCredentials,
+} from "@/lib/integrations/zatca/service";
+import {
+  assertZatcaCompanyReady,
+  buildZatcaSupplierAddress,
+  buildZatcaSupplierInfo,
+} from "@/lib/integrations/zatca/company-info";
+import {
   buildAndSignComplianceScenario,
+  complianceScenariosFor,
+  type ComplianceScenarioId,
 } from "@/lib/integrations/zatca/compliance-scenarios";
+import { signZatcaDocument, toSubmissionBody, type ZatcaSupplier } from "@/lib/integrations/zatca/document";
+import { mergedZatcaConfig } from "@/lib/integrations/zatca/mapping";
 
 const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
-export const certificatePemFromToken = (token: string) => {
-  if (token.includes("BEGIN CERTIFICATE")) {
-    return token;
-  }
-  const normalized = token.replace(/\s/g, "");
-  return `-----BEGIN CERTIFICATE-----\n${normalized.match(/.{1,64}/g)?.join("\n") ?? normalized}\n-----END CERTIFICATE-----`;
-};
-
-/** Certificate expiry for audit metadata; never throws on a malformed PEM. */
-const certificateExpiryOf = (pem: string): string | null => {
-  if (!pem) return null;
+/** Certificate expiry for audit metadata; never throws on a malformed certificate. */
+const certificateExpiryOf = (certificate: string): string | null => {
+  if (!certificate) return null;
   try {
-    const info = parseCertificate(pem);
-    return info.validTo ? new Date(info.validTo).toISOString() : null;
+    const info = parseCertificate(certificate);
+    return info.validTo;
   } catch {
     return null;
   }
 };
 
-const mergedZatcaConfig = (integration: IntegrationRecord) => {
-  const rootConfig = integration.config ?? {};
-  return rootConfig.mapping &&
-    typeof rootConfig.mapping === "object" &&
-    !Array.isArray(rootConfig.mapping)
-    ? { ...rootConfig, ...(rootConfig.mapping as Record<string, unknown>) }
-    : rootConfig;
+const invoiceTypeOf = (config: Record<string, unknown>) => {
+  const value = text(config.invoiceType);
+  return /^[01]{2}00$/.test(value) && value !== "0000" ? value : "1100";
+};
+
+/** ZATCA requires the EGS serial in the form 1-manufacturer|2-model|3-serial. */
+const egsSerialOf = (config: Record<string, unknown>, integrationId: string) => {
+  const value = text(config.egsSerialNumber);
+  return /^1-.+\|2-.+\|3-.+$/.test(value) ? value : `1-SaudiWaqef|2-1.0|3-${integrationId}`;
 };
 
 export async function getZatcaIntegrationForCompany(params: {
@@ -66,155 +60,156 @@ export async function getZatcaIntegrationForCompany(params: {
   return integration;
 }
 
+async function prepareCsr(integration: IntegrationRecord) {
+  const company = await getCompanyById(integration.companyId);
+  if (!company) throw new Error("Company not found.");
+  const config = mergedZatcaConfig(integration);
+  assertZatcaCompanyReady(company, config);
+  const address = buildZatcaSupplierAddress(company, config);
+  const egsSerialNumber = egsSerialOf(config, integration.id);
+  const vatNumber = company.vatNumber.trim();
+  const csr = generateCsr(
+    {
+      organizationName: company.legalName,
+      // A VAT group (11th digit 1) must name the member's 10-digit TIN here.
+      organizationalUnit: text(config.organizationUnit) || company.legalName,
+      commonName: `EGS-${vatNumber}-${integration.id.slice(0, 8)}`,
+      vatNumber,
+      invoiceType: invoiceTypeOf(config),
+      registeredAddress: `${address.building} ${address.street}, ${address.district}, ${address.city} ${address.postalCode}`,
+      businessCategory: text(config.businessCategory) || "Services",
+      egsSerialNumber,
+    },
+    integration.environment
+  );
+  return { company, config, csr, egsSerialNumber };
+}
+
+export type ComplianceCheck = {
+  scenarioId: ComplianceScenarioId;
+  gating: true;
+  valid: boolean;
+  messages: string[];
+};
+
+async function runComplianceChecks(params: {
+  api: ZatcaApi;
+  supplier: ZatcaSupplier;
+  config: Record<string, unknown>;
+  privateKeyPem: string;
+  complianceToken: string;
+  complianceSecret: string;
+}): Promise<ComplianceCheck[]> {
+  const checks: ComplianceCheck[] = [];
+  for (const scenarioId of complianceScenariosFor(invoiceTypeOf(params.config))) {
+    const signed = buildAndSignComplianceScenario(scenarioId, {
+      supplier: params.supplier,
+      privateKeyPem: params.privateKeyPem,
+      certificate: params.complianceToken,
+    });
+    const result = await params.api.checkCompliance(
+      { binarySecurityToken: params.complianceToken, secret: params.complianceSecret },
+      toSubmissionBody(signed)
+    );
+    checks.push({
+      scenarioId,
+      gating: true,
+      valid: result.valid,
+      messages: result.alerts.map(
+        (alert: ZatcaAlert) => `${alert.severity.toUpperCase()}: ${alert.message}`
+      ),
+    });
+  }
+  return checks;
+}
+
 export async function requestZatcaComplianceCsid(params: {
   integration: IntegrationRecord;
   otp: string;
 }) {
-  const integration = params.integration;
-  const company = await getCompanyById(integration.companyId);
-  if (!company) throw new Error("Company not found.");
-
-  const config = mergedZatcaConfig(integration);
-  assertZatcaCompanyReady(company, config);
-  const sellerAddress = buildZatcaSupplierAddress(company, config);
-
-  const csr = generateCSR(
-    {
-      organizationNameAr: text(config.sellerNameAr) || company.legalName || company.name,
-      organizationNameEn: company.legalName || company.name,
-      vatNumber: company.vatNumber,
-      crNumber: company.crNumber,
-      country: "SA",
-      commonName: company.legalName || company.name,
-      invoiceType: text(config.invoiceType) || "1100",
-      businessCategory: text(config.businessCategory) || "Accounting",
-      location: {
-        city: sellerAddress.city,
-        district: sellerAddress.district,
-        street: sellerAddress.street,
-        buildingNumber: sellerAddress.building,
-        postalCode: sellerAddress.postalCode,
-      },
-      egsSerialNumber: text(config.egsSerialNumber) || integration.id,
-    },
-    integration.environment
-  );
-
-  const client = new ZatcaApiClient({
-    environment: integration.environment,
-    timeout: 30000,
-  });
-  const result = await client.requestComplianceCSID(csr.csr, params.otp);
-  if (result.status !== "ACCEPTED") {
-    throw new ZatcaError(
-      result.error?.message || "Compliance CSID rejected.",
-      ZatcaErrorCode.API_ERROR,
-      result.error
-    );
+  const { integration } = params;
+  if (integration.config?.onboardingStatus === "production_ready") {
+    // A new CSR would replace the private key the live certificate belongs to.
+    throw new Error("ZATCA_ALREADY_ONBOARDED: renew the certificate instead.");
   }
+  const { company, csr, egsSerialNumber } = await prepareCsr(integration);
+  const api = new ZatcaApi(integration.environment);
+  const issued = await api.issueComplianceCsid(csr.csr, params.otp);
 
-  const credentials = integration.credentials ?? {};
   await updateIntegration(integration.id, {
     credentials: {
-      ...credentials,
+      ...(integration.credentials ?? {}),
       privateKeyPem: csr.privateKey,
       publicKeyPem: csr.publicKey,
-      complianceToken: result.binarySecurityToken,
-      complianceSecret: result.secret,
-      complianceCertificatePem: certificatePemFromToken(result.binarySecurityToken),
-      complianceRequestId: result.requestId,
+      complianceToken: issued.binarySecurityToken,
+      complianceSecret: issued.secret,
+      complianceCertificatePem: asCertificatePem(issued.binarySecurityToken),
+      complianceRequestId: issued.requestId,
     },
     config: {
-      ...(integration.config ?? {}),
       onboardingStatus: "compliance_csid_issued",
       complianceCsidIssuedAt: new Date().toISOString(),
     },
   });
 
   return {
-    status: result.status,
-    requestId: result.requestId,
+    status: "ACCEPTED" as const,
+    requestId: issued.requestId,
     onboardingStatus: "compliance_csid_issued",
     csr: {
       commonName: company.legalName || company.name,
       vatNumber: company.vatNumber,
-      egsSerialNumber: text(config.egsSerialNumber) || integration.id,
+      egsSerialNumber,
     },
   };
 }
 
 export async function verifyZatcaCompliance(params: { integration: IntegrationRecord }) {
-  const integration = params.integration;
+  const { integration } = params;
   const company = await getCompanyById(integration.companyId);
-  if (!company) {
-    throw new Error("Company not found.");
-  }
+  if (!company) throw new Error("Company not found.");
 
   const credentials = integration.credentials ?? {};
-  const token = text(credentials.complianceToken);
-  const secret = text(credentials.complianceSecret);
+  const complianceToken = text(credentials.complianceToken);
+  const complianceSecret = text(credentials.complianceSecret);
   const privateKeyPem = text(credentials.privateKeyPem);
-  const cert = text(credentials.complianceCertificatePem) || certificatePemFromToken(token);
-  if (!token || !secret || !privateKeyPem) {
+  if (!complianceToken || !complianceSecret || !privateKeyPem) {
     throw new Error("Request a compliance CSID first.");
   }
 
   const config = mergedZatcaConfig(integration);
-  const supplier = buildZatcaSupplierInfo(company, config);
-  const client = new ZatcaApiClient({
-    environment: integration.environment,
-    timeout: 30000,
+  const checks = await runComplianceChecks({
+    api: new ZatcaApi(integration.environment),
+    supplier: buildZatcaSupplierInfo(company, config),
+    config,
+    privateKeyPem,
+    complianceToken,
+    complianceSecret,
   });
 
-  const checks: Array<{ scenarioId: string; gating: boolean; valid: boolean; messages: string[] }> = [];
-  for (const scenarioId of COMPLIANCE_SCENARIOS) {
-    const scenario = buildAndSignComplianceScenario(scenarioId, {
-      supplier,
-      privateKeyPem,
-      certificatePem: cert,
-    });
-    const verification = await client.verifyCompliance(
-      { binarySecurityToken: token, secret },
-      scenario.invoiceHash,
-      scenario.uuid,
-      Buffer.from(scenario.signedXml).toString("base64")
-    );
-    checks.push({
-      scenarioId,
-      gating: (GATING_SCENARIOS as string[]).includes(scenarioId),
-      ...verification,
-    });
+  const ok = checks.length > 0 && checks.every((check) => check.valid);
+  const now = new Date().toISOString();
+  if (integration.config?.onboardingStatus === "production_ready") {
+    // A re-check of a live integration is informational; it must not undo go-live.
+    await updateIntegration(integration.id, ok ? { config: { complianceVerifiedAt: now } } : {});
+    return { ok, checks, onboardingStatus: "production_ready" };
   }
-
-  const ok = checks.filter((check) => check.gating).every((check) => check.valid);
-  if (ok) {
-    await updateIntegration(integration.id, {
-      config: {
-        ...(integration.config ?? {}),
-        onboardingStatus: "compliance_verified",
-        complianceVerifiedAt: new Date().toISOString(),
-      },
-    });
-  } else {
-    await updateIntegration(integration.id, {
-      config: {
-        ...(integration.config ?? {}),
-        onboardingStatus: "compliance_failed",
-        complianceFailedAt: new Date().toISOString(),
-        complianceFailureDetail: checks.filter((check) => check.gating && !check.valid),
-      },
-    });
-  }
+  await updateIntegration(integration.id, {
+    config: ok
+      ? { onboardingStatus: "compliance_verified", complianceVerifiedAt: now, complianceFailureDetail: null }
+      : {
+          onboardingStatus: "compliance_failed",
+          complianceFailedAt: now,
+          complianceFailureDetail: checks.filter((check) => !check.valid),
+        },
+  });
 
   return { ok, checks, onboardingStatus: ok ? "compliance_verified" : "compliance_failed" };
 }
 
-export async function requestZatcaProductionCsid(params: {
-  integration: IntegrationRecord;
-}) {
-  const integration = params.integration;
-  const config = integration.config ?? {};
-  if (config.onboardingStatus !== "compliance_verified") {
+export async function requestZatcaProductionCsid(params: { integration: IntegrationRecord }) {
+  const { integration } = params;
+  if (integration.config?.onboardingStatus !== "compliance_verified") {
     throw new Error("All compliance checks must pass first.");
   }
 
@@ -226,197 +221,130 @@ export async function requestZatcaProductionCsid(params: {
     throw new Error("Compliance CSID token, secret, and request ID are required.");
   }
 
-  const client = new ZatcaApiClient({
-    environment: integration.environment,
-    timeout: 30000,
-  });
-  const result = await client.requestProductionCSID({ binarySecurityToken: token, secret }, requestId);
-  if (result.status !== "ACCEPTED") {
-    throw new ZatcaError(
-      result.error?.message || "Production CSID rejected.",
-      ZatcaErrorCode.API_ERROR,
-      result.error
-    );
-  }
+  const issued = await new ZatcaApi(integration.environment).issueProductionCsid(
+    { binarySecurityToken: token, secret },
+    requestId
+  );
 
   await updateIntegration(integration.id, {
     credentials: {
       ...credentials,
-      binarySecurityToken: result.binarySecurityToken,
-      secret: result.secret,
-      certificatePem: certificatePemFromToken(result.binarySecurityToken),
+      binarySecurityToken: issued.binarySecurityToken,
+      secret: issued.secret,
+      certificatePem: asCertificatePem(issued.binarySecurityToken),
     },
     config: {
-      ...config,
       onboardingStatus: "production_ready",
       productionCsidIssuedAt: new Date().toISOString(),
     },
     status: "active",
+    lastError: null,
   });
 
   return {
-    status: result.status,
+    status: "ACCEPTED" as const,
     onboardingStatus: "production_ready",
-    requestId: result.requestId,
+    requestId: issued.requestId,
   };
 }
 
-/** Renews a production certificate without mutating the live credential set
- * until the replacement production CSID has been issued successfully. */
+/**
+ * Replaces an expiring production certificate. The live credentials stay
+ * untouched until ZATCA has issued the replacement.
+ */
 export async function renewZatcaCertificate(params: {
   integration: IntegrationRecord;
   otp: string;
 }) {
   const { integration } = params;
-  const company = await getCompanyById(integration.companyId);
-  if (!company) throw new Error("Company not found.");
-  const config = mergedZatcaConfig(integration);
-  assertZatcaCompanyReady(company, config);
-  const address = buildZatcaSupplierAddress(company, config);
-  const csr = generateCSR({
-    organizationNameAr: text(config.sellerNameAr) || company.legalName || company.name,
-    organizationNameEn: company.legalName || company.name,
-    vatNumber: company.vatNumber,
-    crNumber: company.crNumber,
-    country: "SA",
-    commonName: company.legalName || company.name,
-    invoiceType: text(config.invoiceType) || "1100",
-    businessCategory: text(config.businessCategory) || "Accounting",
-    location: { city: address.city, district: address.district, street: address.street, buildingNumber: address.building, postalCode: address.postalCode },
-    egsSerialNumber: text(config.egsSerialNumber) || integration.id,
-  }, integration.environment);
-  const client = new ZatcaApiClient({ environment: integration.environment, timeout: 30000 });
-  const compliance = await client.requestComplianceCSID(csr.csr, params.otp);
-  if (compliance.status !== "ACCEPTED") throw new ZatcaError(compliance.error?.message || "Compliance CSID rejected.", ZatcaErrorCode.API_ERROR, compliance.error);
-  const complianceToken = text(compliance.binarySecurityToken);
-  const complianceSecret = text(compliance.secret);
-  const complianceRequestId = text(compliance.requestId);
-  if (!complianceToken || !complianceSecret || !complianceRequestId) {
-    throw new Error("ZATCA returned an incomplete compliance CSID response.");
-  }
-  const pending = {
+  const { company, config, csr } = await prepareCsr(integration);
+  const api = new ZatcaApi(integration.environment);
+  const compliance = await api.issueComplianceCsid(csr.csr, params.otp);
+  const checks = await runComplianceChecks({
+    api,
+    supplier: buildZatcaSupplierInfo(company, config),
+    config,
     privateKeyPem: csr.privateKey,
-    publicKeyPem: csr.publicKey,
-    complianceToken,
-    complianceSecret,
-    complianceCertificatePem: certificatePemFromToken(complianceToken),
-    complianceRequestId,
-  };
-  const supplier = buildZatcaSupplierInfo(company, config);
-  const checks = [];
-  for (const scenarioId of COMPLIANCE_SCENARIOS) {
-    const scenario = buildAndSignComplianceScenario(scenarioId, { supplier, privateKeyPem: pending.privateKeyPem, certificatePem: pending.complianceCertificatePem });
-    const verification = await client.verifyCompliance({ binarySecurityToken: pending.complianceToken, secret: pending.complianceSecret }, scenario.invoiceHash, scenario.uuid, Buffer.from(scenario.signedXml).toString("base64"));
-    checks.push({ scenarioId, gating: (GATING_SCENARIOS as string[]).includes(scenarioId), ...verification });
-  }
-  if (!checks.filter((check) => check.gating).every((check) => check.valid)) {
+    complianceToken: compliance.binarySecurityToken,
+    complianceSecret: compliance.secret,
+  });
+  if (checks.length === 0 || !checks.every((check) => check.valid)) {
     throw new Error("ZATCA compliance verification failed for the replacement certificate.");
   }
-  const production = await client.requestProductionCSID({ binarySecurityToken: pending.complianceToken, secret: pending.complianceSecret }, pending.complianceRequestId);
-  if (production.status !== "ACCEPTED") throw new ZatcaError(production.error?.message || "Production CSID rejected.", ZatcaErrorCode.API_ERROR, production.error);
-  const productionToken = text(production.binarySecurityToken);
-  const productionSecret = text(production.secret);
-  if (!productionToken || !productionSecret) {
-    throw new Error("ZATCA returned an incomplete production CSID response.");
-  }
-  const previousCredentials = integration.credentials ?? {};
-  const newCertificatePem = certificatePemFromToken(productionToken);
+  const production = await api.issueProductionCsid(compliance, compliance.requestId);
+
+  const previous = integration.credentials ?? {};
   const renewedAt = new Date().toISOString();
   await updateIntegration(integration.id, {
     credentials: {
-      ...previousCredentials,
-      ...pending,
-      binarySecurityToken: productionToken,
-      secret: productionSecret,
-      certificatePem: newCertificatePem,
-      // Keep the superseded credential so a replacement that turns out to be
-      // unusable can be rolled back without a fresh OTP round-trip. Overwritten
-      // by the next renewal, so only one generation is ever retained.
-      previousBinarySecurityToken: text(previousCredentials.binarySecurityToken) || null,
-      previousSecret: text(previousCredentials.secret) || null,
-      previousCertificatePem: text(previousCredentials.certificatePem) || null,
-      previousPrivateKeyPem: text(previousCredentials.privateKeyPem) || null,
+      ...previous,
+      privateKeyPem: csr.privateKey,
+      publicKeyPem: csr.publicKey,
+      complianceToken: compliance.binarySecurityToken,
+      complianceSecret: compliance.secret,
+      complianceCertificatePem: asCertificatePem(compliance.binarySecurityToken),
+      complianceRequestId: compliance.requestId,
+      binarySecurityToken: production.binarySecurityToken,
+      secret: production.secret,
+      certificatePem: asCertificatePem(production.binarySecurityToken),
+      // One superseded generation is kept so an unusable replacement can be
+      // rolled back without a fresh OTP.
+      previousBinarySecurityToken: text(previous.binarySecurityToken) || null,
+      previousSecret: text(previous.secret) || null,
+      previousCertificatePem: text(previous.certificatePem) || null,
+      previousPrivateKeyPem: text(previous.privateKeyPem) || null,
       previousCredentialRetiredAt: renewedAt,
     },
-    config: { ...(integration.config ?? {}), zatcaCertExpiryLastAlertTier: null, certificateRenewedAt: renewedAt, productionCsidIssuedAt: renewedAt },
+    // productionCsidIssuedAt is the go-live date and must survive renewals.
+    config: { zatcaCertExpiryLastAlertTier: null, certificateRenewedAt: renewedAt },
     status: "active",
-    // The integration was likely flagged with ZATCA_CERTIFICATE_EXPIRED; the
-    // replacement credential resolves it, so the stale error must not persist.
     lastError: null,
   });
   return {
-    status: production.status,
+    status: "ACCEPTED" as const,
     requestId: production.requestId,
     renewedAt,
-    previousCertificateExpiry: certificateExpiryOf(text(previousCredentials.certificatePem)),
-    newCertificateExpiry: certificateExpiryOf(newCertificatePem),
+    previousCertificateExpiry: certificateExpiryOf(text(previous.certificatePem)),
+    newCertificateExpiry: certificateExpiryOf(production.binarySecurityToken),
   };
 }
 
+/** Signs an invoice for inspection. Uses the next chain position but files nothing. */
 export async function signZatcaInvoice(params: {
   integration: IntegrationRecord;
   invoiceId: string;
 }) {
-  const integration = params.integration;
+  const { integration } = params;
   const invoice = await getSalesInvoiceById(params.invoiceId);
   if (!invoice || invoice.companyId !== integration.companyId) {
     throw new Error("A valid company invoice is required.");
   }
 
   const credentials = integration.credentials ?? {};
-  const privateKeyPem = text(credentials.privateKeyPem);
-  const certificatePem =
-    text(credentials.certificatePem) ||
-    text(credentials.complianceCertificatePem) ||
-    certificatePemFromToken(text(credentials.binarySecurityToken) || text(credentials.complianceToken));
-  if (!privateKeyPem || !certificatePem) {
+  const resolved = resolveZatcaCredentials(integration);
+  const certificate = resolved.certificate || text(credentials.complianceToken);
+  if (!resolved.privateKeyPem || !certificate) {
     throw new Error("CSID certificate and private key are required before signing.");
   }
 
-  const document = await mapSalesInvoiceToZatca({
-    integration,
-    invoice,
-    chain: { lastHash: "", lastUuid: "", counter: 0, updatedAt: new Date().toISOString() },
-  });
-  const xml = generateInvoiceXml(document);
-  const signed = signInvoice({
-    xml,
-    privateKeyPem,
-    certificatePem,
-    qrData: {
-      sellerName: document.supplier.nameEn,
-      vatNumber: document.supplier.vatNumber,
-      timestamp: `${document.issueDate}T${document.issueTime}Z`,
-      totalWithVat: document.taxInclusiveAmount.toFixed(2),
-      vatTotal: document.taxAmount.toFixed(2),
-      certificateSignature: extractCertificateSignature(certificatePem),
-    },
-  });
-  const qrCodeBase64 = generatePhase2TLV({
-    sellerName: document.supplier.nameEn,
-    vatNumber: document.supplier.vatNumber,
-    timestamp: `${document.issueDate}T${document.issueTime}Z`,
-    totalWithVat: document.taxInclusiveAmount.toFixed(2),
-    vatTotal: document.taxAmount.toFixed(2),
-    invoiceHash: signed.invoiceHash,
-    signatureValue: signed.signatureValue,
-    publicKey: extractRawPublicKey(certificatePem),
-    certificateSignature: extractCertificateSignature(certificatePem),
+  const document = await mapSalesInvoiceToZatca({ integration, invoice, chain: null });
+  const signed = signZatcaDocument({
+    document,
+    privateKeyPem: resolved.privateKeyPem,
+    certificate,
   });
 
   return {
     invoiceId: invoice.id,
     uuid: document.uuid,
-    invoiceType: document.profileId,
+    invoiceType: document.simplified ? "simplified" : "standard",
     invoiceHash: signed.invoiceHash,
-    qrCodeBase64,
+    qrCodeBase64: signed.qr,
     signedXmlBase64: Buffer.from(signed.signedXml).toString("base64"),
     signedXmlPreview: signed.signedXml.slice(0, 2000),
   };
 }
 
-export async function submitZatcaProductionDocuments(params: {
-  integration: IntegrationRecord;
-}) {
+export async function submitZatcaProductionDocuments(params: { integration: IntegrationRecord }) {
   return executeZatcaSubmission(params.integration);
 }

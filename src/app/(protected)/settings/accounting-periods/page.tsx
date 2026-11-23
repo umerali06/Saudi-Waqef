@@ -30,7 +30,7 @@ const EMPTY_PERIOD = {
 };
 
 export default function AccountingPeriodsPage() {
-  const { activeCompanyId } = useCompany();
+  const { activeCompanyId, activeCompany } = useCompany();
   const { t, locale } = useTranslations();
   const { toast } = useToast();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
@@ -52,7 +52,7 @@ export default function AccountingPeriodsPage() {
       if (Number.isNaN(date.getTime())) {
         return value;
       }
-      return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US").format(date);
+      return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US").format(date);
     },
     [locale]
   );
@@ -217,7 +217,11 @@ export default function AccountingPeriodsPage() {
             type="button"
             onClick={handleLockDateSave}
             className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110 disabled:opacity-50"
-            disabled={isPending || isLoading}
+            disabled={
+              isPending ||
+              isLoading ||
+              !["owner", "admin"].includes(activeCompany?.role ?? "")
+            }
           >
             {t("common.save")}
           </button>

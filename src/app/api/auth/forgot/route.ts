@@ -6,11 +6,12 @@ import {
   generateResetToken,
 } from "@/lib/data/password-resets";
 import { queueEmailWithDispatch } from "@/lib/email/queue";
+import { renderEmail } from "@/lib/email/template";
 
 export const runtime = "nodejs";
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email(),
   locale: z.enum(["ar", "en"]).optional(),
 });
 
@@ -37,15 +38,34 @@ export async function POST(request: Request) {
     expiresAt,
   });
 
-  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const baseUrl = (process.env.NEXTAUTH_URL?.trim() || new URL(request.url).origin).replace(/\/+$/, "");
   const resetUrl = `${baseUrl}/reset-password?token=${token}`;
   const locale = parsed.data.locale ?? "ar";
   const subject =
     locale === "ar" ? "إعادة تعيين كلمة المرور" : "Reset your password";
-  const bodyHtml =
+  const bodyHtml = renderEmail(
     locale === "ar"
-      ? `<p>طلبت إعادة تعيين كلمة المرور.</p><p><a href="${resetUrl}">إعادة التعيين الآن</a></p>`
-      : `<p>You requested a password reset.</p><p><a href="${resetUrl}">Reset now</a></p>`;
+      ? {
+          locale,
+          heading: subject,
+          paragraphs: [
+            `مرحبًا ${user.name}،`,
+            `وصلنا طلب لإعادة تعيين كلمة مرور حسابك. الرابط صالح لمدة ${ttlMinutes} دقيقة.`,
+            "إن لم تطلب ذلك فتجاهل هذه الرسالة، وتبقى كلمة مرورك كما هي.",
+          ],
+          action: { label: "إعادة تعيين كلمة المرور", url: resetUrl },
+        }
+      : {
+          locale,
+          heading: subject,
+          paragraphs: [
+            `Hello ${user.name},`,
+            `We received a request to reset the password of your account. The link works for ${ttlMinutes} minutes.`,
+            "If you did not ask for this, ignore this message and your password stays the same.",
+          ],
+          action: { label: "Reset password", url: resetUrl },
+        }
+  );
 
   await queueEmailWithDispatch({
     companyId: "system",

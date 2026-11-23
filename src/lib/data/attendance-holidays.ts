@@ -32,6 +32,14 @@ export async function listAttendanceHolidays(companyId: string) {
   return holidays.sort((a, b) => a.date.localeCompare(b.date));
 }
 
+export async function getAttendanceHoliday(holidayId: string) {
+  const doc = await db.collection("attendance_holidays").doc(holidayId).get();
+  if (!doc.exists) {
+    return null;
+  }
+  return { id: doc.id, companyId: doc.data()!.companyId as string };
+}
+
 export async function createAttendanceHoliday(params: {
   companyId: string;
   name: string;

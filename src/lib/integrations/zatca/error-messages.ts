@@ -1,7 +1,7 @@
 /**
  * Translates ZATCA failures into plain-language buckets for the onboarding
  * wizard's "Connection Failed" state. Deliberately has no dependency on
- * @talha7k/zatca (a Node-only package) so this module is safe to import from
+ * Node-only modules so this module is safe to import from
  * client components — it only pattern-matches on error codes/messages that
  * have already crossed the API boundary as plain JSON/strings.
  */

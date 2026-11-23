@@ -9,12 +9,19 @@ const WINDOW_MINUTES =
 const LOCKOUT_MINUTES =
   Number.parseInt(process.env.AUTH_LOCKOUT_MINUTES ?? "15", 10) || 15;
 
-function loginKey(email: string) {
-  return crypto.createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
+/**
+ * Throttling is per email and address: locking on the email alone would let
+ * anyone who knows a client's email keep that client out of their own account.
+ */
+function loginKey(email: string, ip?: string | null) {
+  return crypto
+    .createHash("sha256")
+    .update(`${email.trim().toLowerCase()}|${ip ?? ""}`)
+    .digest("hex");
 }
 
-export async function getLoginThrottle(email: string) {
-  const ref = db.collection("auth_login_attempts").doc(loginKey(email));
+export async function getLoginThrottle(email: string, ip?: string | null) {
+  const ref = db.collection("auth_login_attempts").doc(loginKey(email, ip));
   const snapshot = await ref.get();
   if (!snapshot.exists) {
     return { locked: false, attempts: 0 };
@@ -35,7 +42,7 @@ export async function registerFailedLogin(params: {
   userId?: string | null;
   reason?: string;
 }) {
-  const ref = db.collection("auth_login_attempts").doc(loginKey(params.email));
+  const ref = db.collection("auth_login_attempts").doc(loginKey(params.email, params.ip));
   const now = Timestamp.now();
   const snapshot = await ref.get();
 
@@ -81,7 +88,15 @@ export async function registerFailedLogin(params: {
   return { count, lockedUntil: lockedUntil?.toDate?.() ?? null };
 }
 
-export async function clearLoginAttempts(email: string) {
-  const ref = db.collection("auth_login_attempts").doc(loginKey(email));
-  await ref.delete();
+export async function clearLoginAttempts(email: string, ip?: string | null) {
+  await db.collection("auth_login_attempts").doc(loginKey(email, ip)).delete();
+}
+
+/** Lifts every lock on an email, e.g. once its owner has reset the password. */
+export async function clearAllLoginAttempts(email: string) {
+  const snapshot = await db
+    .collection("auth_login_attempts")
+    .where("emailLower", "==", email.trim().toLowerCase())
+    .get();
+  await Promise.all(snapshot.docs.map((doc) => doc.ref.delete()));
 }

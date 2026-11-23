@@ -17,7 +17,7 @@ export default async function ProtectedLayout({
 
   const memberships = await listMembershipsByUser(user.id);
   if (memberships.length === 0) {
-    redirect("/setup");
+    redirect("/no-access");
   }
 
   const companies = await listCompaniesForUser(user.id);

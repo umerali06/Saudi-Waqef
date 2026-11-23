@@ -1,6 +1,8 @@
-import { Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase/admin";
+import { isUrgentNotification, notificationUrl } from "@/lib/notifications/links";
+import { sendPush } from "@/lib/notifications/push";
 import type { NotificationType } from "@/lib/notifications/types";
 
 export type NotificationStatus = "unread" | "read";
@@ -37,7 +39,28 @@ export async function createNotification(params: {
     status: "unread",
     createdAt: Timestamp.now(),
   });
+  await bumpNotificationVersion(params.userId);
+  await sendPush(params.userId, {
+    title: params.title,
+    body: params.body,
+    url: notificationUrl(params.type, params.data),
+    tag: id,
+    urgent: isUrgentNotification(params.type),
+  });
   return id;
+}
+
+/** Changes whenever the user's list does; open pages watch it instead of re-reading the list. */
+export async function bumpNotificationVersion(userId: string) {
+  await db
+    .collection("notification_state")
+    .doc(userId)
+    .set({ version: FieldValue.increment(1), updatedAt: Timestamp.now() }, { merge: true });
+}
+
+export async function getNotificationVersion(userId: string) {
+  const doc = await db.collection("notification_state").doc(userId).get();
+  return Number(doc.data()?.version ?? 0);
 }
 
 export async function listNotifications(params: {
@@ -50,7 +73,6 @@ export async function listNotifications(params: {
   const snapshot = await db
     .collection("notifications")
     .where("userId", "==", params.userId)
-    .limit(limit)
     .get();
 
   let notifications = snapshot.docs.map((doc) => {
@@ -78,9 +100,9 @@ export async function listNotifications(params: {
     notifications = notifications.filter((entry) => entry.status === params.status);
   }
 
-  return notifications.sort(
-    (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
-  );
+  return notifications
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .slice(0, limit);
 }
 
 export async function getNotificationById(notificationId: string) {
@@ -103,8 +125,8 @@ export async function getNotificationById(notificationId: string) {
   } as InAppNotification;
 }
 
-export async function markNotificationRead(notificationId: string) {
-  await db.collection("notifications").doc(notificationId).set(
+export async function markNotificationRead(notification: Pick<InAppNotification, "id" | "userId">) {
+  await db.collection("notifications").doc(notification.id).set(
     {
       status: "read",
       readAt: Timestamp.now(),
@@ -112,6 +134,7 @@ export async function markNotificationRead(notificationId: string) {
     },
     { merge: true }
   );
+  await bumpNotificationVersion(notification.userId);
 }
 
 export async function markAllNotificationsRead(params: {
@@ -121,27 +144,24 @@ export async function markAllNotificationsRead(params: {
   const snapshot = await db
     .collection("notifications")
     .where("userId", "==", params.userId)
+    .where("status", "==", "unread")
     .get();
 
-  const batch = db.batch();
-  snapshot.docs.forEach((doc) => {
-    const data = doc.data();
-    if (
-      params.companyId &&
-      data.companyId !== params.companyId &&
-      data.companyId !== null
-    ) {
-      return;
-    }
-    batch.set(
-      doc.ref,
-      {
+  const unread = snapshot.docs.filter((doc) => {
+    const companyId = doc.data().companyId ?? null;
+    return !params.companyId || companyId === params.companyId || companyId === null;
+  });
+  // Firestore allows 500 writes per batch.
+  for (let start = 0; start < unread.length; start += 400) {
+    const batch = db.batch();
+    unread.slice(start, start + 400).forEach((doc) => {
+      batch.update(doc.ref, {
         status: "read",
         readAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
-      },
-      { merge: true }
-    );
-  });
-  await batch.commit();
+      });
+    });
+    await batch.commit();
+  }
+  if (unread.length > 0) await bumpNotificationVersion(params.userId);
 }

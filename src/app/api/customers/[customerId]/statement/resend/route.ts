@@ -4,11 +4,12 @@ import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
 import { getCustomerById } from "@/lib/data/customers";
 import { getOutboxEmail } from "@/lib/data/email-outbox";
-import { queueEmailWithDispatch } from "@/lib/email/queue";
+import { sendStatementEmail } from "@/lib/email/statements";
 import { notifyCompanyRoles } from "@/lib/notifications/service";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const schema = z.object({
   emailId: z.string().min(1),
@@ -53,15 +54,20 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });
   }
 
-  const resendId = await queueEmailWithDispatch({
-    companyId: customer.companyId,
+  const sent = await sendStatementEmail({
+    partyType: "customer",
+    partyId: customerId,
     to: email.to,
-    subject: email.subject,
-    body: email.body,
-    sourceType: "customer_statement",
-    sourceId: customerId,
-    meta: { resendOf: email.id },
+    locale: email.meta?.locale,
+    from: email.meta?.from,
+    until: email.meta?.to,
+    replyTo: user.email ?? null,
+    resendOf: email.id,
   });
+  if (!sent.ok) {
+    return NextResponse.json({ error: "EMAIL_FAILED" }, { status: 502 });
+  }
+  const resendId = sent.id;
 
   await notifyCompanyRoles({
     companyId: customer.companyId,

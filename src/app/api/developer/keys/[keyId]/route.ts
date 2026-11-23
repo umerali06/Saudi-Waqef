@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAdminAccess } from "@/lib/access";
-import { revokeApiKey } from "@/lib/data/api-keys";
+import { listApiKeys, revokeApiKey } from "@/lib/data/api-keys";
 
 export const runtime = "nodejs";
 
@@ -26,6 +26,10 @@ export async function DELETE(
   }
 
   const params = await context.params;
+  const keys = await listApiKeys(companyId);
+  if (!keys.some((key) => key.id === params.keyId)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   await revokeApiKey(params.keyId);
 
   return NextResponse.json({ success: true });

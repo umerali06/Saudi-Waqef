@@ -72,6 +72,8 @@ export async function createIntegrationJob(params: {
   return id;
 }
 
+const STALE_JOB_MS = 15 * 60 * 1000;
+
 export async function getRunningIntegrationJob(params: {
   integrationId: string;
   type: "sync" | "test";
@@ -81,13 +83,28 @@ export async function getRunningIntegrationJob(params: {
     .where("integrationId", "==", params.integrationId)
     .where("type", "==", params.type)
     .where("status", "==", "running")
-    .limit(1)
     .get();
 
-  if (snapshot.empty) {
+  // A serverless instance killed mid-run leaves its job "running" forever,
+  // which would block every later run of the integration.
+  const isStale = (startedAt: Date | null) =>
+    !startedAt || Date.now() - startedAt.getTime() > STALE_JOB_MS;
+  let doc: (typeof snapshot.docs)[number] | null = null;
+  for (const candidate of snapshot.docs) {
+    const value = candidate.data().startedAt ?? candidate.data().createdAt;
+    if (isStale(value?.toDate ? value.toDate() : null)) {
+      await updateIntegrationJob(candidate.id, {
+        status: "failed",
+        lastError: "The job stopped without finishing.",
+        finishedAt: new Date(),
+      });
+    } else {
+      doc = candidate;
+    }
+  }
+  if (!doc) {
     return null;
   }
-  const doc = snapshot.docs[0];
   const data = doc.data();
   return {
     id: doc.id,

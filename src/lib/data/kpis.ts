@@ -42,16 +42,8 @@ export async function getKpiSnapshot() {
     db.collection("payroll_runs").where("createdAt", ">=", sinceTimestamp).get(),
     db.collection("support_tickets").where("createdAt", ">=", sinceTimestamp).get(),
     db.collection("subscriptions").get(),
-    db
-      .collection("telemetry_events")
-      .where("name", "==", "onboarding.started")
-      .where("createdAt", ">=", sinceTimestamp)
-      .get(),
-    db
-      .collection("telemetry_events")
-      .where("name", "==", "onboarding.completed")
-      .where("createdAt", ">=", sinceTimestamp)
-      .get(),
+    db.collection("telemetry_events").where("name", "==", "onboarding.started").get(),
+    db.collection("telemetry_events").where("name", "==", "onboarding.completed").get(),
     listBillingPlans({ includeInactive: true }),
   ]);
 
@@ -93,8 +85,11 @@ export async function getKpiSnapshot() {
 
   const arpu = activeCompanies > 0 ? Number((mrr / activeCompanies).toFixed(2)) : 0;
 
-  const onboardingStarted = onboardingStartSnap.size;
-  const onboardingCompleted = onboardingCompleteSnap.size;
+  // Filtered here because name + createdAt would need a composite index.
+  const countSince = (snapshot: FirebaseFirestore.QuerySnapshot) =>
+    snapshot.docs.filter((doc) => doc.data().createdAt?.toDate?.() >= since).length;
+  const onboardingStarted = countSince(onboardingStartSnap);
+  const onboardingCompleted = countSince(onboardingCompleteSnap);
   const onboardingConversionRate =
     onboardingStarted > 0
       ? Number(((onboardingCompleted / onboardingStarted) * 100).toFixed(1))

@@ -31,6 +31,7 @@ type Employee = {
   iqamaNumber?: string | null;
   passportNumber?: string | null;
   nationality?: string | null;
+  iban?: string | null;
   dob?: string | null;
   gender?: string | null;
   email?: string | null;
@@ -134,6 +135,7 @@ type EmployeeForm = {
   iqamaNumber: string;
   passportNumber: string;
   nationality: string;
+  iban: string;
   dob: string;
   gender: string;
   email: string;
@@ -165,6 +167,8 @@ const mapEmployeeError = (error?: string) => {
       return "hr.employees.invalidManager";
     case "Invalid user":
       return "hr.employees.invalidUser";
+    case "User already linked":
+      return "hr.employees.userAlreadyLinked";
     case "Duplicate employee":
       return "hr.employees.duplicate";
     case "Invalid payload":
@@ -303,6 +307,7 @@ export default function EmployeeDetailPage() {
           iqamaNumber: record.iqamaNumber ?? "",
           passportNumber: record.passportNumber ?? "",
           nationality: record.nationality ?? "",
+          iban: record.iban ?? "",
           dob: record.dob ?? "",
           gender: record.gender ?? "",
           email: record.email ?? "",
@@ -422,6 +427,7 @@ export default function EmployeeDetailPage() {
           iqamaNumber: form.iqamaNumber.trim() || null,
           passportNumber: form.passportNumber.trim() || null,
           nationality: form.nationality.trim() || null,
+          iban: form.iban.trim() || null,
           dob: form.dob || null,
           gender: form.gender || null,
           email: form.email.trim() || null,
@@ -777,6 +783,18 @@ export default function EmployeeDetailPage() {
                   className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                   value={form.nationality}
                   onChange={(event) => updateField("nationality", event.target.value)}
+                />
+              </label>
+              <label className={`text-sm ${alignClass}`}>
+                <span className="mb-1 block text-xs text-muted">{t("hr.employees.iban")}</span>
+                <input
+                  dir="ltr"
+                  placeholder="SA"
+                  pattern="\s*[Ss][Aa](\s*\d){22}\s*"
+                  title={t("hr.employees.ibanHint")}
+                  className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+                  value={form.iban}
+                  onChange={(event) => updateField("iban", event.target.value)}
                 />
               </label>
               <label className={`text-sm ${alignClass}`}>

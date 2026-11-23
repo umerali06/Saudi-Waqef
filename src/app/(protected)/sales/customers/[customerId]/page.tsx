@@ -188,7 +188,7 @@ export default function CustomerDetailPage() {
   );
 
   const formatCurrency = (value: number, currencyCode?: string) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       style: "currency",
       currency: currencyCode || "SAR",
     }).format(value);
@@ -198,7 +198,7 @@ export default function CustomerDetailPage() {
       return "";
     }
     const date = value.includes("T") ? new Date(value) : new Date(`${value}T00:00:00Z`);
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US").format(date);
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US").format(date);
   };
 
   const loadCustomer = useCallback(async () => {
@@ -499,6 +499,7 @@ export default function CustomerDetailPage() {
       .then(async (res) => {
         if (res.ok) {
           setNoticeKey("customers.statementSent");
+          loadStatementHistory();
           return;
         }
         const data = await res.json().catch(() => ({}));
@@ -506,7 +507,10 @@ export default function CustomerDetailPage() {
           setErrorKey("customers.statementEmailMissing");
           return;
         }
-        setErrorKey("error.saveFailed");
+        setErrorKey(
+          data?.error === "EMAIL_FAILED" ? "statement.emailFailed" : "error.saveFailed"
+        );
+        loadStatementHistory();
       })
       .finally(() => setSendingStatement(false));
   };
@@ -534,7 +538,10 @@ export default function CustomerDetailPage() {
           setErrorKey("customers.statementResendInvalid");
           return;
         }
-        setErrorKey("error.saveFailed");
+        setErrorKey(
+          data?.error === "EMAIL_FAILED" ? "statement.emailFailed" : "error.saveFailed"
+        );
+        loadStatementHistory();
       })
       .finally(() => setResendingId(null));
   };
@@ -1039,25 +1046,20 @@ export default function CustomerDetailPage() {
               >
                 {t("customers.statementExportCsv")}
               </a>
-              <Link
-                href={`/sales/customers/${customerId}/statement/print`}
-                className="rounded-2xl border border-border px-3 py-2"
-              >
-                {t("customers.statementExportPdf")}
-              </Link>
-              <button
-                type="button"
-                onClick={() =>
-                  window.open(
-                    `/sales/customers/${customerId}/statement/print?print=1`,
-                    "_blank",
-                    "noopener,noreferrer"
-                  )
-                }
-                className="rounded-2xl border border-border px-3 py-2"
+              <a
+                href={`/api/customers/${customerId}/statement/pdf?locale=${locale}`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-secondary"
               >
                 {t("customers.statementQuickPrint")}
-              </button>
+              </a>
+              <a
+                href={`/api/customers/${customerId}/statement/pdf?locale=${locale}&download=1`}
+                className="btn-secondary"
+              >
+                {t("invoice.downloadPdf")}
+              </a>
               <button
                 type="button"
                 onClick={handleSendStatement}

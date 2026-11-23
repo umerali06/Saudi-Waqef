@@ -15,7 +15,6 @@ export async function listAuditEvents(params: {
   const snapshot = await db
     .collection("audit_logs")
     .where("companyId", "==", params.companyId)
-    .limit(limit)
     .get();
 
   const events = snapshot.docs.map((doc) => {
@@ -73,5 +72,8 @@ export async function listAuditEvents(params: {
     });
   }
 
-  return filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  // The newest entries win; document order is random, so the limit applies after sorting.
+  return filtered
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .slice(0, limit);
 }

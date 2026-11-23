@@ -5,6 +5,7 @@ import { reconciliationMatchSchema } from "@/lib/validators/payments";
 import { listStatementLines, updateStatementLine } from "@/lib/data/bank-statement-lines";
 import { listCashTransactions } from "@/lib/data/cash-transactions";
 import { recordAuditEvent } from "@/lib/data/audit-log";
+import { findStatementMatch } from "@/lib/utils/reconciliation";
 
 export const runtime = "nodejs";
 
@@ -44,14 +45,9 @@ export async function POST(request: Request) {
   let matched = 0;
 
   for (const line of unmatched) {
-    const direction = line.amount >= 0 ? "in" : "out";
-    const amount = Math.abs(line.amount);
-    const match = transactions.find(
-      (tx) =>
-        !usedTransactions.has(tx.id) &&
-        tx.direction === direction &&
-        tx.amount === amount &&
-        tx.date === line.date
+    const match = findStatementMatch(
+      { date: line.date, amount: line.amount },
+      transactions.filter((tx) => !usedTransactions.has(tx.id))
     );
     if (!match) {
       continue;

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAccountingAccess, requireCompanyRole } from "@/lib/access";
-import { itemSchema, itemUpdateSchema } from "@/lib/validators/items";
+import { itemErrorCode, itemSchema, itemUpdateSchema } from "@/lib/validators/items";
 import { getItemById, listItems, updateItem } from "@/lib/data/items";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { normalizeSearch } from "@/lib/utils/search";
@@ -47,7 +47,7 @@ export async function PUT(request: Request, context: RouteContext) {
   const body = await request.json().catch(() => null);
   const parsed = itemUpdateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    return NextResponse.json({ error: itemErrorCode(parsed.error) }, { status: 400 });
   }
 
   const membership = await requireCompanyRole(user.id, current.companyId, [
@@ -66,7 +66,7 @@ export async function PUT(request: Request, context: RouteContext) {
   };
   const mergedValidation = itemSchema.safeParse(merged);
   if (!mergedValidation.success) {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    return NextResponse.json({ error: itemErrorCode(mergedValidation.error) }, { status: 400 });
   }
 
   const existing = await listItems(current.companyId);

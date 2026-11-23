@@ -1,12 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
 import { classifyZatcaFailure, type ZatcaFailureInfo } from "@/lib/integrations/zatca/error-messages";
+import type { ZatcaEnvironment } from "@/lib/integrations/zatca/environment";
 
-const FATOORA_PORTAL_URL = "https://fatoora.zatca.gov.sa/";
+const PORTAL_URLS: Record<ZatcaEnvironment, string> = {
+  sandbox: "https://sandbox.zatca.gov.sa/",
+  simulation: "https://fatoora.zatca.gov.sa/",
+  production: "https://fatoora.zatca.gov.sa/",
+};
+const ENVIRONMENTS: ZatcaEnvironment[] = ["sandbox", "simulation", "production"];
 
 type Integration = {
   id: string;
@@ -14,7 +20,7 @@ type Integration = {
   name: string;
   connector: "zatca" | "gosi" | "mudad" | "custom";
   status: "inactive" | "active" | "error";
-  environment: "sandbox" | "production";
+  environment: ZatcaEnvironment;
   config?: Record<string, unknown>;
   lastError?: string | null;
 };
@@ -50,7 +56,7 @@ type ArtifactRow = {
   customerName?: string;
   status: "pending" | "submitted" | "accepted" | "warning" | "rejected";
   documentType?: "standard" | "simplified";
-  environment?: "sandbox" | "production";
+  environment?: ZatcaEnvironment;
   operation?: "clearance" | "reporting";
   technicalStatus?: string;
   lastResponse?: Record<string, unknown> | null;
@@ -100,7 +106,8 @@ export default function ZatcaWizardPage() {
   const isAdmin = ["owner", "admin"].includes(activeCompany?.role ?? "");
 
   const [company, setCompany] = useState<CompanyDetail | null>(null);
-  const [integration, setIntegration] = useState<Integration | null>(null);
+  const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [environment, setEnvironment] = useState<ZatcaEnvironment | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [otp, setOtp] = useState("");
@@ -112,6 +119,8 @@ export default function ZatcaWizardPage() {
   const [complianceFailures, setComplianceFailures] = useState<string[]>([]);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string; details?: Record<string, unknown> } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitResult, setSubmitResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [showLogs, setShowLogs] = useState(false);
   const [artifacts, setArtifacts] = useState<ArtifactRow[]>([]);
   const [renewOtp, setRenewOtp] = useState("");
@@ -143,13 +152,41 @@ export default function ZatcaWizardPage() {
       fetch(`/api/integrations?companyId=${activeCompanyId}`).then((res) => res.json()).catch(() => null),
     ]);
     setCompany(companyRes?.company ?? null);
-    const found =
-      (integrationsRes?.integrations as Integration[] | undefined)?.find(
-        (item) => item.connector === "zatca"
-      ) ?? null;
-    setIntegration(found);
+    const found = ((integrationsRes?.integrations as Integration[] | undefined) ?? []).filter(
+      (item) => item.connector === "zatca"
+    );
+    setIntegrations(found);
+    // Open on the most advanced environment the company has already set up.
+    setEnvironment(
+      (current) =>
+        current ??
+        [...ENVIRONMENTS].reverse().find((env) => found.some((item) => item.environment === env)) ??
+        "sandbox"
+    );
     setLoading(false);
   }, [activeCompanyId]);
+
+  const integration = useMemo(() => {
+    const matches = integrations.filter((item) => item.environment === environment);
+    return (
+      matches.find((item) => item.config?.onboardingStatus === "production_ready") ??
+      matches[0] ??
+      null
+    );
+  }, [integrations, environment]);
+
+  const switchEnvironment = (next: ZatcaEnvironment) => {
+    setEnvironment(next);
+    setFailedStep(null);
+    setFailureInfo(null);
+    setComplianceFailures([]);
+    setProgress(INITIAL_PROGRESS);
+    setTestResult(null);
+    setSubmitResult(null);
+    setShowLogs(false);
+    setSelectedArtifact(null);
+    autoResumedRef.current = false;
+  };
 
   useEffect(() => {
     load();
@@ -229,8 +266,8 @@ export default function ZatcaWizardPage() {
           setProgress((prev) => ({ ...prev, [stepKey]: "failed" }));
           setFailedStep(stepKey);
           if (stepKey === "compliance" && err && typeof err === "object" && "checks" in (err as Record<string, unknown>)) {
-            const checks = (err as { checks?: Array<{ scenarioId: string; gating: boolean; valid: boolean }> }).checks ?? [];
-            setComplianceFailures(checks.filter((c) => c.gating && !c.valid).map((c) => c.scenarioId));
+            const checks = (err as { checks?: Array<{ scenarioId: string; valid: boolean; messages?: string[] }> }).checks ?? [];
+            setComplianceFailures(checks.filter((c) => !c.valid).map((c) => [c.scenarioId, ...(c.messages ?? [])].join(" - ")));
             setFailureInfo({ bucket: "compliance_failed", messageKey: "integrations.zatca.errors.complianceFailed" });
           } else {
             setFailureInfo(classifyZatcaFailure(err));
@@ -258,7 +295,7 @@ export default function ZatcaWizardPage() {
   }, [integration, onboardingStatus, running, runStep3]);
 
   const handleStart = async () => {
-    if (!activeCompanyId) return;
+    if (!activeCompanyId || !environment) return;
     setCreating(true);
     try {
       const res = await fetch("/api/integrations", {
@@ -266,10 +303,12 @@ export default function ZatcaWizardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           companyId: activeCompanyId,
-          name: "ZATCA e-Invoicing",
+          name: `ZATCA e-Invoicing (${t(`integrations.zatca.environment.${environment}`)})`,
           connector: "zatca",
-          environment: "sandbox",
+          environment,
           status: "inactive",
+          // Seller details entered for one environment carry over to the next.
+          config: integrations[0]?.config ?? {},
         }),
       });
       if (res.ok) {
@@ -319,6 +358,34 @@ export default function ZatcaWizardPage() {
       setTestResult({ ok: false, message: t("integrations.zatca.errors.unavailable") });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleSubmitDocuments = async () => {
+    if (!integration) return;
+    setSubmitting(true);
+    setSubmitResult(null);
+    try {
+      const res = await fetch(`/api/integrations/${integration.id}/sync`, { method: "POST" });
+      const json = await res.json().catch(() => ({}));
+      const rows = (json.results ?? []) as Array<{ status?: string }>;
+      const filed = rows.filter((row) => ["reported", "cleared", "warning"].includes(row.status ?? "")).length;
+      setSubmitResult({
+        ok: Boolean(json.ok),
+        message:
+          !json.ok && rows.length === 0
+            ? t(classifyZatcaFailure(json).messageKey)
+            : t("integrations.zatca.submit.summary", {
+                filed: String(filed),
+                failed: String(rows.length - filed),
+              }),
+      });
+      setShowLogs(true);
+      await load();
+    } catch {
+      setSubmitResult({ ok: false, message: t("integrations.zatca.errors.unavailable") });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -499,6 +566,41 @@ export default function ZatcaWizardPage() {
         </Link>
       </div>
 
+      <div className="grid gap-3 md:grid-cols-3" role="tablist">
+        {ENVIRONMENTS.map((env) => {
+          const ready = integrations.some(
+            (item) => item.environment === env && item.config?.onboardingStatus === "production_ready"
+          );
+          return (
+            <button
+              key={env}
+              type="button"
+              role="tab"
+              aria-selected={environment === env}
+              disabled={running}
+              onClick={() => switchEnvironment(env)}
+              className={`rounded-xl border p-4 transition disabled:opacity-60 ${alignClass} ${
+                environment === env
+                  ? "border-primary bg-surface ring-2 ring-primary/15"
+                  : "border-border bg-surface hover:border-primary/40"
+              }`}
+            >
+              <span className="flex items-center justify-between gap-2 text-sm font-semibold">
+                {t(`integrations.zatca.environment.${env}`)}
+                {ready ? (
+                  <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] text-green-700">
+                    {t("integrations.zatca.connected")}
+                  </span>
+                ) : null}
+              </span>
+              <span className="mt-1 block text-xs text-muted">
+                {t(`integrations.zatca.environmentHint.${env}`)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {step === 1 ? (
         <div className="app-card p-6 card-modern space-y-4">
           <h2 className="text-sm font-semibold">{t("integrations.zatca.wizard.step1.title")}</h2>
@@ -539,7 +641,7 @@ export default function ZatcaWizardPage() {
             ))}
             <label className="grid gap-1 text-xs text-muted"><span>{t("integrations.zatca.sellerAddress.sellerNameAr")}</span><input value={sellerAddress.sellerNameAr} onChange={(event) => setSellerAddress((current) => ({ ...current, sellerNameAr: event.target.value }))} className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-foreground" dir="rtl" /></label>
             <label className="grid gap-1 text-xs text-muted"><span>{t("integrations.zatca.sellerAddress.businessCategory")}</span><input value={sellerAddress.businessCategory} onChange={(event) => setSellerAddress((current) => ({ ...current, businessCategory: event.target.value }))} className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-foreground" /></label>
-            <label className="grid gap-1 text-xs text-muted"><span>{t("integrations.zatca.sellerAddress.invoiceType")}</span><input value={sellerAddress.invoiceType} onChange={(event) => setSellerAddress((current) => ({ ...current, invoiceType: event.target.value }))} className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-foreground" /></label>
+            <label className="grid gap-1 text-xs text-muted"><span>{t("integrations.zatca.sellerAddress.invoiceType")}</span><select value={sellerAddress.invoiceType} onChange={(event) => setSellerAddress((current) => ({ ...current, invoiceType: event.target.value }))} className="rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-foreground"><option value="1100">{t("integrations.zatca.invoiceType.both")}</option><option value="1000">{t("integrations.zatca.invoiceType.standard")}</option><option value="0100">{t("integrations.zatca.invoiceType.simplified")}</option></select></label>
           </div>
           {sellerAddressError ? <p className="text-xs text-red-500">{sellerAddressError}</p> : null}
           {sellerAddressSaved ? <p className="text-xs text-green-600">{t("integrations.zatca.sellerAddress.saved")}</p> : null}
@@ -551,8 +653,13 @@ export default function ZatcaWizardPage() {
         <div className="app-card p-6 card-modern space-y-4">
           <h2 className="text-sm font-semibold">{t("integrations.zatca.wizard.step2.title")}</h2>
           <p className="text-xs text-muted">{t("integrations.zatca.wizard.step2.instructions")}</p>
+          {environment === "sandbox" ? (
+            <p className="rounded-xl bg-surface-muted px-3 py-2 text-xs">
+              {t("integrations.zatca.sandboxOtpHint")}
+            </p>
+          ) : null}
           <a
-            href={FATOORA_PORTAL_URL}
+            href={PORTAL_URLS[environment ?? "sandbox"]}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block rounded-2xl border border-border px-4 py-2 text-xs font-semibold"
@@ -616,7 +723,7 @@ export default function ZatcaWizardPage() {
         <div className="app-card p-6 card-modern space-y-4">
           {onboardingStatus === "production_ready" ? (
             <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-              🟢 {t("integrations.zatca.wizard.step4.statusActive")}
+              {t("integrations.zatca.connected")}
             </span>
           ) : isFailedPersisted || failedStep ? (
             <span className="inline-flex items-center gap-2 rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
@@ -624,7 +731,7 @@ export default function ZatcaWizardPage() {
             </span>
           ) : (
             <span className="inline-flex items-center gap-2 rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
-              🟡 {t("integrations.zatca.wizard.step4.statusTesting")}
+              {t("integrations.zatca.wizard.step4.statusTesting")}
             </span>
           )}
 
@@ -632,7 +739,7 @@ export default function ZatcaWizardPage() {
             <div className="space-y-3">
               {failureInfo ? failureDetails(failureInfo) : <p className="text-sm">{t("integrations.zatca.errors.generic")}</p>}
               {complianceFailures.length > 0 ? (
-                <p className="text-xs text-muted">{complianceFailures.join(", ")}</p>
+                <ul className="list-disc space-y-1 ps-5 text-xs text-muted">{complianceFailures.map((entry) => <li key={entry}>{entry}</li>)}</ul>
               ) : null}
               <button
                 type="button"
@@ -644,6 +751,16 @@ export default function ZatcaWizardPage() {
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-3">
+              {onboardingStatus === "production_ready" ? (
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={handleSubmitDocuments}
+                  className="rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-primary-contrast disabled:opacity-50"
+                >
+                  {submitting ? t("integrations.zatca.submit.running") : t("integrations.zatca.submit.action")}
+                </button>
+              ) : null}
               <button
                 type="button"
                 disabled={testing}
@@ -661,6 +778,12 @@ export default function ZatcaWizardPage() {
               </button>
             </div>
           )}
+
+          {submitResult ? (
+            <p className={`text-xs font-semibold ${submitResult.ok ? "text-green-700" : "text-red-600"}`}>
+              {submitResult.message}
+            </p>
+          ) : null}
 
           {testResult ? (
             <div className="rounded-2xl border border-border bg-surface-muted p-3 text-xs">
@@ -693,7 +816,7 @@ export default function ZatcaWizardPage() {
                 <label className="grid gap-1"><span className="text-muted">{t("integrations.zatca.logs.to")}</span><input type="date" value={logTo} onChange={(e) => setLogTo(e.target.value)} className="rounded-xl border border-border bg-surface p-2" /></label>
                 <select value={logStatus} onChange={(e) => setLogStatus(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">{t("integrations.zatca.logs.allStatuses")}</option><option value="pending">{t("integrations.zatca.status.pending")}</option><option value="submitted">{t("integrations.zatca.status.submitted")}</option><option value="accepted">{t("integrations.zatca.status.accepted")}</option><option value="warning">{t("integrations.zatca.status.warning")}</option><option value="rejected">{t("integrations.zatca.status.rejected")}</option></select>
                 <select value={logType} onChange={(e) => setLogType(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">{t("integrations.zatca.logs.allTypes")}</option><option value="standard">{t("integrations.zatca.logs.types.standard")}</option><option value="simplified">{t("integrations.zatca.logs.types.simplified")}</option></select>
-                <select value={logEnvironment} onChange={(e) => setLogEnvironment(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">{t("integrations.zatca.logs.allEnvironments")}</option><option value="sandbox">{t("integrations.zatca.environment.sandbox")}</option><option value="production">{t("integrations.zatca.environment.production")}</option></select>
+                <select value={logEnvironment} onChange={(e) => setLogEnvironment(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">{t("integrations.zatca.logs.allEnvironments")}</option><option value="sandbox">{t("integrations.zatca.environment.sandbox")}</option><option value="simulation">{t("integrations.zatca.environment.simulation")}</option><option value="production">{t("integrations.zatca.environment.production")}</option></select>
                 <select value={logOperation} onChange={(e) => setLogOperation(e.target.value)} className="rounded-xl border border-border bg-surface p-2"><option value="">{t("integrations.zatca.logs.allOperations")}</option><option value="clearance">{t("integrations.zatca.operation.clearance")}</option><option value="reporting">{t("integrations.zatca.operation.reporting")}</option></select>
                 <input
                   value={logSearch}

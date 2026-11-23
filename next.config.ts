@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // pdfkit reads its data files from disk, so it must not be bundled.
+  serverExternalPackages: ["pdfkit"],
+  outputFileTracingIncludes: {
+    "/api/**": ["./src/lib/pdf/fonts/*.ttf"],
+  },
   images: {
     remotePatterns: [
       {

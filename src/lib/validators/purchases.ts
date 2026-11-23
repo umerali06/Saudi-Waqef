@@ -39,6 +39,8 @@ export const billUpdateSchema = z.object({
 
 export const billPaymentSchema = z.object({
   companyId: z.string().min(1),
+  /** Same value on a retry of the same request, so it is recorded once. */
+  requestId: z.string().uuid().optional(),
   paymentDate: dateSchema,
   amount: z.number().positive(),
   method: z.string().min(1),
@@ -76,7 +78,7 @@ export const vendorCreditNoteSchema = z.object({
   currency: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   reason: z.string().optional().nullable(),
-  status: z.enum(["draft", "issued", "canceled"]).optional(),
+  status: z.enum(["draft", "issued"]).optional(),
   lines: z.array(vendorCreditNoteLineSchema).min(1),
 });
 
@@ -84,6 +86,5 @@ export const vendorCreditNoteUpdateSchema = z.object({
   issueDate: dateSchema.optional(),
   notes: z.string().optional().nullable(),
   reason: z.string().optional().nullable(),
-  status: z.enum(["draft", "issued", "canceled"]).optional(),
   lines: z.array(vendorCreditNoteLineSchema).min(1).optional(),
 });

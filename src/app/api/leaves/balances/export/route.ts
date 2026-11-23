@@ -5,7 +5,9 @@ import { listLeaveTypes } from "@/lib/data/leave-types";
 import { listLeaveRequests } from "@/lib/data/leave-requests";
 import { listLeaveAdjustments } from "@/lib/data/leave-adjustments";
 import { listEmployees, getEmployeeByUserId } from "@/lib/data/employees";
-import { isDateInYear } from "@/lib/utils/leave";
+import { listAttendanceHolidays } from "@/lib/data/attendance-holidays";
+import { computeLeaveBalance } from "@/lib/utils/leave";
+import { riyadhYear } from "@/lib/utils/riyadh";
 import { toCsv } from "@/lib/utils/csv";
 
 export const runtime = "nodejs";
@@ -19,7 +21,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const companyId = searchParams.get("companyId");
   const employeeIdParam = searchParams.get("employeeId");
-  const year = Number(searchParams.get("year") ?? new Date().getFullYear());
+  const year = Number(searchParams.get("year") ?? riyadhYear());
 
   if (!companyId) {
     return NextResponse.json({ error: "companyId is required" }, { status: 400 });
@@ -39,11 +41,12 @@ export async function GET(request: Request) {
     employeeId = employee.id;
   }
 
-  const [types, requests, adjustments, employees] = await Promise.all([
+  const [types, requests, adjustments, employees, holidays] = await Promise.all([
     listLeaveTypes(companyId),
     listLeaveRequests(companyId),
     listLeaveAdjustments(companyId),
     listEmployees(companyId),
+    listAttendanceHolidays(companyId),
   ]);
 
   const activeTypes = types.filter((type) => type.status === "active");
@@ -54,25 +57,19 @@ export async function GET(request: Request) {
   const rows: string[][] = [];
   targetEmployees.forEach((employee) => {
     activeTypes.forEach((type) => {
-      const used = requests
-        .filter(
-          (request) =>
-            request.employeeId === employee.id &&
-            request.leaveTypeId === type.id &&
-            request.status === "approved" &&
-            isDateInYear(request.startDate, year)
-        )
-        .reduce((sum, request) => sum + request.days, 0);
-
-      const adjustmentTotal = adjustments
-        .filter(
-          (adjustment) =>
-            adjustment.employeeId === employee.id && adjustment.leaveTypeId === type.id
-        )
-        .reduce((sum, adjustment) => sum + adjustment.amount, 0);
-
-      const allowance = type.defaultAllowance;
-      const balance = allowance + adjustmentTotal - used;
+      const {
+        allowance,
+        adjustments: adjustmentTotal,
+        used,
+        balance,
+      } = computeLeaveBalance({
+        employeeId: employee.id,
+        leaveType: type,
+        year,
+        requests,
+        adjustments,
+        holidays,
+      });
       rows.push([
         String(year),
         employee.employeeNumber ?? "",

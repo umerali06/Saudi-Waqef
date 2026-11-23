@@ -25,7 +25,9 @@ const alertedRecently = (value: unknown) => {
  */
 export async function checkZatcaIntegrationHealth(integration: IntegrationRecord) {
   const config = integration.config ?? {};
-  const artifacts = await listZatcaArtifactsByCompany(integration.companyId, 500);
+  const artifacts = (await listZatcaArtifactsByCompany(integration.companyId, 500)).filter(
+    (artifact) => (artifact.environment ?? "sandbox") === integration.environment
+  );
   const now = Date.now();
   const fired: string[] = [];
   const configPatch: Record<string, unknown> = {};
@@ -96,7 +98,7 @@ export async function checkZatcaIntegrationHealth(integration: IntegrationRecord
   }
 
   if (Object.keys(configPatch).length) {
-    await updateIntegration(integration.id, { config: { ...config, ...configPatch } });
+    await updateIntegration(integration.id, { config: configPatch });
   }
 
   return { integrationId: integration.id, fired };

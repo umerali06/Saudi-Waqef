@@ -62,9 +62,9 @@ const toDate = (value?: { toDate?: () => Date } | null) =>
 
 const slugify = (value: string) =>
   normalizeSearch(value)
-    .replace(/[^a-z0-9\\s-]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
     .trim()
-    .replace(/\\s+/g, "-")
+    .replace(/\s+/g, "-")
     .slice(0, 80);
 
 const buildSearchTokens = (values: string[]) => {
@@ -73,11 +73,20 @@ const buildSearchTokens = (values: string[]) => {
     .filter(Boolean)
     .forEach((value) => {
       normalizeSearch(value)
-        .split(/\\s+/)
+        .split(/\s+/)
         .filter((token) => token.length > 1)
         .forEach((token) => tokens.add(token));
     });
   return Array.from(tokens).slice(0, 60);
+};
+
+/** Every search word must appear somewhere in the text, so partial words match too. */
+const matchesSearch = (tokens: string[], values: string[]) => {
+  if (tokens.length === 0) {
+    return true;
+  }
+  const haystack = normalizeSearch(values.join(" "));
+  return tokens.every((token) => haystack.includes(token));
 };
 
 const normalizeTags = (tags?: string[] | null) =>
@@ -170,47 +179,45 @@ export async function listKbArticles(params: {
   const limitCount = params.limitCount ?? 50;
   let queryRef: Query = db.collection("kb_articles");
 
+  // One equality filter only; the rest happens in memory so no composite index is needed.
   if (!params.includeDrafts) {
     queryRef = queryRef.where("isPublished", "==", true);
   }
-  if (params.categoryId) {
-    queryRef = queryRef.where("categoryId", "==", params.categoryId);
-  }
 
   const tokens = buildSearchTokens([params.query ?? ""]);
-  if (tokens.length > 0) {
-    queryRef = queryRef.where("searchTokens", "array-contains", tokens[0]);
-  } else {
-    queryRef = queryRef.orderBy("createdAt", "desc");
-  }
-
-  const snapshot = await queryRef.limit(limitCount).get();
-  let articles = snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      categoryId: data.categoryId ?? "",
-      slug: data.slug ?? doc.id,
-      titleAr: data.titleAr ?? "",
-      titleEn: data.titleEn ?? "",
-      summaryAr: data.summaryAr ?? null,
-      summaryEn: data.summaryEn ?? null,
-      contentAr: data.contentAr ?? "",
-      contentEn: data.contentEn ?? "",
-      tags: data.tags ?? [],
-      isPublished: data.isPublished ?? false,
-      publishedAt: data.publishedAt?.toDate ? data.publishedAt.toDate() : null,
-      createdAt: toDate(data.createdAt),
-      updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : undefined,
-      searchTokens: data.searchTokens ?? [],
-    } as KbArticle & { searchTokens: string[] };
-  });
-
-  if (tokens.length > 1) {
-    articles = articles.filter((article) =>
-      tokens.every((token) => (article.searchTokens ?? []).includes(token))
+  const snapshot = await queryRef.get();
+  const articles = snapshot.docs
+    .map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        categoryId: data.categoryId ?? "",
+        slug: data.slug ?? doc.id,
+        titleAr: data.titleAr ?? "",
+        titleEn: data.titleEn ?? "",
+        summaryAr: data.summaryAr ?? null,
+        summaryEn: data.summaryEn ?? null,
+        contentAr: data.contentAr ?? "",
+        contentEn: data.contentEn ?? "",
+        tags: data.tags ?? [],
+        isPublished: data.isPublished ?? false,
+        publishedAt: data.publishedAt?.toDate ? data.publishedAt.toDate() : null,
+        createdAt: toDate(data.createdAt),
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : undefined,
+      } as KbArticle;
+    })
+    .filter((article) => !params.categoryId || article.categoryId === params.categoryId)
+    .filter((article) =>
+      matchesSearch(tokens, [
+        article.titleAr,
+        article.titleEn,
+        article.summaryAr ?? "",
+        article.summaryEn ?? "",
+        article.contentAr,
+        article.contentEn,
+        ...article.tags,
+      ])
     );
-  }
 
   return articles
     .sort((a, b) => {
@@ -218,11 +225,7 @@ export async function listKbArticles(params: {
       const bTime = b.updatedAt?.getTime() ?? b.createdAt.getTime();
       return bTime - aTime;
     })
-    .map((article) => {
-      const trimmed = { ...article } as KbArticle & { searchTokens?: string[] };
-      delete trimmed.searchTokens;
-      return trimmed as KbArticle;
-    });
+    .slice(0, limitCount);
 }
 
 export async function getKbArticleById(articleId: string) {
@@ -366,40 +369,32 @@ export async function updateKbArticle(
 }
 
 export async function listKbGlossaryTerms(params?: { query?: string | null }) {
-  let queryRef: Query = db.collection("kb_glossary");
   const tokens = buildSearchTokens([params?.query ?? ""]);
-  if (tokens.length > 0) {
-    queryRef = queryRef.where("searchTokens", "array-contains", tokens[0]);
-  } else {
-    queryRef = queryRef.orderBy("termEn", "asc");
-  }
-  const snapshot = await queryRef.limit(200).get();
-  const items = snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      termAr: data.termAr ?? "",
-      termEn: data.termEn ?? "",
-      definitionAr: data.definitionAr ?? "",
-      definitionEn: data.definitionEn ?? "",
-      category: data.category ?? null,
-      createdAt: toDate(data.createdAt),
-      updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : undefined,
-      searchTokens: data.searchTokens ?? [],
-    } as KbGlossaryTerm & { searchTokens: string[] };
-  });
-
-  if (tokens.length > 1) {
-    return items.filter((item) =>
-      tokens.every((token) => (item.searchTokens ?? []).includes(token))
-    );
-  }
-
-  return items.map((item) => {
-    const trimmed = { ...item } as KbGlossaryTerm & { searchTokens?: string[] };
-    delete trimmed.searchTokens;
-    return trimmed as KbGlossaryTerm;
-  });
+  const snapshot = await db.collection("kb_glossary").get();
+  return snapshot.docs
+    .map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        termAr: data.termAr ?? "",
+        termEn: data.termEn ?? "",
+        definitionAr: data.definitionAr ?? "",
+        definitionEn: data.definitionEn ?? "",
+        category: data.category ?? null,
+        createdAt: toDate(data.createdAt),
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : undefined,
+      } as KbGlossaryTerm;
+    })
+    .filter((item) =>
+      matchesSearch(tokens, [
+        item.termAr,
+        item.termEn,
+        item.definitionAr,
+        item.definitionEn,
+        item.category ?? "",
+      ])
+    )
+    .sort((a, b) => a.termEn.localeCompare(b.termEn));
 }
 
 export async function createKbGlossaryTerm(params: {

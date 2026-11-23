@@ -10,6 +10,11 @@ type Template = {
 };
 
 export const notificationTemplates: Record<NotificationType, Template> = {
+  platform_event: {
+    title: template("حدث في المنصة", "Platform event"),
+    subject: template("حدث في المنصة", "Platform event"),
+    body: template("{message}", "{message}"),
+  },
   invoice_sent: {
     title: template("تم إرسال الفاتورة", "Invoice sent"),
     subject: template("تم إرسال الفاتورة {invoiceNumber}", "Invoice {invoiceNumber} sent"),
@@ -118,6 +123,19 @@ export const notificationTemplates: Record<NotificationType, Template> = {
     body: template(
       "فشلت عملية دفع اشتراكك. يرجى تحديث طريقة الدفع الخاصة بك.",
       "Your subscription payment failed. Please update your payment method."
+    ),
+  },
+  support_ticket: {
+    title: template("تحديث طلب الدعم", "Support ticket update"),
+    subject: template("تحديث طلب الدعم: {subject}", "Support ticket update: {subject}"),
+    body: template("يوجد تحديث على طلب الدعم: {subject}.", "There is an update on support ticket: {subject}."),
+  },
+  employee_link_request: {
+    title: template("طلب ربط ملف موظف", "Employee record link request"),
+    subject: template("طلب ربط ملف موظف: {userName}", "Employee record link request: {userName}"),
+    body: template(
+      "يطلب {userName} ({userEmail}) ربط حسابه بملفه الوظيفي. افتح الموظفين ثم ملفه واختر حسابه في خانة المستخدم المرتبط.",
+      "{userName} ({userEmail}) asks to have their account linked to their employee record. Open Employees, then their record, and choose their account as the linked user."
     ),
   },
   registration_received: {
@@ -263,6 +281,13 @@ export const templateSamples: Record<NotificationType, Record<string, string>> =
   subscription_payment_failed: {
     invoiceNumber: "INV-SUBS-101",
   },
+  support_ticket: {
+    subject: "استفسار عن فاتورة",
+  },
+  employee_link_request: {
+    userName: "أحمد محمد",
+    userEmail: "ahmad@example.com",
+  },
   registration_received: {
     companyName: "شركة المثال",
     name: "أحمد محمد",
@@ -291,6 +316,7 @@ export const templateSamples: Record<NotificationType, Record<string, string>> =
     pendingCount: "12",
     oldestHours: "36",
   },
+  platform_event: { message: "رسالة تجريبية" },
   zatca_integration_unhealthy: {
     reason: "ZATCA_LOCK_LOST",
   },

@@ -1,9 +1,15 @@
 import { listSalesInvoices } from "@/lib/data/sales-invoices";
 import { listExpenses } from "@/lib/data/expenses";
 import { listCashBankAccounts } from "@/lib/data/cash-bank-accounts";
-import { listCashTransactions } from "@/lib/data/cash-transactions";
+import { listSalesCreditNotes } from "@/lib/data/credit-notes";
+import { listSalesDebitNotes } from "@/lib/data/debit-notes";
+import { listPurchaseBills } from "@/lib/data/purchase-bills";
+import { listVendorCreditNotes } from "@/lib/data/vendor-credit-notes";
+import { listJournalEntries } from "@/lib/data/journal-entries";
 import { getCompanyById } from "@/lib/data/companies";
 import { buildVatSummary } from "@/lib/utils/vat-report";
+import { hasOpeningEntry, OPENING_BALANCE_SOURCE } from "@/lib/utils/financial-statements";
+import { roundMoney } from "@/lib/utils/invoice";
 import { buildHrReport } from "@/lib/reports/hr-reports";
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -54,6 +60,7 @@ const calcTrend = (current: number, previous: number) => {
 };
 
 const SALES_REVENUE_STATUSES = new Set(["approved", "sent", "partially_paid", "paid"]);
+const POSTED_BILL_STATUSES = new Set(["approved", "partially_paid", "paid"]);
 const OPEN_INVOICE_STATUSES = new Set(["approved", "sent", "partially_paid"]);
 
 export type AnalyticsOverview = {
@@ -120,46 +127,72 @@ export async function buildAnalyticsOverview(params: {
   const range = normalizeRange(params.startDate, params.endDate);
   const today = formatDate(new Date());
 
-  const [company, invoices, expenses, cashAccounts] = await Promise.all([
+  const [
+    company,
+    invoices,
+    creditNotes,
+    debitNotes,
+    bills,
+    vendorCreditNotes,
+    expenses,
+    cashAccounts,
+    journalEntries,
+  ] = await Promise.all([
     getCompanyById(params.companyId),
     listSalesInvoices(params.companyId),
+    listSalesCreditNotes(params.companyId),
+    listSalesDebitNotes(params.companyId),
+    listPurchaseBills(params.companyId),
+    listVendorCreditNotes(params.companyId),
     listExpenses(params.companyId),
     listCashBankAccounts(params.companyId),
+    listJournalEntries(params.companyId),
   ]);
 
   const currency = company?.currency ?? "SAR";
 
-  const revenue = invoices
-    .filter(
-      (invoice) =>
-        SALES_REVENUE_STATUSES.has(invoice.status) &&
-        inRange(invoice.invoiceDate, range.startDate, range.endDate)
-    )
-    .reduce((sum, invoice) => sum + invoice.total, 0);
+  const revenueBetween = (start: string, end: string) =>
+    roundMoney(
+      invoices
+        .filter(
+          (invoice) =>
+            SALES_REVENUE_STATUSES.has(invoice.status) &&
+            inRange(invoice.invoiceDate, start, end)
+        )
+        .reduce((sum, invoice) => sum + invoice.subtotal, 0) +
+        debitNotes
+          .filter((note) => note.status === "issued" && inRange(note.issueDate, start, end))
+          .reduce((sum, note) => sum + note.subtotal, 0) -
+        creditNotes
+          .filter((note) => note.status === "issued" && inRange(note.issueDate, start, end))
+          .reduce((sum, note) => sum + note.subtotal, 0)
+    );
+  const expensesBetween = (start: string, end: string) =>
+    roundMoney(
+      expenses
+        .filter(
+          (expense) =>
+            expense.status === "approved" && inRange(expense.expenseDate, start, end)
+        )
+        .reduce((sum, expense) => sum + expense.netAmount, 0) +
+        bills
+          .filter(
+            (bill) =>
+              POSTED_BILL_STATUSES.has(bill.status) && inRange(bill.billDate, start, end)
+          )
+          .reduce((sum, bill) => sum + bill.subtotal, 0) -
+        vendorCreditNotes
+          .filter((note) => note.status === "issued" && inRange(note.issueDate, start, end))
+          .reduce((sum, note) => sum + note.subtotal, 0)
+    );
 
-  const previousRevenue = invoices
-    .filter(
-      (invoice) =>
-        SALES_REVENUE_STATUSES.has(invoice.status) &&
-        inRange(invoice.invoiceDate, range.previousStartDate, range.previousEndDate)
-    )
-    .reduce((sum, invoice) => sum + invoice.total, 0);
-
-  const expenseTotal = expenses
-    .filter(
-      (expense) =>
-        expense.status === "approved" &&
-        inRange(expense.expenseDate, range.startDate, range.endDate)
-    )
-    .reduce((sum, expense) => sum + expense.amount, 0);
-
-  const previousExpenseTotal = expenses
-    .filter(
-      (expense) =>
-        expense.status === "approved" &&
-        inRange(expense.expenseDate, range.previousStartDate, range.previousEndDate)
-    )
-    .reduce((sum, expense) => sum + expense.amount, 0);
+  const revenue = revenueBetween(range.startDate, range.endDate);
+  const previousRevenue = revenueBetween(range.previousStartDate, range.previousEndDate);
+  const expenseTotal = expensesBetween(range.startDate, range.endDate);
+  const previousExpenseTotal = expensesBetween(
+    range.previousStartDate,
+    range.previousEndDate
+  );
 
   const overdueAll = invoices
     .filter(
@@ -199,7 +232,7 @@ export async function buildAnalyticsOverview(params: {
           total: 0,
           invoicesCount: 0,
         };
-      entry.total += invoice.total;
+      entry.total += invoice.subtotal;
       entry.invoicesCount += 1;
       topCustomersMap.set(invoice.customerId, entry);
     });
@@ -226,7 +259,7 @@ export async function buildAnalyticsOverview(params: {
           total: 0,
           count: 0,
         };
-      entry.total += expense.amount;
+      entry.total += expense.netAmount;
       entry.count += 1;
       expenseCategoryMap.set(expense.categoryId, entry);
     });
@@ -235,31 +268,29 @@ export async function buildAnalyticsOverview(params: {
     .sort((a, b) => b.total - a.total)
     .slice(0, 8);
 
-  let cashBalance = 0;
+  // Cash comes from the ledger, so it agrees with the cash flow report.
+  const cashAccountIds = new Set(cashAccounts.map((account) => account.accountId));
+  const openingPosted = hasOpeningEntry(journalEntries);
+  let cashBalance = openingPosted
+    ? 0
+    : cashAccounts.reduce((sum, account) => sum + account.openingBalance, 0);
   let netCashFlow = 0;
-  const transactionGroups = await Promise.all(
-    cashAccounts.map(async (account) => {
-      const transactions = await listCashTransactions(params.companyId, account.id);
-      return { account, transactions };
-    })
-  );
-
-  transactionGroups.forEach(({ account, transactions }) => {
-    const balanceDelta = transactions.reduce((sum, tx) => {
-      const signed = tx.direction === "in" ? tx.amount : -tx.amount;
-      return sum + signed;
-    }, 0);
-    cashBalance += account.openingBalance + balanceDelta;
-
-    const rangeDelta = transactions.reduce((sum, tx) => {
-      if (!inRange(tx.date, range.startDate, range.endDate)) {
-        return sum;
+  journalEntries
+    .filter((entry) => entry.status === "posted")
+    .forEach((entry) => {
+      const delta = entry.lines
+        .filter((line) => cashAccountIds.has(line.accountId))
+        .reduce((sum, line) => sum + line.debit - line.credit, 0);
+      cashBalance += delta;
+      if (
+        entry.sourceType !== OPENING_BALANCE_SOURCE &&
+        inRange(entry.date, range.startDate, range.endDate)
+      ) {
+        netCashFlow += delta;
       }
-      const signed = tx.direction === "in" ? tx.amount : -tx.amount;
-      return sum + signed;
-    }, 0);
-    netCashFlow += rangeDelta;
-  });
+    });
+  cashBalance = roundMoney(cashBalance);
+  netCashFlow = roundMoney(netCashFlow);
 
   const vat = await buildVatSummary({
     companyId: params.companyId,

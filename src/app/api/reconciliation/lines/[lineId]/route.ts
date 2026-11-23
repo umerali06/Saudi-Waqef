@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
-import { getStatementLineById, updateStatementLine } from "@/lib/data/bank-statement-lines";
+import {
+  getStatementLineById,
+  listStatementLines,
+  updateStatementLine,
+} from "@/lib/data/bank-statement-lines";
+import { listCashTransactions } from "@/lib/data/cash-transactions";
+import { sameMovement } from "@/lib/utils/reconciliation";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 
 export const runtime = "nodejs";
@@ -50,6 +56,24 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   if (updates.matchedCashTransactionId !== undefined && !updates.status) {
     updates.status = updates.matchedCashTransactionId ? "matched" : "unmatched";
+  }
+
+  if (updates.matchedCashTransactionId) {
+    const [lines, transactions] = await Promise.all([
+      listStatementLines(line.companyId, line.accountId),
+      listCashTransactions(line.companyId, line.accountId),
+    ]);
+    const transaction = transactions.find(
+      (entry) => entry.id === updates.matchedCashTransactionId
+    );
+    const isTaken = lines.some(
+      (entry) =>
+        entry.id !== lineId &&
+        entry.matchedCashTransactionId === updates.matchedCashTransactionId
+    );
+    if (!transaction || isTaken || !sameMovement(line, transaction)) {
+      return NextResponse.json({ error: "Invalid transaction" }, { status: 400 });
+    }
   }
 
   await updateStatementLine(lineId, updates);

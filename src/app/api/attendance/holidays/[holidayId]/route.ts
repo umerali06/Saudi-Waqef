@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
 import {
+  getAttendanceHoliday,
   updateAttendanceHoliday,
   deleteAttendanceHoliday,
 } from "@/lib/data/attendance-holidays";
@@ -36,7 +37,13 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const { holidayId } = await context.params;
-  await updateAttendanceHoliday(holidayId, parsed.data);
+  const holiday = await getAttendanceHoliday(holidayId);
+  if (!holiday || holiday.companyId !== body.companyId) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  const updates = { ...parsed.data };
+  delete updates.companyId;
+  await updateAttendanceHoliday(holidayId, updates);
   await recordAuditEvent({
     companyId: body.companyId,
     userId: user.id,
@@ -44,7 +51,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     action: "attendance.holiday.update",
     entity: "attendance_holiday",
     entityId: holidayId,
-    metadata: { fields: Object.keys(parsed.data) },
+    metadata: { fields: Object.keys(updates) },
   });
   return NextResponse.json({ ok: true });
 }
@@ -71,6 +78,10 @@ export async function DELETE(request: Request, context: RouteContext) {
   }
 
   const { holidayId } = await context.params;
+  const holiday = await getAttendanceHoliday(holidayId);
+  if (!holiday || holiday.companyId !== companyId) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   await deleteAttendanceHoliday(holidayId);
   await recordAuditEvent({
     companyId,

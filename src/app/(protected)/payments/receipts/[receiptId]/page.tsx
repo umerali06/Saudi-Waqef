@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { useCompany } from "@/components/company-provider";
 import { SkeletonBlock } from "@/components/skeleton";
 import { useTranslations } from "@/i18n/provider";
+import { ApplyCreditPanel } from "@/components/apply-credit-panel";
 
 type ReceiptAllocation = {
   invoiceId: string;
@@ -27,6 +28,7 @@ type ReceiptDetail = {
   totalAmount: number;
   appliedAmount: number;
   unappliedAmount: number;
+  creditOpenItemId?: string | null;
   allocations: ReceiptAllocation[];
 };
 
@@ -56,7 +58,7 @@ export default function ReceiptDetailPage() {
   );
 
   const formatCurrency = (value: number, currency?: string) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       style: "currency",
       currency: currency || "SAR",
     }).format(value);
@@ -72,7 +74,7 @@ export default function ReceiptDetailPage() {
       return "-";
     }
     const date = new Date(value);
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       dateStyle: "medium",
       timeStyle: "short",
     }).format(date);
@@ -167,18 +169,17 @@ export default function ReceiptDetailPage() {
           <p className="text-sm text-muted page-subtitle">{t("receipt.detailsSubtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/payments/receipts/${receipt.id}/print`}
-            className="rounded-2xl border border-border px-3 py-2 text-xs font-semibold"
+          <a
+            href={`/api/payments/receipts/${receipt.id}/pdf`}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-secondary"
           >
             {t("receipt.print")}
-          </Link>
-          <Link
-            href={`/payments/receipts/${receipt.id}/print?print=1`}
-            className="rounded-2xl bg-primary px-3 py-2 text-xs font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
-          >
-            {t("receipt.quickPrint")}
-          </Link>
+          </a>
+          <a href={`/api/payments/receipts/${receipt.id}/pdf?download=1`} className="btn-secondary">
+            {t("invoice.downloadPdf")}
+          </a>
         </div>
       </div>
 
@@ -249,8 +250,8 @@ export default function ReceiptDetailPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {receipt.allocations.map((allocation) => (
-                  <tr key={allocation.invoiceId}>
+                {receipt.allocations.map((allocation, index) => (
+                  <tr key={`${allocation.invoiceId}-${index}`}>
                     <td className="px-4 py-2 font-semibold">
                       <Link
                         href={`/sales/invoices/${allocation.invoiceId}`}
@@ -269,6 +270,18 @@ export default function ReceiptDetailPage() {
           </div>
         )}
       </div>
+
+      {receipt.creditOpenItemId && receipt.unappliedAmount > 0 ? (
+        <ApplyCreditPanel
+          openItemId={receipt.creditOpenItemId}
+          companyId={receipt.companyId}
+          partyType="customer"
+          partyId={receipt.customerId}
+          available={receipt.unappliedAmount}
+          currency={receipt.currency}
+          onApplied={loadReceipt}
+        />
+      ) : null}
     </section>
   );
 }

@@ -3,8 +3,12 @@ import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
 import { buildHrReport } from "@/lib/reports/hr-reports";
 import { recordAuditEvent } from "@/lib/data/audit-log";
+import { hrReportModel } from "@/lib/pdf/financial-reports";
+import { loadReportContext, renderReport } from "@/lib/pdf/report";
+import { pdfResponse } from "@/lib/pdf/respond";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const escapeCsvValue = (value: string) => {
   const needsQuotes = value.includes(",") || value.includes("\"") || value.includes("\n");
@@ -21,50 +25,6 @@ const csvSection = (title: string, headers: string[], rows: string[][]) => {
   });
   lines.push("");
   return lines.join("\n");
-};
-
-const renderPdf = (lines: string[]) => {
-  const escapeText = (value: string) =>
-    value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
-
-  const contentLines: string[] = [];
-  let y = 760;
-  lines.forEach((line) => {
-    contentLines.push(`BT /F1 11 Tf 40 ${y} Td (${escapeText(line)}) Tj ET`);
-    y -= 16;
-  });
-
-  const stream = contentLines.join("\n");
-  const streamLength = Buffer.byteLength(stream, "utf8");
-
-  const objects = [
-    "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n",
-    "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n",
-    "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >> endobj\n",
-    `4 0 obj << /Length ${streamLength} >> stream\n${stream}\nendstream endobj\n`,
-    "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\n",
-  ];
-
-  let offset = 0;
-  const header = "%PDF-1.4\n";
-  offset += header.length;
-  const offsets = [0];
-  const body = objects
-    .map((obj) => {
-      offsets.push(offset);
-      offset += obj.length;
-      return obj;
-    })
-    .join("");
-
-  const xrefStart = header.length + body.length;
-  let xref = "xref\n0 6\n0000000000 65535 f \n";
-  offsets.slice(1).forEach((objOffset) => {
-    xref += `${String(objOffset).padStart(10, "0")} 00000 n \n`;
-  });
-  const trailer = `trailer << /Size 6 /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
-
-  return Buffer.from(header + body + xref + trailer, "utf8");
 };
 
 export async function GET(request: Request) {
@@ -113,24 +73,9 @@ export async function GET(request: Request) {
   });
 
   if (format === "pdf") {
-    const lines = [
-      "HR report summary",
-      `Period: ${report.range.startDate} - ${report.range.endDate}`,
-      "",
-      `Headcount: ${report.kpis.headcount}`,
-      `Active employees: ${report.kpis.activeEmployees}`,
-      `Absenteeism rate: ${(report.kpis.absenteeismRate * 100).toFixed(1)}%`,
-      `Overtime hours: ${report.kpis.overtimeHours.toFixed(2)}`,
-      `Leave days: ${report.kpis.leaveDays.toFixed(1)}`,
-      `Payroll cost: ${report.kpis.payrollCost.toFixed(2)}`,
-    ];
-    const buffer = renderPdf(lines);
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename=\"hr-summary-${report.range.startDate}-${report.range.endDate}.pdf\"`,
-      },
-    });
+    const context = await loadReportContext(request, companyId);
+    const pdf = await renderReport(hrReportModel(context, report));
+    return pdfResponse(pdf, `hr-report-${report.range.startDate}-${report.range.endDate}.pdf`, request);
   }
 
   if (format !== "csv") {

@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     NextResponse.json({
       data: {
         name: "ZATCA Integration Layer",
-        environmentRequiredForTesting: "sandbox",
+        environmentsForTesting: ["sandbox", "simulation"],
         endpoints: {
           status: "GET /api/external/v1/zatca/status?integrationId=<ID>",
           requestComplianceCsid: "POST /api/external/v1/zatca/csid/request",

@@ -28,6 +28,7 @@ type Ticket = {
   priority: (typeof PRIORITY_OPTIONS)[number];
   message: string;
   status: (typeof STATUS_OPTIONS)[number];
+  replies?: Array<{ message: string; createdAt: string }>;
   createdAt: string;
 };
 
@@ -120,7 +121,7 @@ export default function SupportPage() {
   };
 
   const formatDate = (value: string) =>
-    new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US").format(new Date(value));
+    new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US").format(new Date(value));
 
   const filteredTickets = useMemo(() => {
     return tickets.filter((ticket) => {
@@ -364,6 +365,16 @@ export default function SupportPage() {
                       <div className="font-semibold">{ticket.subject}</div>
                       <div className="text-xs text-muted">{ticket.userEmail ?? ""}</div>
                       <div className="mt-1 text-xs text-muted">{ticket.message}</div>
+                      {(ticket.replies ?? []).map((reply, index) => (
+                        <div
+                          key={index}
+                          className="mt-2 rounded-xl bg-surface-muted px-3 py-2 text-xs"
+                        >
+                          <span className="font-semibold">{t("support.reply")}</span>{" "}
+                          <span className="text-muted">{formatDate(reply.createdAt)}</span>
+                          <p className="mt-1 whitespace-pre-wrap">{reply.message}</p>
+                        </div>
+                      ))}
                     </td>
                     <td className="px-4 py-2">{t(`support.category.${ticket.category}`)}</td>
                     <td className="px-4 py-2">{t(`support.priority.${ticket.priority}`)}</td>

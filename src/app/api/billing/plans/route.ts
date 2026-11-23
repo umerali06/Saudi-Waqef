@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAdminAccess } from "@/lib/access";
+import { requireSystemAdmin } from "@/lib/admin/access";
 import { billingPlanSchema } from "@/lib/validators/billing";
 import { createBillingPlan, listBillingPlans, updateBillingPlan } from "@/lib/data/billing-plans";
 
@@ -28,20 +29,15 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const user = await getSessionUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requireSystemAdmin();
+  if (access.response) {
+    return access.response;
   }
 
   const body = await request.json().catch(() => null);
   const parsed = billingPlanSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  }
-
-  const membership = await requireAdminAccess(user.id, parsed.data.companyId);
-  if (!membership) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const planId = await createBillingPlan({

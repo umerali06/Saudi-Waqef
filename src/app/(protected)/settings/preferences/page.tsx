@@ -9,22 +9,14 @@ import { SkeletonBlock } from "@/components/skeleton";
 
 type DateFormat = "yyyy-MM-dd" | "dd/MM/yyyy" | "MM/dd/yyyy";
 
-type TimeFormat = "24h" | "12h";
 
-type RoundingMode = "standard" | "up" | "down";
 
 type PreferenceConfig = {
   dateFormat: DateFormat;
-  timeFormat: TimeFormat;
-  roundingPrecision: number;
-  roundingMode: RoundingMode;
 };
 
 const EMPTY_CONFIG: PreferenceConfig = {
   dateFormat: "yyyy-MM-dd",
-  timeFormat: "24h",
-  roundingPrecision: 2,
-  roundingMode: "standard",
 };
 
 export default function PreferencesPage() {
@@ -54,12 +46,6 @@ export default function PreferencesPage() {
         const cfg = data?.config ?? {};
         const nextConfig = {
           dateFormat: (cfg.dateFormat ?? EMPTY_CONFIG.dateFormat) as DateFormat,
-          timeFormat: (cfg.timeFormat ?? EMPTY_CONFIG.timeFormat) as TimeFormat,
-          roundingPrecision:
-            typeof cfg.roundingPrecision === "number"
-              ? cfg.roundingPrecision
-              : EMPTY_CONFIG.roundingPrecision,
-          roundingMode: (cfg.roundingMode ?? EMPTY_CONFIG.roundingMode) as RoundingMode,
         };
         setConfig(nextConfig);
         setInitialSnapshot(JSON.stringify(nextConfig));
@@ -93,24 +79,6 @@ export default function PreferencesPage() {
       default:
         return `${year}-${month}-${day}`;
     }
-  };
-
-  const formatSampleTime = (format: TimeFormat) => {
-    if (format === "12h") {
-      return locale === "ar" ? "02:30 م" : "2:30 PM";
-    }
-    return "14:30";
-  };
-
-  const roundSample = (value: number) => {
-    const factor = Math.pow(10, config.roundingPrecision);
-    if (config.roundingMode === "up") {
-      return Math.ceil(value * factor) / factor;
-    }
-    if (config.roundingMode === "down") {
-      return Math.floor(value * factor) / factor;
-    }
-    return Math.round(value * factor) / factor;
   };
 
   const handleSave = () => {
@@ -169,82 +137,8 @@ export default function PreferencesPage() {
               {t("preferences.sample")}: {formatSampleDate(config.dateFormat)}
             </p>
           </label>
-          <label className={`text-sm ${alignClass}`}>
-            <span className="mb-1 block text-xs text-muted">
-              {t("preferences.timeFormat")}
-            </span>
-            {isLoading ? (
-              <SkeletonBlock className="h-9 w-full" />
-            ) : (
-              <select
-                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
-                value={config.timeFormat}
-                onChange={(event) =>
-                  setConfig((prev) => ({
-                    ...prev,
-                    timeFormat: event.target.value as TimeFormat,
-                  }))
-                }
-              >
-                <option value="24h">{t("preferences.time24")}</option>
-                <option value="12h">{t("preferences.time12")}</option>
-              </select>
-            )}
-            <p className="mt-1 text-xs text-muted">
-              {t("preferences.sample")}: {formatSampleTime(config.timeFormat)}
-            </p>
-          </label>
-          <label className={`text-sm ${alignClass}`}>
-            <span className="mb-1 block text-xs text-muted">
-              {t("preferences.roundingPrecision")}
-            </span>
-            {isLoading ? (
-              <SkeletonBlock className="h-9 w-full" />
-            ) : (
-              <input
-                type="number"
-                min={0}
-                max={6}
-                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
-                value={config.roundingPrecision}
-                onChange={(event) =>
-                  setConfig((prev) => ({
-                    ...prev,
-                    roundingPrecision: Number(event.target.value),
-                  }))
-                }
-              />
-            )}
-          </label>
-          <label className={`text-sm ${alignClass}`}>
-            <span className="mb-1 block text-xs text-muted">
-              {t("preferences.roundingMode")}
-            </span>
-            {isLoading ? (
-              <SkeletonBlock className="h-9 w-full" />
-            ) : (
-              <select
-                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
-                value={config.roundingMode}
-                onChange={(event) =>
-                  setConfig((prev) => ({
-                    ...prev,
-                    roundingMode: event.target.value as RoundingMode,
-                  }))
-                }
-              >
-                <option value="standard">{t("preferences.rounding.standard")}</option>
-                <option value="up">{t("preferences.rounding.up")}</option>
-                <option value="down">{t("preferences.rounding.down")}</option>
-              </select>
-            )}
-          </label>
         </div>
-        <p className="mt-3 text-xs text-muted">
-          {t("preferences.roundingSample", {
-            value: String(roundSample(1234.5678).toFixed(config.roundingPrecision)),
-          })}
-        </p>
+        <p className="mt-3 text-xs text-muted">{t("preferences.moneyHint")}</p>
         {errorKey ? (
           <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {t(errorKey)}

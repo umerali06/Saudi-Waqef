@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { ZATCA_EXEMPTIONS } from "@/lib/integrations/zatca/exemptions";
 import { useCompany } from "@/components/company-provider";
 import { useUnsavedChanges } from "@/components/unsaved-changes";
 import { useTranslations } from "@/i18n/provider";
@@ -34,6 +35,7 @@ type TaxCategory = {
   name: string;
   rate: number;
   type: "standard" | "zero" | "exempt";
+  exemptionReasonCode?: string | null;
   status: "active" | "inactive";
 };
 
@@ -68,7 +70,7 @@ export default function AccountingDefaultsPage() {
   const [defaults, setDefaults] = useState<CompanyDefaults>(EMPTY_DEFAULTS);
   const [taxCategories, setTaxCategories] = useState<TaxCategory[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([]);
-  const [newTax, setNewTax] = useState({ name: "", rate: 15, type: "standard" });
+  const [newTax, setNewTax] = useState({ name: "", rate: 15, type: "standard", exemptionReasonCode: "" });
   const [newTerm, setNewTerm] = useState({ name: "", days: 30 });
   const [editTaxId, setEditTaxId] = useState<string | null>(null);
   const [editTax, setEditTax] = useState<TaxCategory | null>(null);
@@ -125,12 +127,12 @@ export default function AccountingDefaultsPage() {
         setEditTax(null);
         setEditTermId(null);
         setEditTerm(null);
-        setNewTax({ name: "", rate: 15, type: "standard" });
+        setNewTax({ name: "", rate: 15, type: "standard", exemptionReasonCode: "" });
         setNewTerm({ name: "", days: 30 });
         setInitialSnapshot(
           JSON.stringify({
             defaults: nextDefaults,
-            newTax: { name: "", rate: 15, type: "standard" },
+            newTax: { name: "", rate: 15, type: "standard", exemptionReasonCode: "" },
             newTerm: { name: "", days: 30 },
             editTaxId: null,
             editTax: null,
@@ -221,13 +223,15 @@ export default function AccountingDefaultsPage() {
           name: newTax.name,
           rate: Number(newTax.rate),
           type: newTax.type,
+          exemptionReasonCode:
+            Number(newTax.rate) === 0 ? newTax.exemptionReasonCode || null : null,
         }),
       });
       if (!response.ok) {
         setErrorKey("error.saveFailed");
         return;
       }
-      setNewTax({ name: "", rate: 15, type: "standard" });
+      setNewTax({ name: "", rate: 15, type: "standard", exemptionReasonCode: "" });
       loadData();
       toast(t("common.saved"), "success");
     });
@@ -248,6 +252,8 @@ export default function AccountingDefaultsPage() {
           name: editTax.name,
           rate: Number(editTax.rate),
           type: editTax.type,
+          exemptionReasonCode:
+            Number(editTax.rate) === 0 ? editTax.exemptionReasonCode || null : null,
           status: editTax.status,
         }),
       });
@@ -709,6 +715,24 @@ export default function AccountingDefaultsPage() {
               <option value="exempt">{t("tax.type.exempt")}</option>
             </select>
           </label>
+          {Number(newTax.rate) === 0 ? (
+            <label className={`text-sm md:col-span-3 ${alignClass}`}>
+              <span className="mb-1 block text-xs text-muted">{t("tax.exemptionReason")}</span>
+              <select
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+                value={newTax.exemptionReasonCode ?? ""}
+                onChange={(event) => setNewTax((prev) => ({ ...prev, exemptionReasonCode: event.target.value }))}
+              >
+                <option value="">{t("tax.exemptionReason.none")}</option>
+                {ZATCA_EXEMPTIONS.map((item) => (
+                  <option key={item.code} value={item.code}>
+                    {item.code} - {locale === "ar" ? item.reasonAr : item.reasonEn}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs text-muted">{t("tax.exemptionReason.hint")}</span>
+            </label>
+          ) : null}
         </div>
         {errorKey ? (
           <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
@@ -782,6 +806,24 @@ export default function AccountingDefaultsPage() {
                 <option value="exempt">{t("tax.type.exempt")}</option>
               </select>
             </label>
+          {Number(editTax.rate) === 0 ? (
+            <label className={`text-sm md:col-span-3 ${alignClass}`}>
+              <span className="mb-1 block text-xs text-muted">{t("tax.exemptionReason")}</span>
+              <select
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+                value={editTax.exemptionReasonCode ?? ""}
+                onChange={(event) => setEditTax((prev) => (prev ? { ...prev, exemptionReasonCode: event.target.value } : prev))}
+              >
+                <option value="">{t("tax.exemptionReason.none")}</option>
+                {ZATCA_EXEMPTIONS.map((item) => (
+                  <option key={item.code} value={item.code}>
+                    {item.code} - {locale === "ar" ? item.reasonAr : item.reasonEn}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs text-muted">{t("tax.exemptionReason.hint")}</span>
+            </label>
+          ) : null}
           </div>
           <button
             type="submit"

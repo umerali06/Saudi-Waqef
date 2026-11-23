@@ -26,7 +26,11 @@ export async function listSystemAlerts(params?: {
   limit?: number;
 }) {
   const limit = params?.limit && params.limit > 0 ? params.limit : 200;
-  const snapshot = await db.collection("system_alerts").limit(limit).get();
+  const snapshot = await db
+    .collection("system_alerts")
+    .orderBy("createdAt", "desc")
+    .limit(limit)
+    .get();
   const alerts = snapshot.docs.map((doc) => {
     const data = doc.data();
     return {

@@ -5,6 +5,8 @@ import { listAttendanceRecords } from "@/lib/data/attendance-records";
 import { listLeaveTypes } from "@/lib/data/leave-types";
 import { listLeaveRequests } from "@/lib/data/leave-requests";
 import { listLeaveAdjustments } from "@/lib/data/leave-adjustments";
+import { listAttendanceHolidays } from "@/lib/data/attendance-holidays";
+import { computeLeaveBalance } from "@/lib/utils/leave";
 import { listPayrollRuns } from "@/lib/data/payroll-runs";
 import { listPayrollRunItems } from "@/lib/data/payroll-run-items";
 
@@ -183,6 +185,7 @@ export async function buildHrReport(params: {
     leaveRequests,
     leaveAdjustments,
     payrollRuns,
+    holidays,
   ] = await Promise.all([
     listEmployees(params.companyId),
     listDepartments(params.companyId),
@@ -192,6 +195,7 @@ export async function buildHrReport(params: {
     listLeaveRequests(params.companyId),
     listLeaveAdjustments(params.companyId),
     listPayrollRuns(params.companyId),
+    listAttendanceHolidays(params.companyId),
   ]);
 
   const employees = params.departmentId
@@ -369,7 +373,6 @@ export async function buildHrReport(params: {
   );
 
   const leaveUsageByTypeMap = new Map<string, { leaveTypeId: string; leaveTypeName: string; used: number }>();
-  const leaveUsageByEmployeeType = new Map<string, number>();
 
   approvedLeaveRequests.forEach((request) => {
     const employee = employeeById.get(request.employeeId);
@@ -392,30 +395,19 @@ export async function buildHrReport(params: {
       };
     typeEntry.used += usedDays;
     leaveUsageByTypeMap.set(type.id, typeEntry);
-
-    const key = `${request.employeeId}:${request.leaveTypeId}`;
-    leaveUsageByEmployeeType.set(key, (leaveUsageByEmployeeType.get(key) ?? 0) + usedDays);
-  });
-
-  const leaveAdjustmentsByKey = new Map<string, number>();
-  leaveAdjustments.forEach((adjustment) => {
-    const employee = employeeById.get(adjustment.employeeId);
-    if (!employee) {
-      return;
-    }
-    if (params.departmentId && employee.departmentId !== params.departmentId) {
-      return;
-    }
-    const key = `${adjustment.employeeId}:${adjustment.leaveTypeId}`;
-    leaveAdjustmentsByKey.set(key, (leaveAdjustmentsByKey.get(key) ?? 0) + adjustment.amount);
   });
 
   const leaveBalances = employees.flatMap((employee) =>
     leaveTypes.map((leaveType) => {
-      const key = `${employee.id}:${leaveType.id}`;
-      const adjustments = leaveAdjustmentsByKey.get(key) ?? 0;
-      const used = leaveUsageByEmployeeType.get(key) ?? 0;
-      const allowance = leaveType.defaultAllowance ?? 0;
+      // Balances cover the whole leave year, not only the days inside the report range.
+      const { allowance, adjustments, used, balance } = computeLeaveBalance({
+        employeeId: employee.id,
+        leaveType,
+        year: Number(endDate.slice(0, 4)),
+        requests: leaveRequests,
+        adjustments: leaveAdjustments,
+        holidays,
+      });
       return {
         employeeId: employee.id,
         nameAr: employee.nameAr,
@@ -425,7 +417,7 @@ export async function buildHrReport(params: {
         allowance,
         adjustments,
         used,
-        remaining: allowance + adjustments - used,
+        remaining: balance,
       };
     })
   );

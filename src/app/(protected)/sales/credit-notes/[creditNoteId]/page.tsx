@@ -6,7 +6,8 @@ import { useParams } from "next/navigation";
 import { SkeletonBlock } from "@/components/skeleton";
 import { useTranslations } from "@/i18n/provider";
 import { calculateLineAmounts } from "@/lib/utils/invoice";
-import { getUnitOptions } from "@/lib/utils/units";
+import { formatQuantity, getUnitOptions } from "@/lib/utils/units";
+import { ApplyCreditPanel } from "@/components/apply-credit-panel";
 
 type CreditNoteStatus = "draft" | "issued" | "canceled";
 
@@ -42,6 +43,8 @@ type CreditNote = {
   taxTotal: number;
   total: number;
   refundedAmount?: number;
+  unappliedAmount?: number;
+  creditOpenItemId?: string | null;
   lines: CreditNoteLine[];
 };
 
@@ -83,6 +86,7 @@ type CompanyConfig = {
 
 type CashAccount = {
   id: string;
+  accountId: string;
   name: string;
   currency?: string | null;
 };
@@ -143,6 +147,10 @@ const mapCreditNoteError = (error?: string) => {
       return "creditNote.refundExceeds";
     case "VAT period is filed":
       return "vat.periodLocked";
+    case "DUPLICATE_REQUEST":
+      return "error.duplicateRequest";
+    case "PERIOD_CLOSED":
+      return "error.periodClosed";
     default:
       return "error.saveFailed";
   }
@@ -173,6 +181,7 @@ export default function CreditNoteDetailPage() {
   const [refundDate, setRefundDate] = useState("");
   const [refundAccountId, setRefundAccountId] = useState("");
   const [refundReference, setRefundReference] = useState("");
+  const [refundRequestId, setRefundRequestId] = useState(() => crypto.randomUUID());
   const [isPending, startTransition] = useTransition();
 
   const itemMap = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
@@ -182,7 +191,7 @@ export default function CreditNoteDetailPage() {
   );
 
   const formatCurrency = (value: number, currency?: string) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       style: "currency",
       currency: currency || note?.currency || "SAR",
     }).format(value);
@@ -192,7 +201,7 @@ export default function CreditNoteDetailPage() {
       return "-";
     }
     const date = new Date(`${value}T00:00:00Z`);
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US").format(date);
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US").format(date);
   };
 
   const loadNote = useCallback(async () => {
@@ -465,7 +474,8 @@ export default function CreditNoteDetailPage() {
         method: "POST",
       });
       if (!response.ok) {
-        setErrorKey("error.saveFailed");
+        const data = await response.json().catch(() => ({}));
+        setErrorKey(data?.error === "EMAIL_FAILED" ? "invoice.emailFailed" : "error.saveFailed");
         return;
       }
       setNoticeKey("creditNote.sent");
@@ -493,6 +503,7 @@ export default function CreditNoteDetailPage() {
           amount,
           accountId: refundAccountId,
           reference: refundReference || null,
+          requestId: refundRequestId,
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -500,6 +511,7 @@ export default function CreditNoteDetailPage() {
         setErrorKey(mapCreditNoteError(data?.error));
         return;
       }
+      setRefundRequestId(crypto.randomUUID());
       setRefundAmount("");
       setRefundDate("");
       setRefundAccountId("");
@@ -594,6 +606,15 @@ export default function CreditNoteDetailPage() {
             {t("creditNote.title")}
           </Link>
           {!isDraft ? (
+            <>
+              <a
+              href={`/api/credit-notes/${creditNoteId}/pdf`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-secondary"
+            >
+              {t("invoice.print")}
+            </a>
             <button
               type="button"
               onClick={handleSend}
@@ -602,6 +623,7 @@ export default function CreditNoteDetailPage() {
             >
               {t("creditNote.send")}
             </button>
+            </>
           ) : null}
           {isDraft ? (
             <>
@@ -701,15 +723,25 @@ export default function CreditNoteDetailPage() {
         )}
       </div>
 
-      {!isDraft ? (
+      {note.status === "issued" && note.creditOpenItemId && (note.unappliedAmount ?? 0) > 0 ? (
+        <ApplyCreditPanel
+          openItemId={note.creditOpenItemId}
+          companyId={note.companyId}
+          partyType="customer"
+          partyId={note.customerId}
+          available={note.unappliedAmount ?? 0}
+          currency={note.currency}
+          onApplied={loadNote}
+        />
+      ) : null}
+
+      {note.status === "issued" ? (
         <div className="app-card p-6 card-modern">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">{t("creditNote.refundTitle")}</h2>
             <span className="text-xs text-muted">
               {t("creditNote.refundAvailable", {
-                amount: String(
-                  Math.max((note.total ?? 0) - (note.refundedAmount ?? 0), 0)
-                ),
+                amount: formatCurrency(note.unappliedAmount ?? 0, note.currency),
               })}
             </span>
           </div>
@@ -743,7 +775,7 @@ export default function CreditNoteDetailPage() {
               >
                 <option value="">{t("common.select")}</option>
                 {cashAccounts.map((account) => (
-                  <option key={account.id} value={account.id}>
+                  <option key={account.id} value={account.accountId}>
                     {account.name}
                   </option>
                 ))}
@@ -796,7 +828,7 @@ export default function CreditNoteDetailPage() {
                           {formatCurrency(refund.amount, note?.currency)}
                         </td>
                         <td className="px-3 py-2">
-                          {cashAccounts.find((account) => account.id === refund.accountId)
+                          {cashAccounts.find((account) => account.accountId === refund.accountId)
                             ?.name ?? "-"}
                         </td>
                         <td className="px-3 py-2">{refund.reference || "-"}</td>
@@ -957,7 +989,7 @@ export default function CreditNoteDetailPage() {
                   <tr key={line.id}>
                     <td className="px-3 py-2">{line.description}</td>
                     <td className="px-3 py-2">
-                      {line.quantity} {line.unit}
+                      {formatQuantity(line.quantity, line.unit)}
                     </td>
                     <td className="px-3 py-2">{formatCurrency(line.unitPrice)}</td>
                     <td className="px-3 py-2">{formatCurrency(line.totalAmount)}</td>

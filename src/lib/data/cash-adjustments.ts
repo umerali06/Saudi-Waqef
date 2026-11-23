@@ -1,7 +1,8 @@
-import { Timestamp } from "firebase-admin/firestore";
+import { Timestamp, type DocumentSnapshot, type Transaction } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase/admin";
-import { buildSequenceNumber } from "@/lib/utils/numbering";
+import { nextDocumentNumber } from "@/lib/data/numbering";
+import { readDoc } from "@/lib/firebase/documents";
 import { normalizeSearch } from "@/lib/utils/search";
 
 export type CashAdjustmentType = "increase" | "decrease";
@@ -21,45 +22,7 @@ export type CashAdjustment = {
   createdAt: Date;
 };
 
-const DEFAULT_CONFIG = {
-  adjustmentPrefix: "ADJ-",
-  adjustmentSuffix: "",
-  adjustmentNextNumber: 1,
-  adjustmentPadding: 0,
-  adjustmentResetYearly: false,
-  adjustmentLastResetYear: null as number | null,
-};
-
-export async function listCashAdjustments(companyId: string) {
-  const snapshot = await db
-    .collection("cash_adjustments")
-    .where("companyId", "==", companyId)
-    .get();
-
-  return snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      companyId: data.companyId,
-      adjustmentNumber: data.adjustmentNumber,
-      adjustmentDate: data.adjustmentDate,
-      accountId: data.accountId,
-      offsetAccountId: data.offsetAccountId,
-      type: data.type ?? "increase",
-      amount: data.amount ?? 0,
-      reason: data.reason ?? null,
-      memo: data.memo ?? null,
-      journalEntryId: data.journalEntryId ?? null,
-      createdAt: data.createdAt.toDate(),
-    } as CashAdjustment;
-  });
-}
-
-export async function getCashAdjustmentById(adjustmentId: string) {
-  const doc = await db.collection("cash_adjustments").doc(adjustmentId).get();
-  if (!doc.exists) {
-    return null;
-  }
+function mapCashAdjustment(doc: DocumentSnapshot) {
   const data = doc.data()!;
   return {
     id: doc.id,
@@ -77,7 +40,22 @@ export async function getCashAdjustmentById(adjustmentId: string) {
   } as CashAdjustment;
 }
 
+export async function listCashAdjustments(companyId: string) {
+  const snapshot = await db
+    .collection("cash_adjustments")
+    .where("companyId", "==", companyId)
+    .get();
+
+  return snapshot.docs.map(mapCashAdjustment);
+}
+
+export async function getCashAdjustmentById(adjustmentId: string, tx?: Transaction) {
+  const doc = await readDoc(db.collection("cash_adjustments").doc(adjustmentId), tx);
+  return doc.exists ? mapCashAdjustment(doc) : null;
+}
+
 export async function createCashAdjustment(params: {
+  id?: string;
   companyId: string;
   adjustmentDate: string;
   accountId: string;
@@ -87,46 +65,22 @@ export async function createCashAdjustment(params: {
   reason?: string | null;
   memo?: string | null;
   journalEntryId?: string | null;
-}) {
-  const id = uuidv4();
-  const configRef = db.collection("company_configs").doc(params.companyId);
+}, tx?: Transaction) {
+  const id = params.id ?? uuidv4();
   const adjustmentRef = db.collection("cash_adjustments").doc(id);
 
-  let adjustmentNumber = "";
-
-  await db.runTransaction(async (tx) => {
-    const configSnap = await tx.get(configRef);
-    const config = configSnap.data() ?? {};
-    const sequence = buildSequenceNumber({
-      prefix:
-        typeof config.adjustmentPrefix === "string"
-          ? config.adjustmentPrefix
-          : DEFAULT_CONFIG.adjustmentPrefix,
-      suffix:
-        typeof config.adjustmentSuffix === "string"
-          ? config.adjustmentSuffix
-          : DEFAULT_CONFIG.adjustmentSuffix,
-      nextNumber:
-        typeof config.adjustmentNextNumber === "number"
-          ? config.adjustmentNextNumber
-          : DEFAULT_CONFIG.adjustmentNextNumber,
-      padding:
-        typeof config.adjustmentPadding === "number"
-          ? config.adjustmentPadding
-          : DEFAULT_CONFIG.adjustmentPadding,
-      resetYearly:
-        typeof config.adjustmentResetYearly === "boolean"
-          ? config.adjustmentResetYearly
-          : DEFAULT_CONFIG.adjustmentResetYearly,
-      lastResetYear:
-        typeof config.adjustmentLastResetYear === "number"
-          ? config.adjustmentLastResetYear
-          : DEFAULT_CONFIG.adjustmentLastResetYear,
+  const create = async (transaction: Transaction) => {
+    const sequence = await nextDocumentNumber(transaction, {
+      companyId: params.companyId,
+      key: "adjustment",
+      defaultPrefix: "ADJ-",
+      collection: "cash_adjustments",
+      field: "adjustmentNumber",
       date: params.adjustmentDate,
     });
-    adjustmentNumber = sequence.number;
+    const adjustmentNumber = sequence.number;
 
-    tx.set(adjustmentRef, {
+    transaction.set(adjustmentRef, {
       companyId: params.companyId,
       adjustmentNumber,
       adjustmentNumberNormalized: normalizeSearch(adjustmentNumber),
@@ -141,16 +95,10 @@ export async function createCashAdjustment(params: {
       createdAt: Timestamp.now(),
     });
 
-    tx.set(
-      configRef,
-      {
-        adjustmentNextNumber: sequence.nextNumber,
-        adjustmentLastResetYear: sequence.resetYear ?? null,
-        updatedAt: Timestamp.now(),
-      },
-      { merge: true }
-    );
-  });
+    sequence.save();
+    return adjustmentNumber;
+  };
 
+  const adjustmentNumber = tx ? await create(tx) : await db.runTransaction(create);
   return { id, adjustmentNumber };
 }

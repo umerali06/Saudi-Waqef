@@ -113,6 +113,7 @@ export default function ProfitLossPage() {
       params.set("compareEndDate", compareEndDate);
     }
     startTransition(async () => {
+      params.set("locale", locale);
       const response = await fetch(`/api/reports/profit-loss/export?${params}`);
       if (!response.ok) {
         setErrorKey("reports.exportFailed");

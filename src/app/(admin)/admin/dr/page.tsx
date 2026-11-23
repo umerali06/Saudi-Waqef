@@ -348,7 +348,7 @@ export default function AdminDrPage() {
               }
               className="mt-2 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
             >
-              <option value="backup_restore">{t("admin.dr.type.backup")}</option>
+              <option value="backup_restore">{t("admin.dr.type.backup_restore")}</option>
               <option value="failover">{t("admin.dr.type.failover")}</option>
               <option value="tabletop">{t("admin.dr.type.tabletop")}</option>
               <option value="other">{t("admin.dr.type.other")}</option>

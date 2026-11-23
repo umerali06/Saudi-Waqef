@@ -82,6 +82,8 @@ const mapAttendanceError = (error?: string) => {
       return "attendance.errors.invalidPayload";
     case "Not found":
       return "attendance.errors.notFound";
+    case "Already checked in":
+      return "attendance.errors.alreadyCheckedIn";
     case "Employee profile not found":
       return "attendance.errors.noEmployee";
     default:

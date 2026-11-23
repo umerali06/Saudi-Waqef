@@ -12,6 +12,10 @@ export type NumberingOptions = {
   padding?: number | null;
   resetYearly?: boolean | null;
   lastResetYear?: number | null;
+  /** Next number of every year other than `lastResetYear`. */
+  yearCounters?: Record<string, number> | null;
+  /** How far past the counter to go when the numbers before it are taken. */
+  skip?: number;
   date?: string | null;
 };
 
@@ -46,24 +50,57 @@ export function buildSequenceNumber(options: NumberingOptions) {
   const lastResetYear = options.lastResetYear ?? null;
   const currentYear = Number(tokens.year);
 
-  let nextNumber = typeof options.nextNumber === "number" && options.nextNumber > 0
-    ? options.nextNumber
-    : 1;
+  const storedNext =
+    typeof options.nextNumber === "number" && options.nextNumber > 0
+      ? options.nextNumber
+      : 1;
+  const yearCounters: Record<string, number> = { ...(options.yearCounters ?? {}) };
+  const skip = options.skip ?? 0;
+
+  let current = storedNext + skip;
+  let nextNumber = current + 1;
   let resetYear = lastResetYear;
 
-  if (resetYearly && lastResetYear !== currentYear) {
-    nextNumber = 1;
+  if (resetYearly && lastResetYear === null) {
     resetYear = currentYear;
+  } else if (resetYearly && lastResetYear !== null && currentYear > lastResetYear) {
+    yearCounters[String(lastResetYear)] = storedNext;
+    current = (yearCounters[String(currentYear)] ?? 1) + skip;
+    delete yearCounters[String(currentYear)];
+    nextNumber = current + 1;
+    resetYear = currentYear;
+  } else if (resetYearly && lastResetYear !== null && currentYear < lastResetYear) {
+    // A backdated document counts in its own year and leaves the running year alone.
+    current = (yearCounters[String(currentYear)] ?? 1) + skip;
+    yearCounters[String(currentYear)] = current + 1;
+    nextNumber = storedNext;
   }
 
   const padding = typeof options.padding === "number" && options.padding > 0
     ? options.padding
     : 0;
-  const numericPart = padding ? String(nextNumber).padStart(padding, "0") : String(nextNumber);
+  const numericPart = padding ? String(current).padStart(padding, "0") : String(current);
 
   return {
     number: `${prefix}${numericPart}${suffix}`,
-    nextNumber: nextNumber + 1,
+    nextNumber,
     resetYear,
+    yearCounters,
   };
+}
+
+/** Whether a settings change would hand out numbers that were already used. */
+export function lowersNextNumber(
+  current: Record<string, unknown>,
+  updates: Record<string, unknown>
+) {
+  return Object.entries(updates).some(([key, value]) => {
+    const stored = current[key];
+    return (
+      key.endsWith("NextNumber") &&
+      typeof value === "number" &&
+      typeof stored === "number" &&
+      value < stored
+    );
+  });
 }

@@ -9,6 +9,8 @@ export type TaxCategory = {
   name: string;
   rate: number;
   type: "standard" | "zero" | "exempt";
+  /** ZATCA VATEX-SA code; required to e-invoice 0% lines. */
+  exemptionReasonCode?: string | null;
   status: "active" | "inactive";
   createdAt: Date;
 };
@@ -32,6 +34,7 @@ export async function listTaxCategories(companyId: string) {
       name: data.name,
       rate: data.rate,
       type: data.type,
+      exemptionReasonCode: data.exemptionReasonCode ?? null,
       status: data.status ?? "active",
       createdAt: data.createdAt.toDate(),
     } as TaxCategory;
@@ -48,6 +51,7 @@ export async function createTaxCategory(params: {
   name: string;
   rate: number;
   type: TaxCategory["type"];
+  exemptionReasonCode?: string | null;
   status?: TaxCategory["status"];
 }) {
   const id = uuidv4();
@@ -56,6 +60,7 @@ export async function createTaxCategory(params: {
     name: params.name.trim(),
     rate: params.rate,
     type: params.type,
+    exemptionReasonCode: params.exemptionReasonCode ?? null,
     status: params.status ?? "active",
     createdAt: Timestamp.now(),
   });
@@ -75,6 +80,7 @@ export async function getTaxCategory(categoryId: string) {
     name: data.name,
     rate: data.rate,
     type: data.type,
+    exemptionReasonCode: data.exemptionReasonCode ?? null,
     status: data.status ?? "active",
     createdAt: data.createdAt.toDate(),
   } as TaxCategory;

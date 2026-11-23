@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const connectorSchema = z.enum(["zatca", "gosi", "mudad", "custom"]);
 const statusSchema = z.enum(["inactive", "active", "error"]);
-const environmentSchema = z.enum(["sandbox", "production"]);
+const environmentSchema = z.enum(["sandbox", "simulation", "production"]);
 
 export const PRODUCTION_ACTIVATION_PHRASE = "ACTIVATE PRODUCTION";
 

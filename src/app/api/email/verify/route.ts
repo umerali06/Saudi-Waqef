@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAdminAccess } from "@/lib/access";
 import { sendEmail } from "@/lib/email/sender";
+import { renderBilingualEmail } from "@/lib/email/template";
 
 export const runtime = "nodejs";
 
 type VerifyBody = {
   companyId?: string;
-  to?: string;
 };
 
 export async function POST(request: Request) {
@@ -27,16 +27,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const to = body?.to ?? user.email ?? null;
+  const to = user.email ?? null;
   if (!to) {
     return NextResponse.json({ error: "Recipient email is required" }, { status: 400 });
   }
 
-  await sendEmail({
-    to,
-    subject: "SMTP verification - Saudi Waqef",
-    body: "<p>SMTP verification succeeded.</p>",
-  });
+  try {
+    await sendEmail({
+      to,
+      subject: "اختبار البريد | Email test",
+      body: renderBilingualEmail({
+        first: "ar",
+        ar: { heading: "اختبار البريد", paragraphs: ["إعدادات إرسال البريد تعمل بشكل صحيح."] },
+        en: { heading: "Email test", paragraphs: ["Your email settings work correctly."] },
+      }),
+    });
+  } catch (error) {
+    console.error("SMTP verification failed:", error);
+    return NextResponse.json({ error: "Email could not be sent" }, { status: 502 });
+  }
 
   return NextResponse.json({ ok: true });
 }

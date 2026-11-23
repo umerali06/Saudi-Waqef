@@ -119,11 +119,9 @@ export async function listOutboxEmailsBySource(params: {
     .where("companyId", "==", params.companyId)
     .where("sourceType", "==", params.sourceType)
     .where("sourceId", "==", params.sourceId)
-    .orderBy("createdAt", "desc")
-    .limit(limit)
     .get();
 
-  return snapshot.docs.map((doc) => {
+  const emails = snapshot.docs.map((doc) => {
     const data = doc.data();
     return {
       id: doc.id,
@@ -141,6 +139,9 @@ export async function listOutboxEmailsBySource(params: {
       updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : undefined,
     } as OutboxEmail;
   });
+  return emails
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .slice(0, limit);
 }
 
 export async function updateOutboxStatus(params: {

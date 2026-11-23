@@ -3,11 +3,12 @@ import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
 import { getCustomerById } from "@/lib/data/customers";
 import { listContacts } from "@/lib/data/contacts";
-import { queueEmailWithDispatch } from "@/lib/email/queue";
+import { sendStatementEmail } from "@/lib/email/statements";
 import { notifyCompanyRoles } from "@/lib/notifications/service";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 type RouteContext = {
   params: Promise<{ customerId: string }>;
@@ -51,26 +52,18 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const locale = body?.locale === "en" ? "en" : "ar";
-  const subject =
-    locale === "ar"
-      ? `كشف حساب ${customer.name}`
-      : `Statement for ${customer.name}`;
-  const link = `${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/sales/customers/${customerId}`;
-  const html =
-    locale === "ar"
-      ? `<p>تم إعداد كشف الحساب للعميل ${customer.name}.</p><p><a href="${link}">عرض داخل النظام</a></p>`
-      : `<p>Your statement for ${customer.name} is ready.</p><p><a href="${link}">View in the system</a></p>`;
-
-  await queueEmailWithDispatch({
-    companyId: customer.companyId,
+  const sent = await sendStatementEmail({
+    partyType: "customer",
+    partyId: customerId,
     to: recipientEmail,
-    subject,
-    body: html,
-    sourceType: "customer_statement",
-    sourceId: customerId,
-    meta: { locale, customerName: customer.name, recipientEmail },
+    locale: body?.locale,
+    from: body?.from,
+    until: body?.to,
+    replyTo: user.email ?? null,
   });
+  if (!sent.ok) {
+    return NextResponse.json({ error: "EMAIL_FAILED" }, { status: 502 });
+  }
 
   await notifyCompanyRoles({
     companyId: customer.companyId,

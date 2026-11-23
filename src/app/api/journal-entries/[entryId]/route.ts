@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { db } from "@/lib/firebase/admin";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
 import { listChartAccounts } from "@/lib/data/chart-accounts";
@@ -8,9 +9,9 @@ import {
   deleteJournalEntry,
 } from "@/lib/data/journal-entries";
 import { manualJournalEntryUpdateSchema } from "@/lib/validators/journal-entries";
-import { getCompanyConfig } from "@/lib/data/company-config";
-import { findClosedPeriod } from "@/lib/data/accounting-periods";
 import { recordAuditEvent } from "@/lib/data/audit-log";
+import { PostingError, postingErrorResponse } from "@/lib/accounting/errors";
+import { periodClosedResponse } from "@/lib/accounting/period-guard";
 
 export const runtime = "nodejs";
 
@@ -113,19 +114,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (nextStatus === "posted") {
       const entryDate = updates.date ?? current.date;
       const isAdjusting = updates.isAdjusting ?? current.isAdjusting ?? false;
-      const config = await getCompanyConfig(parsed.data.companyId);
-      if (config.periodLockDate && entryDate <= config.periodLockDate) {
-        return NextResponse.json(
-          { error: "Posting period is locked" },
-          { status: 403 }
-        );
-      }
-      const closedPeriod = await findClosedPeriod(parsed.data.companyId, entryDate);
-      if (closedPeriod && !isAdjusting) {
-        return NextResponse.json(
-          { error: "Accounting period is closed" },
-          { status: 403 }
-        );
+      const closedPeriod = await periodClosedResponse(parsed.data.companyId, entryDate, {
+        isAdjusting,
+      });
+      if (closedPeriod) {
+        return closedPeriod;
       }
       updates.status = "posted";
       updates.approvedBy = user.id;
@@ -139,7 +132,17 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ ok: true });
   }
 
-  await updateJournalEntry(entryId, updates);
+  try {
+    await db.runTransaction(async (tx) => {
+      const latest = await getJournalEntry(entryId, tx);
+      if (latest?.status !== current.status) {
+        throw new PostingError("Entry is not editable");
+      }
+      await updateJournalEntry(entryId, updates, tx);
+    });
+  } catch (error) {
+    return postingErrorResponse(error);
+  }
 
   await recordAuditEvent({
     companyId: parsed.data.companyId,

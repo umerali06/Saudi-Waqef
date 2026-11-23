@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isNumericUnit } from "@/lib/utils/units";
 
 const optionalString = z.string().optional().nullable();
 
@@ -30,10 +31,18 @@ const itemUpdateBaseSchema = itemBaseSchema.partial().extend({
   companyId: z.string().min(1),
 });
 
+/** Error text the items API answers with for a unit made only of digits. */
+export const NUMERIC_UNIT = "UNIT_NOT_NUMERIC";
+
 const refineItem = (
   data: z.infer<typeof itemUpdateBaseSchema>,
   ctx: z.RefinementCtx
 ) => {
+  (["baseUnit", "packUnit"] as const).forEach((field) => {
+    if (data[field] && isNumericUnit(data[field])) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: NUMERIC_UNIT, path: [field] });
+    }
+  });
   if (data.type === "service") {
     if (data.trackInventory) {
       ctx.addIssue({
@@ -99,3 +108,9 @@ export const itemImportSchema = z.object({
   csv: z.string().min(1),
   dryRun: z.boolean().optional(),
 });
+
+/** What the API answers when an item payload is refused. */
+export const itemErrorCode = (error: z.ZodError) =>
+  error.issues.some((issue) => issue.message === NUMERIC_UNIT)
+    ? NUMERIC_UNIT
+    : "Invalid payload";

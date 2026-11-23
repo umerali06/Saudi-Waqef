@@ -42,6 +42,11 @@ export async function listAccountingPeriods(companyId: string) {
   return periods.sort((a, b) => a.startDate.localeCompare(b.startDate));
 }
 
+export async function getAccountingPeriodCompanyId(periodId: string) {
+  const doc = await db.collection("accounting_periods").doc(periodId).get();
+  return doc.exists ? (doc.data()!.companyId as string) : null;
+}
+
 export async function createAccountingPeriod(params: {
   companyId: string;
   name: string;

@@ -1,13 +1,23 @@
 import { NextResponse } from "next/server";
+import { v4 as uuidv4 } from "uuid";
+import { db } from "@/lib/firebase/admin";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAccountingAccess, requireCompanyRole } from "@/lib/access";
 import { transferSchema } from "@/lib/validators/payments";
-import { createBankTransfer, listBankTransfers } from "@/lib/data/bank-transfers";
+import {
+  createBankTransfer,
+  getBankTransferById,
+  listBankTransfers,
+} from "@/lib/data/bank-transfers";
 import { listChartAccounts } from "@/lib/data/chart-accounts";
 import { createJournalEntry } from "@/lib/data/journal-entries";
 import { createCashTransaction } from "@/lib/data/cash-transactions";
 import { normalizeSearch } from "@/lib/utils/search";
 import { recordAuditEvent } from "@/lib/data/audit-log";
+import { postingErrorResponse } from "@/lib/accounting/errors";
+import { periodClosedResponse } from "@/lib/accounting/period-guard";
+import { assertSameRequest } from "@/lib/accounting/payments";
+import { roundMoney } from "@/lib/utils/invoice";
 
 export const runtime = "nodejs";
 
@@ -104,60 +114,80 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid destination account" }, { status: 400 });
   }
 
-  const journalEntryId = await createJournalEntry({
-    companyId: parsed.data.companyId,
-    sourceType: "bank_transfer",
-    sourceId: null,
-    date: parsed.data.transferDate,
-    memo: parsed.data.memo ?? "Internal transfer",
-    lines: [
-      {
-        accountId: parsed.data.toAccountId,
-        debit: parsed.data.amount,
-        credit: 0,
-      },
-      {
-        accountId: parsed.data.fromAccountId,
-        debit: 0,
-        credit: parsed.data.amount,
-      },
-    ],
-  });
+  const closedPeriod = await periodClosedResponse(
+    parsed.data.companyId,
+    parsed.data.transferDate
+  );
+  if (closedPeriod) {
+    return closedPeriod;
+  }
 
-  const { id, transferNumber } = await createBankTransfer({
-    companyId: parsed.data.companyId,
-    transferDate: parsed.data.transferDate,
-    fromAccountId: parsed.data.fromAccountId,
-    toAccountId: parsed.data.toAccountId,
-    amount: parsed.data.amount,
-    reference: parsed.data.reference ?? null,
-    memo: parsed.data.memo ?? null,
-    journalEntryId,
-  });
-
-  await createCashTransaction({
-    companyId: parsed.data.companyId,
-    accountId: parsed.data.fromAccountId,
-    date: parsed.data.transferDate,
-    amount: parsed.data.amount,
-    direction: "out",
-    reference: parsed.data.reference ?? transferNumber,
-    description: `Transfer ${transferNumber}`,
-    sourceType: "bank_transfer",
-    sourceId: id,
-  });
-
-  await createCashTransaction({
-    companyId: parsed.data.companyId,
-    accountId: parsed.data.toAccountId,
-    date: parsed.data.transferDate,
-    amount: parsed.data.amount,
-    direction: "in",
-    reference: parsed.data.reference ?? transferNumber,
-    description: `Transfer ${transferNumber}`,
-    sourceType: "bank_transfer",
-    sourceId: id,
-  });
+  const amount = roundMoney(parsed.data.amount);
+  const id = parsed.data.requestId ?? uuidv4();
+  let transferNumber: string;
+  try {
+    const result = await db.runTransaction(async (tx) => {
+      const existing = await getBankTransferById(id, tx);
+      if (existing) {
+        assertSameRequest(existing, { companyId: parsed.data.companyId, amount });
+        return { transferNumber: existing.transferNumber, duplicate: true };
+      }
+      const journalEntryId = uuidv4();
+      const created = await createBankTransfer(
+        {
+          id,
+          companyId: parsed.data.companyId,
+          transferDate: parsed.data.transferDate,
+          fromAccountId: parsed.data.fromAccountId,
+          toAccountId: parsed.data.toAccountId,
+          amount,
+          reference: parsed.data.reference ?? null,
+          memo: parsed.data.memo ?? null,
+          journalEntryId,
+        },
+        tx
+      );
+      await createJournalEntry(
+        {
+          id: journalEntryId,
+          companyId: parsed.data.companyId,
+          sourceType: "bank_transfer",
+          sourceId: id,
+          date: parsed.data.transferDate,
+          memo: parsed.data.memo ?? "Internal transfer",
+          lines: [
+            { accountId: parsed.data.toAccountId, debit: amount, credit: 0 },
+            { accountId: parsed.data.fromAccountId, debit: 0, credit: amount },
+          ],
+        },
+        tx
+      );
+      const movement = {
+        companyId: parsed.data.companyId,
+        date: parsed.data.transferDate,
+        amount,
+        reference: parsed.data.reference ?? created.transferNumber,
+        description: `Transfer ${created.transferNumber}`,
+        sourceType: "bank_transfer",
+        sourceId: id,
+      };
+      await createCashTransaction(
+        { ...movement, accountId: parsed.data.fromAccountId, direction: "out" },
+        tx
+      );
+      await createCashTransaction(
+        { ...movement, accountId: parsed.data.toAccountId, direction: "in" },
+        tx
+      );
+      return { transferNumber: created.transferNumber, duplicate: false };
+    });
+    transferNumber = result.transferNumber;
+    if (result.duplicate) {
+      return NextResponse.json({ transferId: id, transferNumber });
+    }
+  } catch (error) {
+    return postingErrorResponse(error);
+  }
 
   await recordAuditEvent({
     companyId: parsed.data.companyId,
@@ -166,7 +196,7 @@ export async function POST(request: Request) {
     action: "transfer.create",
     entity: "bank_transfer",
     entityId: id,
-    metadata: { transferNumber, amount: parsed.data.amount },
+    metadata: { transferNumber, amount },
   });
 
   return NextResponse.json({ transferId: id, transferNumber });

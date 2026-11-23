@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
-import { requireAccountingAccess } from "@/lib/access";
+import { requireHrAccess } from "@/lib/access";
 import { getEmployeeById, listEmployees } from "@/lib/data/employees";
 import { listEmployeeTransfers } from "@/lib/data/employee-transfers";
 
@@ -22,7 +22,7 @@ export async function GET(_: Request, context: RouteContext) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const membership = await requireAccountingAccess(user.id, employee.companyId);
+  const membership = await requireHrAccess(user.id, employee.companyId);
   if (!membership) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

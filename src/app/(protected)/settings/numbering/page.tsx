@@ -8,6 +8,7 @@ import { buildSequenceNumber } from "@/lib/utils/numbering";
 // toast is already imported via useToast hook below
 import { SkeletonBlock } from "@/components/skeleton";
 import { useToast } from "@/components/toast";
+import { changedFields } from "@/lib/utils/changed-fields";
 
 type NumberingConfig = {
   invoicePrefix: string;
@@ -422,10 +423,19 @@ export default function NumberingSettingsPage() {
       const response = await fetch(`/api/companies/${activeCompanyId}/config`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
+        body: JSON.stringify(
+          initialSnapshot
+            ? changedFields<NumberingConfig>(JSON.parse(initialSnapshot), config)
+            : config
+        ),
       });
       if (!response.ok) {
-        setErrorKey("error.saveFailed");
+        const data = await response.json().catch(() => ({}));
+        setErrorKey(
+          data?.error === "NEXT_NUMBER_TOO_LOW"
+            ? "numbering.nextTooLow"
+            : "error.saveFailed"
+        );
         return;
       }
       setInitialSnapshot(JSON.stringify(config));

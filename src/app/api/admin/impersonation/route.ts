@@ -7,7 +7,7 @@ import { getUserById } from "@/lib/data/users";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const user = await getSessionUser();
+  const user = await getSessionUser({ ignoreImpersonation: true });
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -19,7 +19,7 @@ export async function GET() {
   }
 
   const impersonation = await getActiveImpersonation(impersonationId);
-  if (!impersonation) {
+  if (!impersonation || impersonation.adminUserId !== user.id) {
     const response = NextResponse.json({ active: false });
     response.cookies.set("impersonation_id", "", {
       httpOnly: true,

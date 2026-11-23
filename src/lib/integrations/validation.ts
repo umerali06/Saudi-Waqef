@@ -1,5 +1,6 @@
 import type { IntegrationRecord } from "@/lib/data/integrations";
 import { getCompanyById } from "@/lib/data/companies";
+import { isPrivateHostname } from "@/lib/integrations/url-guard";
 
 export type IntegrationValidationResult = {
   ok: boolean;
@@ -17,15 +18,6 @@ const endpointValues = (integration: IntegrationRecord) => {
   return [config.endpoint, config.testEndpoint, config.syncEndpoint]
     .map(trim)
     .filter(Boolean);
-};
-
-const isPrivateHostname = (hostname: string) => {
-  const value = hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  if (value === "localhost" || value === "::1" || value.endsWith(".local")) return true;
-  if (/^127\./.test(value) || /^10\./.test(value) || /^169\.254\./.test(value)) return true;
-  if (/^192\.168\./.test(value)) return true;
-  const match = value.match(/^172\.(\d+)\./);
-  return Boolean(match && Number(match[1]) >= 16 && Number(match[1]) <= 31);
 };
 
 const hasEndpoint = (integration: IntegrationRecord) => {

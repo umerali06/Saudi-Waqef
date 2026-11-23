@@ -64,22 +64,22 @@ export function CompanySwitcher() {
       markClean();
     }
     startTransition(async () => {
-      await fetch("/api/companies/active", {
+      const response = await fetch("/api/companies/active", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ companyId }),
-      });
-      setActiveCompanyId(companyId);
+      }).catch(() => null);
+      if (response?.ok) setActiveCompanyId(companyId);
     });
   };
 
   return (
-    <label className="flex flex-col gap-1 text-sm">
-      <span className="text-xs text-muted">{t("nav.activeCompany")}</span>
+    <label className="min-w-0">
+      <span className="sr-only">{t("nav.activeCompany")}</span>
       <select
         value={activeCompanyId ?? ""}
         onChange={handleChange}
-        className="rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+        className="w-full max-w-72 truncate border px-3 py-2 text-sm font-medium"
         disabled={isPending}
       >
         {recentCompanies.length > 0 ? (

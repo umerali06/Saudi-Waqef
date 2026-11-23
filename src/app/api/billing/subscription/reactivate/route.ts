@@ -4,6 +4,7 @@ import { requireCompanyRole } from "@/lib/access";
 import { subscriptionReactivateSchema } from "@/lib/validators/billing";
 import { updateSubscription, getSubscription } from "@/lib/data/subscriptions";
 import { buildBillingPeriod } from "@/lib/utils/billing";
+import { reportPlatformEvent } from "@/lib/notifications/platform-events";
 
 export const runtime = "nodejs";
 
@@ -32,6 +33,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  if (subscription.status === "suspended" || subscription.status === "past_due") {
+    return NextResponse.json({ error: "Subscription suspended" }, { status: 403 });
+  }
+
   const now = new Date();
   const period = buildBillingPeriod(now, subscription.billingCycle);
 
@@ -41,6 +46,19 @@ export async function POST(request: Request) {
     canceledAt: null,
     currentPeriodStart: period.startDate,
     currentPeriodEnd: period.endDate,
+  });
+
+  await reportPlatformEvent({
+    kind: "subscription_reactivate",
+    severity: "low",
+    title: { ar: "إعادة تفعيل اشتراك", en: "Subscription reactivated" },
+    message: {
+      ar: `المستخدم: ${user.email ?? ""}`,
+      en: `User: ${user.email ?? ""}`,
+    },
+    path: "/admin/tenants",
+    entityId: parsed.data.companyId,
+    companyId: parsed.data.companyId,
   });
 
   return NextResponse.json({ ok: true });

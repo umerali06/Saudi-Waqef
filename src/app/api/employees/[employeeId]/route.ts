@@ -109,14 +109,30 @@ export async function PUT(request: Request, context: RouteContext) {
     if (!linked) {
       return NextResponse.json({ error: "Invalid user" }, { status: 400 });
     }
+    const linkedElsewhere = (await listEmployees(current.companyId)).some(
+      (entry) => entry.userId === parsed.data.userId && entry.id !== employeeId
+    );
+    if (linkedElsewhere) {
+      return NextResponse.json({ error: "User already linked" }, { status: 409 });
+    }
+  }
+
+  // The employee never changes company here, even if another one is active in the UI.
+  const { companyId: requestedCompanyId, onboarding, ...fields } = parsed.data;
+  if (requestedCompanyId !== current.companyId) {
+    return NextResponse.json({ error: "Invalid company" }, { status: 400 });
   }
 
   const updates = {
-    ...parsed.data,
-    onboarding: parsed.data.onboarding?.map((task) => ({
-      ...task,
-      completed: task.completed ?? false,
-    })),
+    ...fields,
+    ...(onboarding
+      ? {
+          onboarding: onboarding.map((task) => ({
+            ...task,
+            completed: task.completed ?? false,
+          })),
+        }
+      : {}),
   };
   const transferReason = updates.transferReason ?? null;
   const transferEffectiveDate = updates.transferEffectiveDate ?? null;

@@ -7,7 +7,7 @@ import { useCompany } from "@/components/company-provider";
 import { SkeletonBlock } from "@/components/skeleton";
 import { useTranslations } from "@/i18n/provider";
 import { uploadToCloudinary } from "@/lib/cloudinary-client";
-import { getUnitOptions } from "@/lib/utils/units";
+import { formatQuantity, getUnitOptions } from "@/lib/utils/units";
 
 type Item = {
   id: string;
@@ -178,7 +178,7 @@ export default function ItemDetailPage() {
       return "";
     }
     const date = new Date(value);
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       dateStyle: "medium",
       timeStyle: "short",
     }).format(date);
@@ -394,6 +394,8 @@ export default function ItemDetailPage() {
       if (!response.ok) {
         if (data?.error === "Duplicate item") {
           setErrorKey("items.duplicate");
+        } else if (data?.error === "UNIT_NOT_NUMERIC") {
+          setErrorKey("items.unitNotNumeric");
         } else if (data?.error === "Invalid payload") {
           setErrorKey("items.invalidPayload");
         } else {
@@ -1081,7 +1083,7 @@ export default function ItemDetailPage() {
                       <tr key={adjustment.id}>
                         <td className="px-2 py-2">{formatDate(adjustment.createdAt)}</td>
                         <td className="px-2 py-2">
-                          {adjustment.quantity} {adjustment.unit}
+                          {formatQuantity(adjustment.quantity, adjustment.unit)}
                         </td>
                         <td className="px-2 py-2">
                           {t(`items.reason.${adjustment.reason}`)}

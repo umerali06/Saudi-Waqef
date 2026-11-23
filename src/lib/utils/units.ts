@@ -44,3 +44,13 @@ export function toDisplayQuantity(
   }
   return baseQuantity;
 }
+
+/** Whether a unit is written only in digits ("1"), so it reads as a quantity. */
+export const isNumericUnit = (unit: string) => /^[\d٠-٩\s.]+$/.test(unit);
+
+/** A unit named only with digits says nothing and reads as part of the quantity. */
+export const printableUnit = (unit: string) => (isNumericUnit(unit) ? "" : unit.trim());
+
+/** Quantity with its unit, for display. */
+export const formatQuantity = (quantity: number, unit: string) =>
+  [String(quantity), printableUnit(unit)].filter(Boolean).join(" ");

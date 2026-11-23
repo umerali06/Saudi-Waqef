@@ -5,22 +5,20 @@ import { vendorCreditNoteSchema } from "@/lib/validators/purchases";
 import {
   createVendorCreditNote,
   listVendorCreditNotes,
-  updateVendorCreditNote,
 } from "@/lib/data/vendor-credit-notes";
-import { getPurchaseBillById, updatePurchaseBill } from "@/lib/data/purchase-bills";
+import { getPurchaseBillById } from "@/lib/data/purchase-bills";
 import { listItems } from "@/lib/data/items";
 import { listTaxCategories } from "@/lib/data/tax-categories";
 import { getCompanyDefaults } from "@/lib/data/company-defaults";
 import { getCompanyConfig } from "@/lib/data/company-config";
-import { calculateLineAmounts } from "@/lib/utils/invoice";
+import { calculateLineAmounts, resolveNoteTaxRate, sumLineAmounts } from "@/lib/utils/invoice";
 import { toBaseQuantity } from "@/lib/utils/units";
-import { createJournalEntry } from "@/lib/data/journal-entries";
-import { updateOpenItemBalance } from "@/lib/data/open-items";
-import { applyItemStockDeltas } from "@/lib/data/items";
-import { listChartAccounts } from "@/lib/data/chart-accounts";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { normalizeSearch } from "@/lib/utils/search";
 import { findFiledVatPeriod } from "@/lib/data/vat-periods";
+import { postingErrorResponse } from "@/lib/accounting/errors";
+import { periodClosedResponse } from "@/lib/accounting/period-guard";
+import { issueVendorCreditNote } from "@/lib/accounting/purchases";
 
 export const runtime = "nodejs";
 
@@ -120,21 +118,22 @@ export async function POST(request: Request) {
   if (bill.status === "canceled") {
     return NextResponse.json({ error: "Bill is canceled" }, { status: 400 });
   }
+  if (bill.status === "draft") {
+    return NextResponse.json({ error: "Bill is not approved" }, { status: 400 });
+  }
 
-  const [items, taxCategories, defaults, config, accounts] = await Promise.all([
+  const [items, taxCategories, defaults, config] = await Promise.all([
     listItems(parsed.data.companyId),
     listTaxCategories(parsed.data.companyId),
     getCompanyDefaults(parsed.data.companyId),
     getCompanyConfig(parsed.data.companyId),
-    listChartAccounts(parsed.data.companyId),
   ]);
 
   const itemMap = new Map(items.map((item) => [item.id, item]));
   const taxMap = new Map(taxCategories.map((tax) => [tax.id, tax]));
-  const accountIds = new Set(accounts.map((account) => account.id));
+  const originalLines = new Map(bill.lines.map((line) => [line.id, line]));
 
   const computedLines = [];
-  const returnMap = new Map<string, number>();
 
   for (const line of parsed.data.lines) {
     const item = line.itemId ? itemMap.get(line.itemId) : null;
@@ -153,7 +152,12 @@ export async function POST(request: Request) {
       defaults.defaultPurchaseTaxCategoryId ??
       null;
     const taxCategory = taxCategoryId ? taxMap.get(taxCategoryId) : null;
-    const taxRate = taxCategory ? (taxCategory.rate ?? 0) / 100 : 0;
+    const taxRate = resolveNoteTaxRate({
+      original: line.billLineId ? originalLines.get(line.billLineId) : null,
+      taxCategoryId,
+      category: taxCategory,
+      vatEnabled: config.vatEnabled,
+    });
 
     const amounts = calculateLineAmounts({
       quantity: line.quantity,
@@ -189,44 +193,27 @@ export async function POST(request: Request) {
       baseQuantity,
       returnToVendor,
     });
-
-    if (item.trackInventory && returnToVendor) {
-      const current = returnMap.get(item.id) ?? 0;
-      returnMap.set(item.id, current + baseQuantity);
-    }
   }
 
-  const subtotal = computedLines.reduce((sum, line) => sum + line.netAmount, 0);
-  const discountTotal = computedLines.reduce(
-    (sum, line) => sum + line.discountAmount,
-    0
-  );
-  const taxTotal = computedLines.reduce((sum, line) => sum + line.taxAmount, 0);
-  const total = computedLines.reduce((sum, line) => sum + line.totalAmount, 0);
-
-  if (total > bill.balance) {
-    return NextResponse.json({ error: "Credit exceeds balance" }, { status: 400 });
-  }
-
-  const { id, creditNumber } = await createVendorCreditNote({
-    companyId: parsed.data.companyId,
-    billId: bill.id,
-    billNumber: bill.billNumber,
-    vendorId: bill.vendorId,
-    vendorName: bill.vendorName,
-    issueDate: parsed.data.issueDate,
-    currency: parsed.data.currency ?? bill.currency,
-    notes: parsed.data.notes ?? null,
-    reason: parsed.data.reason ?? null,
-    subtotal,
-    discountTotal,
-    taxTotal,
-    total,
-    status: parsed.data.status ?? "issued",
-    lines: computedLines,
-  });
-
-  if ((parsed.data.status ?? "issued") === "draft") {
+  const { subtotal, discountTotal, taxTotal, total } = sumLineAmounts(computedLines);
+  if (parsed.data.status === "draft") {
+    const { id, creditNumber } = await createVendorCreditNote({
+      companyId: parsed.data.companyId,
+      billId: bill.id,
+      billNumber: bill.billNumber,
+      vendorId: bill.vendorId,
+      vendorName: bill.vendorName,
+      issueDate: parsed.data.issueDate,
+      currency: parsed.data.currency ?? bill.currency,
+      notes: parsed.data.notes ?? null,
+      reason: parsed.data.reason ?? null,
+      subtotal,
+      discountTotal,
+      taxTotal,
+      total,
+      status: "draft",
+      lines: computedLines,
+    });
     await recordAuditEvent({
       companyId: parsed.data.companyId,
       userId: user.id,
@@ -239,105 +226,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ creditNoteId: id, creditNumber });
   }
 
-  const payableId = defaults.payableAccountId;
-  const purchasesAccountId = defaults.purchasesAccountId;
-  const vatInputAccountId = defaults.vatInputAccountId;
-  const discountAccountId = defaults.discountAccountId;
-
-  if (!payableId || !accountIds.has(payableId)) {
-    return NextResponse.json({ error: "Missing payable account" }, { status: 400 });
-  }
-  if (taxTotal > 0 && (!vatInputAccountId || !accountIds.has(vatInputAccountId))) {
-    return NextResponse.json({ error: "Missing VAT input account" }, { status: 400 });
-  }
-  if (discountTotal > 0 && (!discountAccountId || !accountIds.has(discountAccountId))) {
-    return NextResponse.json({ error: "Missing discount account" }, { status: 400 });
+  const closedPeriod = await periodClosedResponse(
+    parsed.data.companyId,
+    parsed.data.issueDate
+  );
+  if (closedPeriod) {
+    return closedPeriod;
   }
 
-  const useDiscountAccount = Boolean(discountAccountId && discountTotal > 0);
-  const expenseTotals = new Map<string, number>();
-
-  for (const line of computedLines) {
-    const accountId = line.itemId
-      ? itemMap.get(line.itemId)?.expenseAccountId ?? purchasesAccountId ?? null
-      : purchasesAccountId ?? null;
-    if (!accountId || !accountIds.has(accountId)) {
-      return NextResponse.json({ error: "Missing purchases account" }, { status: 400 });
-    }
-    const amount = useDiscountAccount
-      ? line.netAmount + line.discountAmount
-      : line.netAmount;
-    const current = expenseTotals.get(accountId) ?? 0;
-    expenseTotals.set(accountId, current + amount);
-  }
-
-  const journalLines = [];
-  expenseTotals.forEach((amount, accountId) => {
-    journalLines.push({
-      accountId,
-      debit: 0,
-      credit: amount,
+  let issued: Awaited<ReturnType<typeof issueVendorCreditNote>>;
+  try {
+    issued = await issueVendorCreditNote({
+      companyId: parsed.data.companyId,
+      create: {
+        billId: bill.id,
+        issueDate: parsed.data.issueDate,
+        currency: parsed.data.currency ?? bill.currency,
+        notes: parsed.data.notes ?? null,
+        reason: parsed.data.reason ?? null,
+        lines: computedLines,
+      },
     });
-  });
-
-  if (useDiscountAccount && discountAccountId) {
-    journalLines.push({
-      accountId: discountAccountId,
-      debit: discountTotal,
-      credit: 0,
-    });
-  }
-
-  if (taxTotal > 0 && vatInputAccountId) {
-    journalLines.push({
-      accountId: vatInputAccountId,
-      debit: 0,
-      credit: taxTotal,
-    });
-  }
-
-  journalLines.push({
-    accountId: payableId,
-    debit: total,
-    credit: 0,
-  });
-
-  const journalEntryId = await createJournalEntry({
-    companyId: bill.companyId,
-    sourceType: "vendor_credit_note",
-    sourceId: id,
-    date: parsed.data.issueDate,
-    memo: `Vendor credit note ${creditNumber}`,
-    lines: journalLines,
-  });
-
-  await updateVendorCreditNote(id, { journalEntryId, status: "issued" });
-
-  if (returnMap.size > 0) {
-    const updates = Array.from(returnMap.entries()).map(([itemId, qty]) => ({
-      itemId,
-      stockOnHandDelta: -qty,
-    }));
-    await applyItemStockDeltas(updates);
-  }
-
-  const amountCredited = bill.amountCredited + total;
-  const balance = Math.max(bill.total - bill.amountPaid - amountCredited, 0);
-  let status = bill.status;
-  if (balance <= 0) {
-    status = "paid";
-  } else if (amountCredited > 0 || bill.amountPaid > 0) {
-    status = "partially_paid";
-  }
-
-  await updatePurchaseBill(bill.id, {
-    amountCredited,
-    balance,
-    status,
-  });
-
-  if (bill.openItemId) {
-    await updateOpenItemBalance(bill.openItemId, balance);
+  } catch (error) {
+    return postingErrorResponse(error);
   }
 
   await recordAuditEvent({
@@ -346,10 +257,10 @@ export async function POST(request: Request) {
     userEmail: user.email ?? undefined,
     action: "vendor_credit_note.issue",
     entity: "vendor_credit_note",
-    entityId: id,
-    metadata: { creditNumber, total },
+    entityId: issued.id,
+    metadata: { creditNumber: issued.creditNumber, total: issued.total },
   });
 
-  return NextResponse.json({ creditNoteId: id, creditNumber });
+  return NextResponse.json({ creditNoteId: issued.id, creditNumber: issued.creditNumber });
 }
 

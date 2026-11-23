@@ -1,338 +1,145 @@
 import crypto from "crypto";
 import {
-  extractCertificateSignature,
-  generateInvoiceXml,
-  signComplianceInvoice,
-  signInvoice,
-  type CustomerInfo,
-  type InvoiceData,
-  type SupplierInfo,
-  type ZatcaComplianceCheckType,
-} from "@talha7k/zatca";
+  INITIAL_PREVIOUS_HASH,
+  signZatcaDocument,
+  type SignedZatcaDocument,
+  type ZatcaDocument,
+  type ZatcaLine,
+  type ZatcaParty,
+  type ZatcaSupplier,
+} from "@/lib/integrations/zatca/document";
+import { riyadhDateTime } from "@/lib/integrations/zatca/time";
 
 /**
- * ZATCA's mandatory compliance test batch. The 6 native ids are built and
- * signed entirely by the @talha7k/zatca package (no real invoice needed —
- * see `signComplianceInvoice`). The 5 custom ids exercise "special case"
- * document shapes the package doesn't ship a canned builder for.
+ * The documents ZATCA requires before it issues a production CSID, plus the
+ * special shapes this product actually produces. They go through the same
+ * builder and signer as real invoices, so passing them proves the live path.
  */
-export type CustomScenarioId =
+export type ComplianceScenarioId =
+  | "STANDARD_INVOICE"
+  | "STANDARD_CREDIT_NOTE"
+  | "STANDARD_DEBIT_NOTE"
+  | "SIMPLIFIED_INVOICE"
+  | "SIMPLIFIED_CREDIT_NOTE"
+  | "SIMPLIFIED_DEBIT_NOTE"
   | "STANDARD_INVOICE_LINE_DISCOUNT"
-  | "STANDARD_INVOICE_HEADER_CHARGE"
   | "STANDARD_INVOICE_MULTI_TAX_CATEGORY"
-  | "STANDARD_INVOICE_EXEMPT_LINE"
-  | "STANDARD_INVOICE_RETURN_LINE";
+  | "STANDARD_INVOICE_EXEMPT_LINE";
 
-export type ComplianceScenarioId = ZatcaComplianceCheckType | CustomScenarioId;
-
-const NATIVE_SCENARIOS: ZatcaComplianceCheckType[] = [
+const STANDARD: ComplianceScenarioId[] = [
   "STANDARD_INVOICE",
   "STANDARD_CREDIT_NOTE",
   "STANDARD_DEBIT_NOTE",
+  "STANDARD_INVOICE_LINE_DISCOUNT",
+  "STANDARD_INVOICE_MULTI_TAX_CATEGORY",
+  "STANDARD_INVOICE_EXEMPT_LINE",
+];
+
+const SIMPLIFIED: ComplianceScenarioId[] = [
   "SIMPLIFIED_INVOICE",
   "SIMPLIFIED_CREDIT_NOTE",
   "SIMPLIFIED_DEBIT_NOTE",
 ];
 
-const CUSTOM_SCENARIOS: CustomScenarioId[] = [
-  "STANDARD_INVOICE_LINE_DISCOUNT",
-  "STANDARD_INVOICE_HEADER_CHARGE",
-  "STANDARD_INVOICE_MULTI_TAX_CATEGORY",
-  "STANDARD_INVOICE_EXEMPT_LINE",
-  "STANDARD_INVOICE_RETURN_LINE",
-];
-
-export const COMPLIANCE_SCENARIOS: ComplianceScenarioId[] = [
-  ...NATIVE_SCENARIOS,
-  ...CUSTOM_SCENARIOS,
-];
-
 /**
- * Gates onboarding pass/fail. Excludes STANDARD_INVOICE_RETURN_LINE: a plain
- * invoice with a negative-quantity return line is a deliberately unusual
- * document that ZATCA may legitimately reject (returns should go through
- * credit notes) — it is still run and reported, just never blocks onboarding.
+ * The CSR's invoice type ("1100" = standard and simplified, "1000" = standard
+ * only, "0100" = simplified only) decides which documents ZATCA accepts.
  */
-export const GATING_SCENARIOS: ComplianceScenarioId[] = COMPLIANCE_SCENARIOS.filter(
-  (id) => id !== "STANDARD_INVOICE_RETURN_LINE"
-);
+export const complianceScenariosFor = (invoiceType: string): ComplianceScenarioId[] => [
+  ...(invoiceType[0] === "1" ? STANDARD : []),
+  ...(invoiceType[1] === "1" ? SIMPLIFIED : []),
+];
 
-export type ComplianceScenarioResult = {
-  scenarioId: ComplianceScenarioId;
-  signedXml: string;
-  invoiceHash: string;
-  uuid: string;
-};
+const line = (overrides: Partial<ZatcaLine> = {}): ZatcaLine => ({
+  id: 1,
+  name: "Compliance item",
+  quantity: 1,
+  unitCode: "PCE",
+  unitPrice: 100,
+  discount: 0,
+  taxCategory: "S",
+  taxPercent: 15,
+  ...overrides,
+});
 
-export type ComplianceScenarioContext = {
-  supplier: SupplierInfo;
-  customer?: CustomerInfo;
-  privateKeyPem: string;
-  certificatePem: string;
-};
-
-function defaultComplianceCustomer(): CustomerInfo {
-  return {
-    name: "Compliance Test Customer",
-    vatNumber: "300000000000003",
-    address: {
-      street: "Test Street",
-      building: "1234",
-      district: "Test District",
-      city: "Riyadh",
-      postalCode: "12211",
-      countryCode: "SA",
-    },
-  };
-}
-
-function baseCustomInvoice(ctx: ComplianceScenarioContext, invoiceNumber: string) {
-  const now = new Date();
-  return {
-    invoiceNumber,
-    uuid: crypto.randomUUID(),
-    issueDate: now.toISOString().slice(0, 10),
-    issueTime: now.toISOString().slice(11, 19),
-    invoiceTypeCode: "388" as const,
-    invoiceTypeCodeName: "0100000" as const,
-    profileId: "clearance:1.0" as const,
-    currencyCode: "SAR",
-    supplier: ctx.supplier,
-    customer: ctx.customer ?? defaultComplianceCustomer(),
-  };
-}
-
-function buildLineDiscountScenario(ctx: ComplianceScenarioContext): InvoiceData {
-  const base = baseCustomInvoice(ctx, "COMP-DISC-001");
-  const gross = 200; // qty 2 x 100
-  const discount = 20;
-  const net = gross - discount;
-  const tax = Math.round(net * 15) / 100;
-  return {
-    ...base,
-    lineExtensionAmount: net,
-    taxExclusiveAmount: net,
-    taxInclusiveAmount: net + tax,
-    payableAmount: net + tax,
-    taxAmount: tax,
-    allowanceTotalAmount: discount,
-    taxSubtotals: [{ taxableAmount: net, taxAmount: tax, percent: 15, taxCategoryId: "S" }],
-    invoiceLines: [
-      {
-        id: 1,
-        quantity: 2,
-        unitCode: "C62",
-        lineExtensionAmount: net,
-        taxAmount: tax,
-        itemName: "Compliance Line Discount Item",
-        taxCategoryId: "S",
-        taxPercent: 15,
-        priceAmount: 100,
-        allowanceCharges: [
-          {
-            chargeIndicator: false,
-            reason: "Volume discount",
-            amount: discount,
-            taxCategoryId: "S",
-            taxPercent: 15,
-          },
-        ],
-      },
-    ],
-  };
-}
-
-function buildHeaderChargeScenario(ctx: ComplianceScenarioContext): InvoiceData {
-  const base = baseCustomInvoice(ctx, "COMP-CHRG-001");
-  const lineNet = 500;
-  const lineTax = Math.round(lineNet * 15) / 100;
-  const charge = 50;
-  const chargeTax = Math.round(charge * 15) / 100;
-  const taxExclusive = lineNet + charge;
-  const totalTax = lineTax + chargeTax;
-  return {
-    ...base,
-    lineExtensionAmount: lineNet,
-    taxExclusiveAmount: taxExclusive,
-    taxInclusiveAmount: taxExclusive + totalTax,
-    payableAmount: taxExclusive + totalTax,
-    taxAmount: totalTax,
-    allowanceCharges: [
-      { chargeIndicator: true, reason: "Delivery Fee", amount: charge, taxCategoryId: "S", taxPercent: 15 },
-    ],
-    taxSubtotals: [{ taxableAmount: taxExclusive, taxAmount: totalTax, percent: 15, taxCategoryId: "S" }],
-    invoiceLines: [
-      {
-        id: 1,
-        quantity: 1,
-        unitCode: "C62",
-        lineExtensionAmount: lineNet,
-        taxAmount: lineTax,
-        itemName: "Compliance Header Charge Item",
-        taxCategoryId: "S",
-        taxPercent: 15,
-        priceAmount: lineNet,
-      },
-    ],
-  };
-}
-
-function buildMultiTaxCategoryScenario(ctx: ComplianceScenarioContext): InvoiceData {
-  const base = baseCustomInvoice(ctx, "COMP-MULTI-001");
-  const standardNet = 300;
-  const standardTax = Math.round(standardNet * 15) / 100;
-  const zeroNet = 200;
-  return {
-    ...base,
-    lineExtensionAmount: standardNet + zeroNet,
-    taxExclusiveAmount: standardNet + zeroNet,
-    taxInclusiveAmount: standardNet + zeroNet + standardTax,
-    payableAmount: standardNet + zeroNet + standardTax,
-    taxAmount: standardTax,
-    taxSubtotals: [
-      { taxableAmount: standardNet, taxAmount: standardTax, percent: 15, taxCategoryId: "S" },
-      { taxableAmount: zeroNet, taxAmount: 0, percent: 0, taxCategoryId: "Z" },
-    ],
-    invoiceLines: [
-      {
-        id: 1,
-        quantity: 1,
-        unitCode: "C62",
-        lineExtensionAmount: standardNet,
-        taxAmount: standardTax,
-        itemName: "Compliance Standard-Rated Item",
-        taxCategoryId: "S",
-        taxPercent: 15,
-        priceAmount: standardNet,
-      },
-      {
+const scenarioLines = (id: ComplianceScenarioId): ZatcaLine[] => {
+  if (id === "STANDARD_INVOICE_LINE_DISCOUNT") return [line({ quantity: 2, discount: 20 })];
+  if (id === "STANDARD_INVOICE_MULTI_TAX_CATEGORY") {
+    return [
+      line({ unitPrice: 300 }),
+      line({
         id: 2,
-        quantity: 1,
-        unitCode: "C62",
-        lineExtensionAmount: zeroNet,
-        taxAmount: 0,
-        itemName: "Compliance Zero-Rated Item",
-        taxCategoryId: "Z",
+        unitPrice: 200,
+        taxCategory: "Z",
         taxPercent: 0,
-        priceAmount: zeroNet,
-      },
-    ],
-  };
-}
-
-function buildExemptLineScenario(ctx: ComplianceScenarioContext): InvoiceData {
-  const base = baseCustomInvoice(ctx, "COMP-EXEMPT-001");
-  const net = 100;
-  return {
-    ...base,
-    lineExtensionAmount: net,
-    taxExclusiveAmount: net,
-    taxInclusiveAmount: net,
-    payableAmount: net,
-    taxAmount: 0,
-    taxSubtotals: [{ taxableAmount: net, taxAmount: 0, percent: 0, taxCategoryId: "E" }],
-    invoiceLines: [
-      {
-        id: 1,
-        quantity: 1,
-        unitCode: "C62",
-        lineExtensionAmount: net,
-        taxAmount: 0,
-        itemName: "Compliance Exempt Item",
-        taxCategoryId: "E",
-        taxPercent: 0,
-        priceAmount: net,
-      },
-    ],
-  };
-}
-
-function buildReturnLineScenario(ctx: ComplianceScenarioContext): InvoiceData {
-  const base = baseCustomInvoice(ctx, "COMP-RETURN-001");
-  const net = -50;
-  const tax = -7.5;
-  return {
-    ...base,
-    lineExtensionAmount: net,
-    taxExclusiveAmount: net,
-    taxInclusiveAmount: net + tax,
-    payableAmount: net + tax,
-    taxAmount: tax,
-    taxSubtotals: [{ taxableAmount: net, taxAmount: tax, percent: 15, taxCategoryId: "S" }],
-    invoiceLines: [
-      {
-        id: 1,
-        quantity: -1,
-        unitCode: "C62",
-        lineExtensionAmount: net,
-        taxAmount: tax,
-        itemName: "Compliance Return Item",
-        taxCategoryId: "S",
-        taxPercent: 15,
-        priceAmount: 50,
-      },
-    ],
-  };
-}
-
-function buildCustomScenarioDocument(id: CustomScenarioId, ctx: ComplianceScenarioContext): InvoiceData {
-  switch (id) {
-    case "STANDARD_INVOICE_LINE_DISCOUNT":
-      return buildLineDiscountScenario(ctx);
-    case "STANDARD_INVOICE_HEADER_CHARGE":
-      return buildHeaderChargeScenario(ctx);
-    case "STANDARD_INVOICE_MULTI_TAX_CATEGORY":
-      return buildMultiTaxCategoryScenario(ctx);
-    case "STANDARD_INVOICE_EXEMPT_LINE":
-      return buildExemptLineScenario(ctx);
-    case "STANDARD_INVOICE_RETURN_LINE":
-      return buildReturnLineScenario(ctx);
+        exemptionCode: "VATEX-SA-32",
+        exemptionReason: "Export of goods",
+      }),
+    ];
   }
-}
+  if (id === "STANDARD_INVOICE_EXEMPT_LINE") {
+    return [
+      line({
+        taxCategory: "E",
+        taxPercent: 0,
+        exemptionCode: "VATEX-SA-30",
+        exemptionReason: "Real estate transactions mentioned in Article 30 of the VAT Regulations",
+      }),
+    ];
+  }
+  return [line()];
+};
 
-function isNativeScenario(id: ComplianceScenarioId): id is ZatcaComplianceCheckType {
-  return (NATIVE_SCENARIOS as string[]).includes(id);
+const COMPLIANCE_CUSTOMER: ZatcaParty = {
+  name: "عميل اختبار الامتثال",
+  vatNumber: "399999999800003",
+  address: {
+    street: "طريق الملك فهد",
+    building: "1234",
+    district: "العليا",
+    city: "الرياض",
+    postalCode: "12211",
+    countryCode: "SA",
+  },
+};
+
+export function buildComplianceDocument(
+  id: ComplianceScenarioId,
+  supplier: ZatcaSupplier,
+  now = new Date()
+): ZatcaDocument {
+  const simplified = id.startsWith("SIMPLIFIED");
+  const kind = id.endsWith("CREDIT_NOTE") ? "credit" : id.endsWith("DEBIT_NOTE") ? "debit" : "invoice";
+  const { date, time } = riyadhDateTime(now);
+  return {
+    kind,
+    simplified,
+    invoiceNumber: `COMP-${id}`,
+    uuid: crypto.randomUUID(),
+    issueDate: date,
+    issueTime: time,
+    supplyDate: date,
+    counter: 1,
+    previousHash: INITIAL_PREVIOUS_HASH,
+    supplier,
+    customer: simplified ? undefined : COMPLIANCE_CUSTOMER,
+    ...(kind === "invoice"
+      ? {}
+      : {
+          reason: "Compliance check",
+          originalInvoiceNumber: `COMP-${simplified ? "SIMPLIFIED" : "STANDARD"}_INVOICE`,
+        }),
+    lines: scenarioLines(id),
+  };
 }
 
 export function buildAndSignComplianceScenario(
   id: ComplianceScenarioId,
-  ctx: ComplianceScenarioContext
-): ComplianceScenarioResult {
-  if (isNativeScenario(id)) {
-    const result = signComplianceInvoice({
-      checkType: id,
-      supplier: ctx.supplier,
-      customer: ctx.customer,
-      privateKeyPem: ctx.privateKeyPem,
-      certificatePem: ctx.certificatePem,
-    });
-    return {
-      scenarioId: id,
-      signedXml: result.signedXml,
-      invoiceHash: result.invoiceHash,
-      uuid: result.uuid,
-    };
-  }
-
-  const document = buildCustomScenarioDocument(id, ctx);
-  const xml = generateInvoiceXml(document);
-  const signed = signInvoice({
-    xml,
-    privateKeyPem: ctx.privateKeyPem,
-    certificatePem: ctx.certificatePem,
-    qrData: {
-      sellerName: document.supplier.nameEn,
-      vatNumber: document.supplier.vatNumber,
-      timestamp: `${document.issueDate}T${document.issueTime}Z`,
-      totalWithVat: document.taxInclusiveAmount.toFixed(2),
-      vatTotal: document.taxAmount.toFixed(2),
-      certificateSignature: extractCertificateSignature(ctx.certificatePem),
-    },
+  params: { supplier: ZatcaSupplier; privateKeyPem: string; certificate: string }
+): SignedZatcaDocument {
+  return signZatcaDocument({
+    document: buildComplianceDocument(id, params.supplier),
+    privateKeyPem: params.privateKeyPem,
+    certificate: params.certificate,
   });
-  return {
-    scenarioId: id,
-    signedXml: signed.signedXml,
-    invoiceHash: signed.invoiceHash,
-    uuid: document.uuid,
-  };
 }

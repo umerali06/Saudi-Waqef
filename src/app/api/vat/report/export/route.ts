@@ -5,8 +5,18 @@ import { getVatPeriodById } from "@/lib/data/vat-periods";
 import { buildVatSummary } from "@/lib/utils/vat-report";
 import { toCsv } from "@/lib/utils/csv";
 import { createReportExport } from "@/lib/data/report-exports";
+import { vatReturnModel } from "@/lib/pdf/financial-reports";
+import { loadReportContext, renderReport } from "@/lib/pdf/report";
+import { pdfResponse } from "@/lib/pdf/respond";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
+
+/** Header values are Latin-1 only, so an Arabic name travels in the encoded form. */
+const attachmentName = (name: string) =>
+  `attachment; filename="${name.replace(/[^\x20-\x7e]|["\\]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(
+    name
+  )}`;
 
 const buildCsvRows = (summary: Awaited<ReturnType<typeof buildVatSummary>>) => {
   const rows: string[][] = [];
@@ -100,87 +110,6 @@ const buildZatcaMapping = (
   };
 };
 
-const renderPdf = (
-  summary: Awaited<ReturnType<typeof buildVatSummary>>,
-  periodName: string,
-  startDate: string,
-  endDate: string
-) => {
-  const escapeText = (value: string) =>
-    value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
-
-  const lines = [
-    "VAT Summary Report",
-    `Period: ${periodName}`,
-    `From: ${startDate}`,
-    `To: ${endDate}`,
-    "",
-    "Summary",
-    `Sales net: ${summary.sales.netAmount.toFixed(2)}`,
-    `Sales VAT: ${summary.sales.taxAmount.toFixed(2)}`,
-    `Purchases net: ${summary.purchases.netAmount.toFixed(2)}`,
-    `Purchases VAT: ${summary.purchases.taxAmount.toFixed(2)}`,
-    `Adjustments (output): ${summary.adjustments.output.toFixed(2)}`,
-    `Adjustments (input): ${summary.adjustments.input.toFixed(2)}`,
-    `Net VAT: ${summary.netVat.toFixed(2)}`,
-    "",
-    "Sales breakdown",
-    ...summary.breakdown.sales.map(
-      (entry) =>
-        `Rate ${entry.rate.toFixed(2)}% (${entry.type}) - Taxable: ${entry.taxableAmount.toFixed(
-          2
-        )}, VAT: ${entry.taxAmount.toFixed(2)}`
-    ),
-    "",
-    "Purchases breakdown",
-    ...summary.breakdown.purchases.map(
-      (entry) =>
-        `Rate ${entry.rate.toFixed(2)}% (${entry.type}) - Taxable: ${entry.taxableAmount.toFixed(
-          2
-        )}, VAT: ${entry.taxAmount.toFixed(2)}`
-    ),
-  ];
-
-  const contentLines: string[] = [];
-  let y = 760;
-  lines.forEach((line) => {
-    contentLines.push(`BT /F1 11 Tf 50 ${y} Td (${escapeText(line)}) Tj ET`);
-    y -= 16;
-  });
-
-  const stream = contentLines.join("\n");
-  const streamLength = Buffer.byteLength(stream, "utf8");
-
-  const objects = [
-    "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n",
-    "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n",
-    "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >> endobj\n",
-    `4 0 obj << /Length ${streamLength} >> stream\n${stream}\nendstream endobj\n`,
-    "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\n",
-  ];
-
-  let offset = 0;
-  const header = "%PDF-1.4\n";
-  offset += header.length;
-  const offsets = [0];
-  const body = objects
-    .map((obj) => {
-      offsets.push(offset);
-      offset += obj.length;
-      return obj;
-    })
-    .join("");
-
-  const xrefStart = header.length + body.length;
-  let xref = "xref\n0 6\n0000000000 65535 f \n";
-  offsets.slice(1).forEach((objOffset) => {
-    xref += `${String(objOffset).padStart(10, "0")} 00000 n \n`;
-  });
-  const trailer = `trailer << /Size 6 /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
-
-  return Buffer.from(header + body + xref + trailer, "utf8");
-};
-
 export async function GET(request: Request) {
   const user = await getSessionUser();
   if (!user) {
@@ -237,19 +166,17 @@ export async function GET(request: Request) {
     const mapping = buildZatcaMapping(summary, period);
     return NextResponse.json(mapping, {
       headers: {
-        "Content-Disposition": `attachment; filename="vat-report-${period.name}-zatca.json"`,
+        "Content-Disposition": attachmentName(`vat-report-${period.name}-zatca.json`),
       },
     });
   }
 
   if (format === "pdf") {
-    const buffer = renderPdf(summary, period.name, period.startDate, period.endDate);
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="vat-report-${period.name}.pdf"`,
-      },
-    });
+    const context = await loadReportContext(request, companyId);
+    const pdf = await renderReport(
+      vatReturnModel(context, { summary, periodName: period.name, status: period.status })
+    );
+    return pdfResponse(pdf, `vat-return-${period.name}.pdf`, request);
   }
 
   const headers = ["Section", "Category", "Rate", "Type", "TaxableAmount", "TaxAmount"];
@@ -259,7 +186,7 @@ export async function GET(request: Request) {
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="vat-report-${period.name}.csv"`,
+      "Content-Disposition": attachmentName(`vat-report-${period.name}.csv`),
     },
   });
 }

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin-shell";
+import { NotPlatformAdmin } from "@/components/not-platform-admin";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { ensureSystemAdmin, getSystemAdminEmails, isSystemAdminUser } from "@/lib/data/system-admins";
 
@@ -29,7 +30,7 @@ export default async function AdminLayout({
 
   const isAdmin = await isSystemAdminUser(user.id, user.email ?? undefined);
   if (!isAdmin) {
-    redirect("/");
+    return <NotPlatformAdmin />;
   }
 
   return <AdminShell>{children}</AdminShell>;

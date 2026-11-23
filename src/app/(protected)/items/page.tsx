@@ -121,6 +121,8 @@ export default function ItemsPage() {
     switch (error.code) {
       case "missing_name":
         return t("items.import.missingName");
+      case "numeric_unit":
+        return t("items.unitNotNumeric");
       case "missing_base_unit":
         return t("items.import.missingBaseUnit");
       case "invalid_type":
@@ -361,6 +363,8 @@ export default function ItemsPage() {
       if (!response.ok) {
         if (data?.error === "Duplicate item") {
           setErrorKey("items.duplicate");
+        } else if (data?.error === "UNIT_NOT_NUMERIC") {
+          setErrorKey("items.unitNotNumeric");
         } else if (data?.error === "Invalid payload") {
           setErrorKey("items.invalidPayload");
         } else {

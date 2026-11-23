@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { db } from "@/lib/firebase/admin";
+import { PostingError, postingErrorResponse } from "@/lib/accounting/errors";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAccountingAccess, requireCompanyRole } from "@/lib/access";
 import { billUpdateSchema } from "@/lib/validators/purchases";
@@ -8,10 +10,11 @@ import { listItems } from "@/lib/data/items";
 import { listTaxCategories } from "@/lib/data/tax-categories";
 import { getCompanyDefaults } from "@/lib/data/company-defaults";
 import { getCompanyConfig } from "@/lib/data/company-config";
-import { calculateLineAmounts } from "@/lib/utils/invoice";
+import { calculateLineAmounts, resolveTaxRate, sumLineAmounts } from "@/lib/utils/invoice";
 import { toBaseQuantity } from "@/lib/utils/units";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { findFiledVatPeriod } from "@/lib/data/vat-periods";
+import type { BillLine } from "@/lib/data/purchase-bills";
 
 export const runtime = "nodejs";
 
@@ -98,7 +101,7 @@ export async function PUT(request: Request, context: RouteContext) {
   }
 
   const lines = parsed.data.lines ?? current.lines;
-  const computedLines = [];
+  const computedLines: BillLine[] = [];
 
   for (const line of lines) {
     const item = line.itemId ? itemMap.get(line.itemId) : null;
@@ -117,7 +120,7 @@ export async function PUT(request: Request, context: RouteContext) {
       defaults.defaultPurchaseTaxCategoryId ??
       null;
     const taxCategory = taxCategoryId ? taxMap.get(taxCategoryId) : null;
-    const taxRate = taxCategory ? (taxCategory.rate ?? 0) / 100 : 0;
+    const taxRate = resolveTaxRate(taxCategory, config.vatEnabled);
 
     const amounts = calculateLineAmounts({
       quantity: line.quantity,
@@ -152,40 +155,48 @@ export async function PUT(request: Request, context: RouteContext) {
     });
   }
 
-  const subtotal = computedLines.reduce((sum, line) => sum + line.netAmount, 0);
-  const discountTotal = computedLines.reduce(
-    (sum, line) => sum + line.discountAmount,
-    0
-  );
-  const taxTotal = computedLines.reduce((sum, line) => sum + line.taxAmount, 0);
-  const total = computedLines.reduce((sum, line) => sum + line.totalAmount, 0);
+  const { subtotal, discountTotal, taxTotal, total } = sumLineAmounts(computedLines);
 
-  await updatePurchaseBill(billId, {
-    vendorId: vendor?.id ?? current.vendorId,
-    vendorName: vendor?.name ?? current.vendorName,
-    vendorVatNumber: vendor ? vendor.vatNumber ?? null : current.vendorVatNumber ?? null,
-    remittanceAddress: vendor
-      ? vendor.remittanceAddress ?? null
-      : current.remittanceAddress ?? null,
-    billDate: parsed.data.billDate ?? current.billDate,
-    dueDate: parsed.data.dueDate ?? current.dueDate,
-    currency: parsed.data.currency ?? current.currency,
-    paymentTermId:
-      parsed.data.paymentTermId !== undefined
-        ? parsed.data.paymentTermId
-        : current.paymentTermId ?? null,
-    vendorBillNumber:
-      parsed.data.vendorBillNumber !== undefined
-        ? parsed.data.vendorBillNumber
-        : current.vendorBillNumber ?? null,
-    notes: parsed.data.notes ?? current.notes ?? null,
-    subtotal,
-    discountTotal,
-    taxTotal,
-    total,
-    balance: total - current.amountPaid - current.amountCredited,
-    lines: computedLines,
-  });
+  try {
+    await db.runTransaction(async (tx) => {
+      const latest = await getPurchaseBillById(billId, tx);
+      if (latest?.status !== "draft") {
+        throw new PostingError("Bill is locked");
+      }
+      await updatePurchaseBill(
+        billId,
+        {
+          vendorId: vendor?.id ?? current.vendorId,
+          vendorName: vendor?.name ?? current.vendorName,
+          vendorVatNumber: vendor ? vendor.vatNumber ?? null : current.vendorVatNumber ?? null,
+          remittanceAddress: vendor
+            ? vendor.remittanceAddress ?? null
+            : current.remittanceAddress ?? null,
+          billDate: parsed.data.billDate ?? current.billDate,
+          dueDate: parsed.data.dueDate ?? current.dueDate,
+          currency: parsed.data.currency ?? current.currency,
+          paymentTermId:
+            parsed.data.paymentTermId !== undefined
+              ? parsed.data.paymentTermId
+              : current.paymentTermId ?? null,
+          vendorBillNumber:
+            parsed.data.vendorBillNumber !== undefined
+              ? parsed.data.vendorBillNumber
+              : current.vendorBillNumber ?? null,
+          notes: parsed.data.notes ?? current.notes ?? null,
+          subtotal,
+          discountTotal,
+          taxTotal,
+          total,
+          balance: total,
+          lines: computedLines,
+        },
+        tx
+      );
+    });
+  } catch (error) {
+    return postingErrorResponse(error);
+  }
 
   await recordAuditEvent({
     companyId: current.companyId,

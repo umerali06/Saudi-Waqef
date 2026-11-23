@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRegistrationRequestById, updateRegistrationRequestStatus } from "@/lib/data/registration-requests";
 import { createUser, getUserByEmail } from "@/lib/data/users";
-import { createCompany, getCompanyById } from "@/lib/data/companies";
-import { createMembership, getMembership, updateMembershipRole } from "@/lib/data/memberships";
+import { createCompany, findActiveCompanyByName, getCompanyById } from "@/lib/data/companies";
+import { seedCompanyDefaults } from "@/lib/data/company-seed";
+import { createMembership, getMembership } from "@/lib/data/memberships";
 import { queueEmailWithDispatch } from "@/lib/email/queue";
+import { registrationApprovedMail } from "@/lib/email/registration-mails";
+import { checkUserLimit } from "@/lib/billing/limits";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { isSystemAdminUser } from "@/lib/data/system-admins";
 import { v4 as uuid } from "uuid";
@@ -62,7 +65,7 @@ export async function POST(
     }
 
     const systemAdmin = await isSystemAdminUser(sessionUser.id, sessionUser.email ?? undefined);
-    const selectedCompany = request.companyId
+    let selectedCompany = request.companyId
       ? await getCompanyById(request.companyId)
       : null;
 
@@ -75,19 +78,52 @@ export async function POST(
         userId: sessionUser.id,
         companyId: request.companyId,
       });
-      if (approverMembership?.role !== "owner") {
+      if (approverMembership?.role !== "owner" && !systemAdmin) {
         return NextResponse.json({ error: "Only the company owner can approve this request" }, { status: 403 });
       }
     } else if (!systemAdmin) {
       return NextResponse.json({ error: "Only a system admin can approve unlinked requests" }, { status: 403 });
+    } else if (request.kind === "join") {
+      // Joining never creates a company; the name has to match one by now.
+      selectedCompany = await findActiveCompanyByName(request.companyName);
+      if (!selectedCompany) {
+        return NextResponse.json({ error: "Company not found" }, { status: 409 });
+      }
     }
 
     const existingUser = await getUserByEmail(request.email);
+    if (existingUser && selectedCompany) {
+      // Anyone can submit a request for any address, so approving one must never change
+      // the role of somebody who already belongs to the company.
+      const existingMembership = await getMembership({
+        userId: existingUser.id,
+        companyId: selectedCompany.id,
+      });
+      if (existingMembership) {
+        return NextResponse.json({ error: "Already a member" }, { status: 409 });
+      }
+    }
+    if (selectedCompany) {
+      const limitCheck = await checkUserLimit(selectedCompany.id);
+      if (!limitCheck.ok) {
+        return NextResponse.json(
+          { error: limitCheck.reason ?? "Plan user limit reached" },
+          { status: 400 }
+        );
+      }
+    }
+
     const userId = existingUser?.id ?? uuid();
     const companyId = selectedCompany?.id ?? uuid();
     const membershipId = uuid();
     const password = crypto.randomBytes(8).toString("hex");
-    const membershipRole = mapRequestedRoleToMembershipRole(request.requestedRole);
+    // The first member of a new company owns it; otherwise nobody could ever manage it.
+    const requestedRole = mapRequestedRoleToMembershipRole(request.requestedRole);
+    const membershipRole: Role = !selectedCompany
+      ? "owner"
+      : requestedRole === "owner"
+      ? "viewer"
+      : requestedRole;
     const baseUrl =
       normalizeBaseUrl(process.env.NEXTAUTH_URL) ||
       normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL) ||
@@ -110,27 +146,21 @@ export async function POST(
       await createCompany({
         id: companyId,
         name: request.companyName,
+        vatNumber: request.vatNumber,
+        crNumber: request.crNumber,
+        defaultLanguage: request.locale,
         status: "active",
       });
+      await seedCompanyDefaults(companyId);
     }
 
-    // 3. Create or update Membership with requested role
-    const existingMembership = await getMembership({
-      userId,
-      companyId,
+    // 3. Create Membership
+    await createMembership({
+      id: membershipId,
+      userId: userId,
+      companyId: companyId,
+      role: membershipRole,
     });
-    if (existingMembership) {
-      if (existingMembership.role !== membershipRole) {
-        await updateMembershipRole(existingMembership.id, membershipRole);
-      }
-    } else {
-      await createMembership({
-        id: membershipId,
-        userId: userId,
-        companyId: companyId,
-        role: membershipRole,
-      });
-    }
 
     // 4. Update Request Status
     await updateRegistrationRequestStatus(id, "approved");
@@ -139,42 +169,21 @@ export async function POST(
     let emailQueued = false;
     let emailError: string | null = null;
     try {
-      const body = existingUser
-        ? `
-        <div style="font-family: sans-serif; padding: 20px;">
-          <h2>Registration Approved</h2>
-          <p>Dear ${request.name},</p>
-          <p>Your registration request for <strong>${request.companyName}</strong> has been approved.</p>
-          <p>Your account already exists. You can log in here:</p>
-          <p><a href="${loginUrl}">Click here to login</a></p>
-          <br/>
-          <p>Best regards,</p>
-          <p>The Saudi Waqef Team</p>
-        </div>
-      `
-        : `
-        <div style="font-family: sans-serif; padding: 20px;">
-          <h2>Registration Approved</h2>
-          <p>Dear ${request.name},</p>
-          <p>Your registration request for <strong>${request.companyName}</strong> has been approved.</p>
-          <p>You can now log in to your account using the following credentials:</p>
-          <ul>
-            <li><strong>Email:</strong> ${request.email}</li>
-            <li><strong>Temporary Password:</strong> ${password}</li>
-          </ul>
-          <p>Please change your password after logging in.</p>
-          <p><a href="${loginUrl}">Click here to login</a></p>
-          <br/>
-          <p>Best regards,</p>
-          <p>The Saudi Waqef Team</p>
-        </div>
-      `;
-
+      const mail = registrationApprovedMail({
+        locale: request.locale ?? "ar",
+        name: request.name,
+        email: request.email,
+        companyName: selectedCompany?.name ?? request.companyName,
+        isNewCompany: !selectedCompany,
+        role: membershipRole,
+        password: existingUser ? null : password,
+        loginUrl,
+      });
       await queueEmailWithDispatch({
         companyId: "system",
         to: request.email,
-        subject: "Registration Approved - Saudi Waqef",
-        body,
+        subject: mail.subject,
+        body: mail.body,
         sourceType: "registration_approved",
         sourceId: id,
       });

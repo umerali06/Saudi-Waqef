@@ -43,7 +43,7 @@ export default function SalesInvoicesPage() {
   const [isPending, startTransition] = useTransition();
 
   const formatCurrency = (value: number, currency?: string) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       style: "currency",
       currency: currency || "SAR",
     }).format(value);
@@ -53,7 +53,7 @@ export default function SalesInvoicesPage() {
       return "-";
     }
     const date = new Date(`${value}T00:00:00Z`);
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US").format(date);
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US").format(date);
   };
 
   const loadInvoices = useCallback(() => {
@@ -143,6 +143,11 @@ export default function SalesInvoicesPage() {
                   setError("error.saveFailed");
                   return;
                 }
+                const data = await response.json().catch(() => ({}));
+                if (data.failed > 0) {
+                  setError("invoice.remindersFailed");
+                  return;
+                }
                 setNotice("invoice.remindersSent");
               });
             }}
@@ -167,7 +172,12 @@ export default function SalesInvoicesPage() {
                   setError("error.saveFailed");
                   return;
                 }
-                setNotice("invoice.recurringRun");
+                const data = await response.json().catch(() => ({}));
+                setNotice(
+                  (data.failed ?? []).length > 0
+                    ? "sales.recurringFailedSome"
+                    : "invoice.recurringRun"
+                );
                 loadInvoices();
               });
             }}

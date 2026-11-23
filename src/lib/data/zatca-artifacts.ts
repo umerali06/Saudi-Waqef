@@ -1,6 +1,7 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase/admin";
+import type { ZatcaEnvironment } from "@/lib/integrations/zatca/environment";
 
 export type ZatcaArtifact = {
   id: string;
@@ -11,7 +12,7 @@ export type ZatcaArtifact = {
   qr: string;
   payload: Record<string, unknown>;
   status?: "pending" | "submitted" | "accepted" | "warning" | "rejected";
-  environment?: "sandbox" | "production";
+  environment?: ZatcaEnvironment;
   documentType?: "standard" | "simplified";
   operation?: "clearance" | "reporting";
   technicalStatus?: ZatcaTechnicalStatus;
@@ -39,19 +40,30 @@ export type ZatcaTechnicalStatus =
   | "retry_pending"
   | "integration_unavailable";
 
-export async function getZatcaArtifactByInvoiceId(companyId: string, invoiceId: string) {
+/**
+ * Artifacts are per environment: a document accepted by the sandbox has not been
+ * filed in production. Without `environment` the most authoritative one is returned.
+ */
+export async function getZatcaArtifactByInvoiceId(
+  companyId: string,
+  invoiceId: string,
+  environment?: ZatcaEnvironment
+) {
   const snapshot = await db
     .collection("zatca_artifacts")
     .where("companyId", "==", companyId)
     .where("invoiceId", "==", invoiceId)
-    .limit(1)
     .get();
 
-  if (snapshot.empty) {
+  const rank = (value: unknown) =>
+    value === "production" ? 2 : value === "simulation" ? 1 : 0;
+  const doc = snapshot.docs
+    .filter((item) => !environment || (item.data().environment ?? "sandbox") === environment)
+    .sort((a, b) => rank(b.data().environment) - rank(a.data().environment))[0];
+  if (!doc) {
     return null;
   }
 
-  const doc = snapshot.docs[0];
   const data = doc.data();
   return {
     id: doc.id,
@@ -86,7 +98,7 @@ export async function createZatcaArtifact(params: {
   qr: string;
   payload: Record<string, unknown>;
   status?: "pending" | "submitted" | "accepted" | "warning" | "rejected";
-  environment: "sandbox" | "production";
+  environment: ZatcaEnvironment;
   documentType: "standard" | "simplified";
   operation: "clearance" | "reporting";
   technicalStatus?: ZatcaTechnicalStatus;
@@ -99,7 +111,7 @@ export async function createZatcaArtifact(params: {
     uuid: params.uuid,
     hash: params.hash,
     qr: params.qr,
-    payload: params.payload,
+    payload: JSON.parse(JSON.stringify(params.payload)),
     status: params.status ?? "pending",
     environment: params.environment,
     documentType: params.documentType,
@@ -117,19 +129,24 @@ export async function createZatcaArtifact(params: {
   return id;
 }
 
-export async function getZatcaArtifactByUuid(companyId: string, uuid: string) {
+export async function getZatcaArtifactByUuid(
+  companyId: string,
+  uuid: string,
+  environment?: ZatcaEnvironment
+) {
   const snapshot = await db
     .collection("zatca_artifacts")
     .where("companyId", "==", companyId)
     .where("uuid", "==", uuid)
-    .limit(1)
     .get();
 
-  if (snapshot.empty) {
+  const doc = snapshot.docs.find(
+    (item) => !environment || (item.data().environment ?? "sandbox") === environment
+  );
+  if (!doc) {
     return null;
   }
 
-  const doc = snapshot.docs[0];
   const data = doc.data();
   return {
     id: doc.id,
@@ -167,6 +184,11 @@ export async function updateZatcaArtifactStatus(
     lastSubmittedAt?: Date | null;
     lastResponse?: Record<string, unknown> | null;
     slaAlertedAt?: Date | null;
+    hash?: string;
+    qr?: string;
+    payload?: Record<string, unknown>;
+    documentType?: "standard" | "simplified";
+    operation?: "clearance" | "reporting";
   }
 ) {
   const payload: Record<string, unknown> = {
@@ -176,6 +198,13 @@ export async function updateZatcaArtifactStatus(
     payload.status = updates.status;
   }
   if (updates.technicalStatus) payload.technicalStatus = updates.technicalStatus;
+  for (const key of ["hash", "qr", "documentType", "operation"] as const) {
+    if (updates[key] !== undefined) payload[key] = updates[key];
+  }
+  if (updates.payload !== undefined) {
+    // Firestore rejects undefined values anywhere in the document.
+    payload.payload = JSON.parse(JSON.stringify(updates.payload));
+  }
   if (updates.attemptCount !== undefined) payload.attemptCount = updates.attemptCount;
   if (updates.nextRetryAt !== undefined) {
     payload.nextRetryAt = updates.nextRetryAt ? Timestamp.fromDate(updates.nextRetryAt) : null;
@@ -197,6 +226,19 @@ export async function updateZatcaArtifactStatus(
   await db.collection("zatca_artifacts").doc(artifactId).set(payload, { merge: true });
 }
 
+/**
+ * Applies a status reported by a third party (webhook, manual reconciliation).
+ * A verdict ZATCA itself returned is final and is never overwritten.
+ */
+export async function applyExternalZatcaStatus(
+  artifact: Pick<ZatcaArtifact, "id" | "status">,
+  updates: Parameters<typeof updateZatcaArtifactStatus>[1]
+) {
+  if (["accepted", "warning", "rejected"].includes(artifact.status ?? "")) return false;
+  await updateZatcaArtifactStatus(artifact.id, updates);
+  return true;
+}
+
 /** Append-only submission evidence. Keeping attempts outside the mutable
  * artifact prevents a later retry from erasing the original ZATCA response. */
 export async function recordZatcaSubmissionAttempt(params: {
@@ -204,7 +246,7 @@ export async function recordZatcaSubmissionAttempt(params: {
   companyId: string;
   invoiceId: string;
   uuid: string;
-  environment: "sandbox" | "production";
+  environment: ZatcaEnvironment;
   operation: "clearance" | "reporting";
   attempt: number;
   httpStatus?: number | null;
@@ -243,7 +285,7 @@ export type ZatcaSubmissionAttempt = {
   companyId: string;
   invoiceId: string;
   uuid: string;
-  environment: "sandbox" | "production";
+  environment: ZatcaEnvironment;
   operation: "clearance" | "reporting";
   attempt: number;
   httpStatus: number | null;

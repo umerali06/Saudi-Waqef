@@ -1,6 +1,7 @@
 import { listSalesInvoices } from "@/lib/data/sales-invoices";
 import { listPurchaseBills } from "@/lib/data/purchase-bills";
 import { listSalesCreditNotes } from "@/lib/data/credit-notes";
+import { listSalesDebitNotes } from "@/lib/data/debit-notes";
 import { listVendorCreditNotes } from "@/lib/data/vendor-credit-notes";
 import { listExpenses } from "@/lib/data/expenses";
 import { listTaxCategories } from "@/lib/data/tax-categories";
@@ -35,6 +36,10 @@ export type VatSummary = {
   outputVat: number;
   inputVat: number;
   netVat: number;
+  /** Zero-rated sales that were exports; missing on returns filed before it was recorded. */
+  exports?: number;
+  /** Private health care and education supplied to citizens. */
+  citizenServices?: number;
   breakdown: {
     sales: VatBreakdownEntry[];
     purchases: VatBreakdownEntry[];
@@ -47,6 +52,9 @@ const SALES_STATUSES = new Set([
   "partially_paid",
   "paid",
 ]);
+/** ZATCA reason codes of export and citizen-service supplies. */
+const EXPORT_REASONS = new Set(["VATEX-SA-32", "VATEX-SA-33"]);
+const CITIZEN_REASONS = new Set(["VATEX-SA-EDU", "VATEX-SA-HEA"]);
 const PURCHASE_STATUSES = new Set(["approved", "partially_paid", "paid"]);
 
 const roundAmount = (value: number) =>
@@ -88,11 +96,21 @@ export async function buildVatSummary(params: {
   endDate: string;
   periodId?: string | null;
 }): Promise<VatSummary> {
-  const [invoices, bills, creditNotes, vendorCreditNotes, expenses, taxes, adjustments] =
+  const [
+    invoices,
+    bills,
+    creditNotes,
+    debitNotes,
+    vendorCreditNotes,
+    expenses,
+    taxes,
+    adjustments,
+  ] =
     await Promise.all([
       listSalesInvoices(params.companyId),
       listPurchaseBills(params.companyId),
       listSalesCreditNotes(params.companyId),
+      listSalesDebitNotes(params.companyId),
       listVendorCreditNotes(params.companyId),
       listExpenses(params.companyId),
       listTaxCategories(params.companyId),
@@ -105,6 +123,19 @@ export async function buildVatSummary(params: {
 
   const salesBreakdown = new Map<string, VatBreakdownEntry>();
   const purchaseBreakdown = new Map<string, VatBreakdownEntry>();
+
+  let exportsNet = 0;
+  let citizenNet = 0;
+  const countZeroRated = (
+    line: { taxRate: number; taxCategoryId?: string | null; netAmount: number },
+    sign: 1 | -1
+  ) => {
+    const category = line.taxCategoryId ? taxMap.get(line.taxCategoryId) : null;
+    const code = category?.exemptionReasonCode;
+    if (line.taxRate > 0 || !code || category.type === "exempt") return;
+    if (EXPORT_REASONS.has(code)) exportsNet += sign * line.netAmount;
+    if (CITIZEN_REASONS.has(code)) citizenNet += sign * line.netAmount;
+  };
 
   let salesNet = 0;
   let salesTax = 0;
@@ -126,6 +157,7 @@ export async function buildVatSummary(params: {
           net: line.netAmount,
           tax: line.taxAmount,
         });
+        countZeroRated(line, 1);
         salesNet += line.netAmount;
         salesTax += line.taxAmount;
       });
@@ -146,8 +178,30 @@ export async function buildVatSummary(params: {
           net: -line.netAmount,
           tax: -line.taxAmount,
         });
+        countZeroRated(line, -1);
         salesNet -= line.netAmount;
         salesTax -= line.taxAmount;
+      });
+    });
+
+  debitNotes
+    .filter((note) => note.status === "issued" && isInPeriod(note.issueDate))
+    .forEach((note) => {
+      note.lines.forEach((line) => {
+        const rate = Number((line.taxRate * 100).toFixed(2));
+        const taxCategory = line.taxCategoryId ? taxMap.get(line.taxCategoryId) : null;
+        const type =
+          taxCategory?.type ??
+          (rate === 0 ? "zero" : "standard");
+        addBreakdownEntry(salesBreakdown, {
+          rate,
+          type,
+          net: line.netAmount,
+          tax: line.taxAmount,
+        });
+        countZeroRated(line, 1);
+        salesNet += line.netAmount;
+        salesTax += line.taxAmount;
       });
     });
 
@@ -240,6 +294,8 @@ export async function buildVatSummary(params: {
     outputVat: roundAmount(outputVat),
     inputVat: roundAmount(inputVat),
     netVat: roundAmount(outputVat - inputVat),
+    exports: roundAmount(exportsNet),
+    citizenServices: roundAmount(citizenNet),
     breakdown: {
       sales: finalizeBreakdown(salesBreakdown),
       purchases: finalizeBreakdown(purchaseBreakdown),

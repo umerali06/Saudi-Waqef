@@ -4,8 +4,8 @@ import { requireAccountingAccess } from "@/lib/access";
 import { getVendorById } from "@/lib/data/vendors";
 import { listPurchaseBills } from "@/lib/data/purchase-bills";
 import { listVendorCreditNotes } from "@/lib/data/vendor-credit-notes";
-import { listVendorPayments } from "@/lib/data/vendor-payments";
 import { toCsv } from "@/lib/utils/csv";
+import { outstandingBalance } from "@/lib/utils/settlement";
 
 export const runtime = "nodejs";
 
@@ -33,32 +33,24 @@ export async function GET(_: Request, context: RouteContext) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const [bills, credits, payments] = await Promise.all([
+  const [bills, credits] = await Promise.all([
     listPurchaseBills(vendor.companyId),
     listVendorCreditNotes(vendor.companyId),
-    listVendorPayments(vendor.companyId),
   ]);
 
-  const vendorBills = bills.filter((bill) => bill.vendorId === vendorId);
-  const vendorCredits = credits.filter((note) => note.vendorId === vendorId);
-  const vendorPayments = payments.filter((payment) => payment.vendorId === vendorId);
-
-  const paidMap = new Map<string, number>();
-  vendorPayments.forEach((payment) => {
-    payment.allocations.forEach((allocation) => {
-      paidMap.set(
-        allocation.billId,
-        (paidMap.get(allocation.billId) ?? 0) + allocation.amount
-      );
-    });
-  });
+  const vendorBills = bills.filter(
+    (bill) => bill.vendorId === vendorId && !["draft", "canceled"].includes(bill.status)
+  );
+  const vendorCredits = credits.filter(
+    (note) => note.vendorId === vendorId && note.status === "issued"
+  );
 
   const rows: string[][] = [];
 
   vendorBills.forEach((bill) => {
-    const paid = paidMap.get(bill.id) ?? bill.amountPaid ?? 0;
-    const credited = bill.amountCredited ?? 0;
-    const balance = Math.max(bill.total - paid - credited, 0);
+    const paid = bill.amountPaid;
+    const credited = bill.amountCredited;
+    const balance = outstandingBalance(bill);
     rows.push([
       "bill",
       bill.billNumber,

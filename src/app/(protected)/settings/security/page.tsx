@@ -5,6 +5,7 @@ import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
 import { SkeletonBlock } from "@/components/skeleton";
 import { useToast } from "@/components/toast";
+import { ChangePasswordForm } from "@/components/change-password-form";
 
 type MfaStatus = {
   mfaEnabled: boolean;
@@ -122,6 +123,8 @@ export default function SecuritySettingsPage() {
         <h1 className="text-2xl font-semibold page-title">{t("settings.security.title")}</h1>
         <p className="text-sm text-muted page-subtitle">{t("settings.security.subtitle")}</p>
       </div>
+
+      <ChangePasswordForm />
 
       {!isAdmin ? (
         <div className="app-card p-6 text-sm text-muted card-modern">

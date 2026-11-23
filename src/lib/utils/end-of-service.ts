@@ -64,9 +64,16 @@ export const calculateEndOfServiceBenefit = (params: {
   employee: EmployeeRecord;
   contract: EmployeeContractRecord;
   payrollSettings: PayrollSettings;
+  contracts?: EmployeeContractRecord[];
   asOfDate?: string | null;
 }): EndOfServiceResult => {
-  const serviceStart = params.contract.startDate ?? params.employee.hireDate;
+  // Service is continuous from the hire date; renewing a contract does not restart it.
+  const earliestContractStart = [params.contract, ...(params.contracts ?? [])]
+    .filter((contract) => contract.status !== "draft" && contract.startDate)
+    .map((contract) => contract.startDate as string)
+    .sort()[0];
+  const serviceStart =
+    params.employee.hireDate || earliestContractStart || params.contract.startDate;
   const serviceEnd =
     params.employee.terminationDate ?? params.contract.endDate ?? params.asOfDate ?? null;
   const terminationCategory = getTerminationCategory(params.employee);

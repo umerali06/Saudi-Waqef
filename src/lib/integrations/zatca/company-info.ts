@@ -1,21 +1,27 @@
-import type { PostalAddress, SupplierInfo } from "@talha7k/zatca";
+import type { ZatcaAddress, ZatcaSupplier } from "@/lib/integrations/zatca/document";
 import type { CompanyRecord } from "@/lib/data/companies";
 
 const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
+/** ZATCA rejects Arabic-Indic digits in building and postal numbers. */
+const digits = (value: unknown) =>
+  text(value)
+    .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0));
+
 export function buildZatcaSupplierAddress(
   company: CompanyRecord,
   config: Record<string, unknown> = {}
-): PostalAddress {
+): ZatcaAddress {
   const raw = config.sellerAddress;
   const address =
     raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
   const result = {
     street: text(address.street) || company.address || "",
-    building: text(address.building),
+    building: digits(address.building),
     district: text(address.district),
     city: text(address.city),
-    postalCode: text(address.postalCode),
+    postalCode: digits(address.postalCode),
     countryCode: text(address.countryCode) || "SA",
   };
   const missing = Object.entries(result)
@@ -35,22 +41,22 @@ export function buildZatcaSupplierAddress(
  * when a buyer's address cannot be held on the customer record itself.
  */
 export function buildZatcaCustomerAddress(
-  structured: Partial<PostalAddress> | null | undefined,
+  structured: Partial<ZatcaAddress> | null | undefined,
   freeTextFallback?: string,
   configOverride?: unknown
-): PostalAddress {
+): ZatcaAddress {
   const override =
     configOverride && typeof configOverride === "object" && !Array.isArray(configOverride)
       ? (configOverride as Record<string, unknown>)
       : {};
   const source = structured ?? {};
-  const pick = (key: keyof PostalAddress) => text(override[key]) || text(source[key]);
+  const pick = (key: keyof ZatcaAddress) => text(override[key]) || text(source[key]);
   const result = {
     street: pick("street") || text(freeTextFallback),
-    building: pick("building"),
+    building: digits(pick("building")),
     district: pick("district"),
     city: pick("city"),
-    postalCode: pick("postalCode"),
+    postalCode: digits(pick("postalCode")),
     countryCode: pick("countryCode") || "SA",
   };
   const missing = Object.entries(result)
@@ -81,12 +87,12 @@ export function assertZatcaCompanyReady(
 export function buildZatcaSupplierInfo(
   company: CompanyRecord,
   config: Record<string, unknown> = {}
-): SupplierInfo {
+): ZatcaSupplier {
   return {
-    nameAr: text(config.sellerNameAr) || company.legalName || company.name,
-    nameEn: company.legalName || company.name,
-    vatNumber: company.vatNumber || "",
-    crNumber: company.crNumber,
+    // The QR code and XML carry one seller name, and ZATCA requires it in Arabic.
+    name: text(config.sellerNameAr) || company.legalName || company.name,
+    vatNumber: company.vatNumber?.trim() ?? "",
+    crNumber: company.crNumber?.trim() || undefined,
     address: buildZatcaSupplierAddress(company, config),
   };
 }

@@ -28,7 +28,9 @@ export async function GET(request: Request) {
   }
 
   const methods = await listPaymentMethods(companyId);
-  return NextResponse.json({ methods });
+  return NextResponse.json({
+    methods: methods.map(({ token, ...method }) => ({ ...method, hasToken: Boolean(token) })),
+  });
 }
 
 export async function POST(request: Request) {

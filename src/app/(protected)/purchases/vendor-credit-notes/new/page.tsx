@@ -108,6 +108,10 @@ const mapCreditNoteError = (error?: string) => {
       return "vendorCreditNote.missingDiscountAccount";
     case "VAT period is filed":
       return "vat.periodLocked";
+    case "Bill is not approved":
+      return "error.documentNotApproved";
+    case "PERIOD_CLOSED":
+      return "error.periodClosed";
     default:
       return "error.saveFailed";
   }
@@ -142,7 +146,7 @@ export default function NewVendorCreditNotePage() {
   );
 
   const formatCurrency = (value: number, currency?: string) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       style: "currency",
       currency: currency || bill?.currency || "SAR",
     }).format(value);
@@ -163,7 +167,7 @@ export default function NewVendorCreditNotePage() {
       .then((res) => res.json())
       .then((data) => {
         const rows: BillSummary[] = data.bills ?? [];
-        setBills(rows.filter((row) => row.status !== "canceled"));
+        setBills(rows.filter((row) => !["draft", "canceled"].includes(row.status)));
       })
       .catch(() => setBills([]))
       .finally(() => setLoadingBills(false));

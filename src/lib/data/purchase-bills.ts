@@ -1,8 +1,9 @@
-import { Timestamp } from "firebase-admin/firestore";
+import { Timestamp, type DocumentSnapshot, type Transaction } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase/admin";
 import { normalizeSearch } from "@/lib/utils/search";
-import { buildSequenceNumber } from "@/lib/utils/numbering";
+import { nextDocumentNumber } from "@/lib/data/numbering";
+import { readDoc, writeDoc } from "@/lib/firebase/documents";
 
 export type BillStatus =
   | "draft"
@@ -50,6 +51,8 @@ export type PurchaseBill = {
   total: number;
   amountPaid: number;
   amountCredited: number;
+  /** Total of issued credit notes, including the part that became a credit. */
+  creditNotesTotal: number;
   balance: number;
   lines: BillLine[];
   openItemId?: string | null;
@@ -58,59 +61,7 @@ export type PurchaseBill = {
   createdAt: Date;
 };
 
-const DEFAULT_CONFIG = {
-  billPrefix: "BILL-",
-  billSuffix: "",
-  billNextNumber: 1,
-  billPadding: 0,
-  billResetYearly: false,
-  billLastResetYear: null as number | null,
-};
-
-export async function listPurchaseBills(companyId: string) {
-  const snapshot = await db
-    .collection("purchase_bills")
-    .where("companyId", "==", companyId)
-    .get();
-
-  return snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      companyId: data.companyId,
-      vendorId: data.vendorId,
-      vendorName: data.vendorName,
-      vendorVatNumber: data.vendorVatNumber ?? undefined,
-      remittanceAddress: data.remittanceAddress ?? undefined,
-      billNumber: data.billNumber,
-      vendorBillNumber: data.vendorBillNumber ?? null,
-      status: data.status,
-      billDate: data.billDate,
-      dueDate: data.dueDate,
-      currency: data.currency ?? "SAR",
-      paymentTermId: data.paymentTermId ?? null,
-      notes: data.notes ?? null,
-      subtotal: data.subtotal ?? 0,
-      discountTotal: data.discountTotal ?? 0,
-      taxTotal: data.taxTotal ?? 0,
-      total: data.total ?? 0,
-      amountPaid: data.amountPaid ?? 0,
-      amountCredited: data.amountCredited ?? 0,
-      balance: data.balance ?? 0,
-      lines: data.lines ?? [],
-      openItemId: data.openItemId ?? null,
-      journalEntryId: data.journalEntryId ?? null,
-      approvedAt: data.approvedAt ?? null,
-      createdAt: data.createdAt.toDate(),
-    } as PurchaseBill;
-  });
-}
-
-export async function getPurchaseBillById(billId: string) {
-  const doc = await db.collection("purchase_bills").doc(billId).get();
-  if (!doc.exists) {
-    return null;
-  }
+function mapPurchaseBill(doc: DocumentSnapshot) {
   const data = doc.data()!;
   return {
     id: doc.id,
@@ -133,6 +84,7 @@ export async function getPurchaseBillById(billId: string) {
     total: data.total ?? 0,
     amountPaid: data.amountPaid ?? 0,
     amountCredited: data.amountCredited ?? 0,
+    creditNotesTotal: data.creditNotesTotal ?? data.amountCredited ?? 0,
     balance: data.balance ?? 0,
     lines: data.lines ?? [],
     openItemId: data.openItemId ?? null,
@@ -142,7 +94,22 @@ export async function getPurchaseBillById(billId: string) {
   } as PurchaseBill;
 }
 
+export async function listPurchaseBills(companyId: string) {
+  const snapshot = await db
+    .collection("purchase_bills")
+    .where("companyId", "==", companyId)
+    .get();
+
+  return snapshot.docs.map(mapPurchaseBill);
+}
+
+export async function getPurchaseBillById(billId: string, tx?: Transaction) {
+  const doc = await readDoc(db.collection("purchase_bills").doc(billId), tx);
+  return doc.exists ? mapPurchaseBill(doc) : null;
+}
+
 export async function createPurchaseBill(params: {
+  id?: string;
   companyId: string;
   vendorId: string;
   vendorName: string;
@@ -163,51 +130,27 @@ export async function createPurchaseBill(params: {
   balance?: number;
   status?: BillStatus;
   lines: BillLine[];
-}) {
-  const id = uuidv4();
-  const configRef = db.collection("company_configs").doc(params.companyId);
+}, tx?: Transaction) {
+  const id = params.id ?? uuidv4();
   const billRef = db.collection("purchase_bills").doc(id);
 
-  let billNumber = "";
-
-  await db.runTransaction(async (tx) => {
-    const configSnap = await tx.get(configRef);
-    const config = configSnap.data() ?? {};
-    const sequence = buildSequenceNumber({
-      prefix:
-        typeof config.billPrefix === "string"
-          ? config.billPrefix
-          : DEFAULT_CONFIG.billPrefix,
-      suffix:
-        typeof config.billSuffix === "string"
-          ? config.billSuffix
-          : DEFAULT_CONFIG.billSuffix,
-      nextNumber:
-        typeof config.billNextNumber === "number"
-          ? config.billNextNumber
-          : DEFAULT_CONFIG.billNextNumber,
-      padding:
-        typeof config.billPadding === "number"
-          ? config.billPadding
-          : DEFAULT_CONFIG.billPadding,
-      resetYearly:
-        typeof config.billResetYearly === "boolean"
-          ? config.billResetYearly
-          : DEFAULT_CONFIG.billResetYearly,
-      lastResetYear:
-        typeof config.billLastResetYear === "number"
-          ? config.billLastResetYear
-          : DEFAULT_CONFIG.billLastResetYear,
+  const create = async (transaction: Transaction) => {
+    const sequence = await nextDocumentNumber(transaction, {
+      companyId: params.companyId,
+      key: "bill",
+      defaultPrefix: "BILL-",
+      collection: "purchase_bills",
+      field: "billNumber",
       date: params.billDate,
     });
-    billNumber = sequence.number;
+    const billNumber = sequence.number;
 
     const vendorBillNumber = params.vendorBillNumber?.trim() || null;
     const vendorBillNormalized = vendorBillNumber
       ? normalizeSearch(vendorBillNumber)
       : null;
 
-    tx.set(billRef, {
+    transaction.set(billRef, {
       companyId: params.companyId,
       vendorId: params.vendorId,
       vendorName: params.vendorName,
@@ -230,22 +173,17 @@ export async function createPurchaseBill(params: {
       total: params.total,
       amountPaid: params.amountPaid ?? 0,
       amountCredited: params.amountCredited ?? 0,
+      creditNotesTotal: 0,
       balance: params.balance ?? params.total,
       lines: params.lines,
       createdAt: Timestamp.now(),
     });
 
-    tx.set(
-      configRef,
-      {
-        billNextNumber: sequence.nextNumber,
-        billLastResetYear: sequence.resetYear ?? null,
-        updatedAt: Timestamp.now(),
-      },
-      { merge: true }
-    );
-  });
+    sequence.save();
+    return billNumber;
+  };
 
+  const billNumber = tx ? await create(tx) : await db.runTransaction(create);
   return { id, billNumber };
 }
 
@@ -269,12 +207,15 @@ export async function updatePurchaseBill(
     total: number;
     amountPaid: number;
     amountCredited: number;
+    creditNotesTotal: number;
     balance: number;
     lines: BillLine[];
     openItemId: string | null;
     journalEntryId: string | null;
+    cancelJournalEntryId: string | null;
     approvedAt: string | null;
-  }>
+  }>,
+  tx?: Transaction
 ) {
   const payload: Record<string, unknown> = {
     ...updates,
@@ -289,5 +230,5 @@ export async function updatePurchaseBill(
       : null;
     payload.vendorBillNumberNormalized = normalized;
   }
-  await db.collection("purchase_bills").doc(billId).set(payload, { merge: true });
+  await writeDoc(db.collection("purchase_bills").doc(billId), payload, { merge: true, tx });
 }

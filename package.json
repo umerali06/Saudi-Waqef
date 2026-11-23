@@ -11,8 +11,9 @@
     "docs:integration": "node scripts/docs/generate-integration-docs.mjs"
   },
   "dependencies": {
-    "@talha7k/zatca": "0.11.1",
+    "@xmldom/xmldom": "0.9.10",
     "bcryptjs": "^3.0.2",
+    "bidi-js": "1.0.3",
     "cloudinary": "^2.5.1",
     "clsx": "^2.1.1",
     "firebase-admin": "^13.5.0",
@@ -20,11 +21,13 @@
     "next-auth": "^4.24.7",
     "nodemailer": "^6.9.14",
     "otplib": "^12.0.1",
+    "pdfkit": "0.17.2",
     "qrcode": "^1.5.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "tailwind-merge": "^2.5.4",
     "uuid": "^11.1.0",
+    "web-push": "3.6.7",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -32,6 +35,7 @@
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20",
     "@types/nodemailer": "^6.4.14",
+    "@types/pdfkit": "0.17.3",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",

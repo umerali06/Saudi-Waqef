@@ -30,6 +30,7 @@ export async function POST(request: Request) {
   }
 
   const result = await dispatchQueuedEmails({
+    companyId,
     limit: body?.limit,
     retryFailed: body?.retryFailed ?? false,
     maxAttempts: body?.maxAttempts,

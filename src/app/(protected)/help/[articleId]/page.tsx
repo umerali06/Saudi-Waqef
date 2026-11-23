@@ -89,7 +89,7 @@ export default function HelpArticlePage() {
     if (!article?.updatedAt) {
       return "";
     }
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       dateStyle: "medium",
     }).format(new Date(article.updatedAt));
   }, [article, locale]);

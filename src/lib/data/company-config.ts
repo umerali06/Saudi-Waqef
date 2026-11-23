@@ -151,9 +151,12 @@ const DEFAULT_CONFIG: CompanyConfig = {
   onboardingCompleted: false,
 };
 
-export async function getCompanyConfig(companyId: string) {
+export async function getCompanyConfig(
+  companyId: string,
+  options: { fresh?: boolean } = {}
+) {
   const cacheKey = `company_config:${companyId}`;
-  const cached = getCache<CompanyConfig>(cacheKey);
+  const cached = options.fresh ? null : getCache<CompanyConfig>(cacheKey);
   if (cached) {
     return cached;
   }

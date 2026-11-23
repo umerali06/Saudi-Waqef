@@ -2,8 +2,22 @@
 
 import { useTranslations } from "@/i18n/provider";
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { locale, setLocale, t } = useTranslations();
+
+  if (compact) {
+    const next = locale === "ar" ? "en" : "ar";
+    return (
+      <button
+        type="button"
+        lang={next}
+        onClick={() => setLocale(next)}
+        className="rounded-md px-2.5 py-1.5 text-sm font-medium text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+      >
+        {t(`language.${next}`)}
+      </button>
+    );
+  }
 
   return (
     <label className="flex flex-col gap-1 text-sm">

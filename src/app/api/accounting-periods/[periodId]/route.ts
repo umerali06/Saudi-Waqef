@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
 import { accountingPeriodUpdateSchema } from "@/lib/validators/company";
-import { updateAccountingPeriod } from "@/lib/data/accounting-periods";
+import { getAccountingPeriodCompanyId, updateAccountingPeriod } from "@/lib/data/accounting-periods";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 
 export const runtime = "nodejs";
@@ -33,6 +33,9 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const { periodId } = await context.params;
+  if ((await getAccountingPeriodCompanyId(periodId)) !== body.companyId) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   await updateAccountingPeriod(periodId, {
     status: parsed.data.status,
     lockedBy: user.id,

@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { db } from "@/lib/firebase/admin";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
 import { getSalesCreditNoteById, updateSalesCreditNote } from "@/lib/data/credit-notes";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { findFiledVatPeriod } from "@/lib/data/vat-periods";
+import { PostingError, postingErrorResponse } from "@/lib/accounting/errors";
 
 export const runtime = "nodejs";
 
@@ -41,7 +43,17 @@ export async function POST(_: Request, context: RouteContext) {
     return NextResponse.json({ error: "VAT period is filed" }, { status: 400 });
   }
 
-  await updateSalesCreditNote(creditNoteId, { status: "canceled" });
+  try {
+    await db.runTransaction(async (tx) => {
+      const current = await getSalesCreditNoteById(creditNoteId, tx);
+      if (current?.status !== "draft") {
+        throw new PostingError("Credit note is locked");
+      }
+      await updateSalesCreditNote(creditNoteId, { status: "canceled" }, tx);
+    });
+  } catch (error) {
+    return postingErrorResponse(error);
+  }
 
   await recordAuditEvent({
     companyId: note.companyId,

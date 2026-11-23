@@ -9,7 +9,7 @@ import {
 import { attendanceRecordUpdateSchema } from "@/lib/validators/attendance";
 import { getAttendanceSettings } from "@/lib/data/attendance-settings";
 import { listAttendanceHolidays } from "@/lib/data/attendance-holidays";
-import { computeAttendanceMetrics } from "@/lib/utils/attendance";
+import { computeAttendanceMetrics, isRestDay } from "@/lib/utils/attendance";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 
 export const runtime = "nodejs";
@@ -50,29 +50,33 @@ export async function PATCH(request: Request, context: RouteContext) {
     listAttendanceHolidays(body.companyId),
   ]);
 
+  const checkIn =
+    parsed.data.checkIn !== undefined ? parsed.data.checkIn : record.checkIn ?? null;
+  const checkOut =
+    parsed.data.checkOut !== undefined ? parsed.data.checkOut : record.checkOut ?? null;
+  const restDay = isRestDay(record.date, settings.weekendDays, holidays);
   const metrics = computeAttendanceMetrics({
-    checkIn: parsed.data.checkIn ?? record.checkIn ?? null,
-    checkOut: parsed.data.checkOut ?? record.checkOut ?? null,
+    checkIn,
+    checkOut,
     shiftStart: settings.shiftStart,
     shiftEnd: settings.shiftEnd,
     graceMinutes: settings.graceMinutes,
     roundingMinutes: settings.roundingMinutes,
     overtimeThresholdMinutes: settings.overtimeThresholdMinutes,
+    isRestDay: restDay,
   });
 
-  const isHoliday = holidays.some((holiday) => holiday.date === record.date);
-  const status =
-    parsed.data.status ?? (isHoliday ? "holiday" : metrics.status);
+  const status = parsed.data.status ?? (restDay ? "holiday" : metrics.status);
 
   await updateAttendanceRecord(recordId, {
-    checkIn: parsed.data.checkIn ?? record.checkIn ?? null,
-    checkOut: parsed.data.checkOut ?? record.checkOut ?? null,
+    checkIn,
+    checkOut,
     status,
     totalMinutes: metrics.totalMinutes,
     overtimeMinutes: metrics.overtimeMinutes,
     lateMinutes: metrics.lateMinutes,
     earlyMinutes: metrics.earlyMinutes,
-    notes: parsed.data.notes ?? record.notes ?? null,
+    notes: parsed.data.notes !== undefined ? parsed.data.notes : record.notes ?? null,
   });
 
   await recordAuditEvent({
@@ -110,6 +114,10 @@ export async function DELETE(request: Request, context: RouteContext) {
   }
 
   const { recordId } = await context.params;
+  const record = await getAttendanceRecord(recordId);
+  if (!record || record.companyId !== companyId) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   await deleteAttendanceRecord(recordId);
   await recordAuditEvent({
     companyId,

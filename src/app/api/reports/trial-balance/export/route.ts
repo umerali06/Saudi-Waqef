@@ -5,8 +5,12 @@ import { listChartAccounts } from "@/lib/data/chart-accounts";
 import { listJournalEntries } from "@/lib/data/journal-entries";
 import { toCsv } from "@/lib/utils/csv";
 import { createReportExport } from "@/lib/data/report-exports";
+import { trialBalanceModel } from "@/lib/pdf/financial-reports";
+import { loadReportContext, renderReport } from "@/lib/pdf/report";
+import { pdfResponse } from "@/lib/pdf/respond";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const isDateInRange = (date: string, startDate?: string | null, endDate?: string | null) => {
   if (startDate && date < startDate) {
@@ -16,90 +20,6 @@ const isDateInRange = (date: string, startDate?: string | null, endDate?: string
     return false;
   }
   return true;
-};
-
-const renderPdf = (
-  title: string,
-  startDate: string | null,
-  endDate: string | null,
-  rows: {
-    label: string;
-    openingDebit: number;
-    openingCredit: number;
-    movementDebit: number;
-    movementCredit: number;
-    closingDebit: number;
-    closingCredit: number;
-    compareDebit?: number;
-    compareCredit?: number;
-  }[],
-  includeCompare: boolean
-) => {
-  const escapeText = (value: string) =>
-    value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
-
-  const headerLines = [
-    title,
-    `From: ${startDate ?? "-"}`,
-    `To: ${endDate ?? "-"}`,
-    "",
-    includeCompare
-      ? "Account | Opening Dr | Opening Cr | Movement Dr | Movement Cr | Closing Dr | Closing Cr | Compare Dr | Compare Cr"
-      : "Account | Opening Dr | Opening Cr | Movement Dr | Movement Cr | Closing Dr | Closing Cr",
-  ];
-
-  const detailLines = rows.map((row) => {
-    const base = `${row.label} | ${row.openingDebit.toFixed(2)} | ${row.openingCredit.toFixed(
-      2
-    )} | ${row.movementDebit.toFixed(2)} | ${row.movementCredit.toFixed(2)} | ${row.closingDebit.toFixed(
-      2
-    )} | ${row.closingCredit.toFixed(2)}`;
-    if (!includeCompare) {
-      return base;
-    }
-    return `${base} | ${(row.compareDebit ?? 0).toFixed(2)} | ${(row.compareCredit ?? 0).toFixed(
-      2
-    )}`;
-  });
-
-  const contentLines: string[] = [];
-  let y = 760;
-  [...headerLines, ...detailLines].forEach((line) => {
-    contentLines.push(`BT /F1 9 Tf 40 ${y} Td (${escapeText(line)}) Tj ET`);
-    y -= 14;
-  });
-
-  const stream = contentLines.join("\n");
-  const streamLength = Buffer.byteLength(stream, "utf8");
-
-  const objects = [
-    "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n",
-    "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n",
-    "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >> endobj\n",
-    `4 0 obj << /Length ${streamLength} >> stream\n${stream}\nendstream endobj\n`,
-    "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\n",
-  ];
-
-  let offset = 0;
-  const header = "%PDF-1.4\n";
-  offset += header.length;
-  const offsets = [0];
-  const body = objects
-    .map((obj) => {
-      offsets.push(offset);
-      offset += obj.length;
-      return obj;
-    })
-    .join("");
-
-  const xrefStart = header.length + body.length;
-  let xref = "xref\n0 6\n0000000000 65535 f \n";
-  offsets.slice(1).forEach((objOffset) => {
-    xref += `${String(objOffset).padStart(10, "0")} 00000 n \n`;
-  });
-  const trailer = `trailer << /Size 6 /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
-
-  return Buffer.from(header + body + xref + trailer, "utf8");
 };
 
 export async function GET(request: Request) {
@@ -213,19 +133,11 @@ export async function GET(request: Request) {
   });
 
   if (format === "pdf") {
-    const buffer = renderPdf(
-      "Trial Balance",
-      startDate ?? null,
-      endDate ?? null,
-      rows,
-      includeCompare
+    const context = await loadReportContext(request, companyId);
+    const pdf = await renderReport(
+      trialBalanceModel(context, { rows, startDate, endDate, includeCompare })
     );
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": "attachment; filename=\"trial-balance.pdf\"",
-      },
-    });
+    return pdfResponse(pdf, "trial-balance.pdf", request);
   }
 
   const headers = includeCompare

@@ -122,11 +122,16 @@ describe("computePayrollForEmployee", () => {
       gosiEnabled: true,
       gosiEmployeeRate: 2,
       gosiEmployerRate: 0,
+      gosiNonSaudiEmployerRate: 2,
+      gosiMinBase: 1500,
+      gosiMaxBase: 45000,
       incomeTaxEnabled: false,
       incomeTaxRate: 0,
       salaryExpenseAccountId: null,
       payrollPayableAccountId: null,
       salaryDeductionsAccountId: null,
+      gosiExpenseAccountId: null,
+      gosiPayableAccountId: null,
       paymentAccountId: null,
       createdAt: new Date(),
     };
@@ -145,14 +150,16 @@ describe("computePayrollForEmployee", () => {
     expect(result.baseSalary).toBeCloseTo(3000, 2);
     expect(result.allowances).toBeCloseTo(700, 2);
     expect(result.fixedDeductions).toBeCloseTo(100, 2);
-    expect(result.overtimePay).toBeCloseTo(36.29, 2);
+    // Art. 107: 2h x (full hourly wage 3700/240 + 50% of basic hourly 3000/240).
+    expect(result.overtimePay).toBeCloseTo(43.33, 2);
     expect(result.latenessDeduction).toBeCloseTo(20, 2);
     expect(result.unpaidLeaveDeduction).toBeCloseTo(246.67, 2);
     expect(result.absenceDeduction).toBeCloseTo(123.33, 2);
-    expect(result.gosiDeduction).toBeCloseTo(74, 2);
-    expect(result.grossPay).toBeCloseTo(3736.29, 2);
-    expect(result.totalDeductions).toBeCloseTo(564, 2);
-    expect(result.netPay).toBeCloseTo(3172.29, 2);
+    // GOSI base is basic + housing only: 2% of 3500, transport excluded.
+    expect(result.gosiDeduction).toBeCloseTo(70, 2);
+    expect(result.grossPay).toBeCloseTo(3743.33, 2);
+    expect(result.totalDeductions).toBeCloseTo(560, 2);
+    expect(result.netPay).toBeCloseTo(3183.33, 2);
     expect(result.absentDays).toBe(1);
     expect(result.unpaidLeaveDays).toBe(2);
     expect(result.dailyRate).toBeCloseTo(123.33, 2);
@@ -203,11 +210,16 @@ describe("calculateEndOfServiceBenefit", () => {
       gosiEnabled: false,
       gosiEmployeeRate: 0,
       gosiEmployerRate: 0,
+      gosiNonSaudiEmployerRate: 2,
+      gosiMinBase: 1500,
+      gosiMaxBase: 45000,
       incomeTaxEnabled: false,
       incomeTaxRate: 0,
       salaryExpenseAccountId: null,
       payrollPayableAccountId: null,
       salaryDeductionsAccountId: null,
+      gosiExpenseAccountId: null,
+      gosiPayableAccountId: null,
       paymentAccountId: null,
       createdAt: new Date(),
     };
@@ -217,6 +229,22 @@ describe("calculateEndOfServiceBenefit", () => {
       contract,
       payrollSettings,
     });
+
+    // Renewing the contract must not restart the service period.
+    const renewed = calculateEndOfServiceBenefit({
+      employee,
+      contract: { ...contract, id: "c2", startDate: "2025-01-01" },
+      contracts: [contract],
+      payrollSettings,
+    });
+    expect(renewed.awardAmount).toBeCloseTo(result.awardAmount, 2);
+    const withoutHireDate = calculateEndOfServiceBenefit({
+      employee: { ...employee, hireDate: null },
+      contract: { ...contract, id: "c2", startDate: "2025-01-01" },
+      contracts: [contract],
+      payrollSettings,
+    });
+    expect(withoutHireDate.serviceDays).toBe(result.serviceDays);
 
     expect(result.eligible).toBe(true);
     expect(result.monthlyWage).toBe(6000);

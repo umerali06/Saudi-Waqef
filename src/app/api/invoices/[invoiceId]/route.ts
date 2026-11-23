@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { db } from "@/lib/firebase/admin";
+import { PostingError, postingErrorResponse } from "@/lib/accounting/errors";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAccountingAccess, requireCompanyRole } from "@/lib/access";
 import { invoiceUpdateSchema } from "@/lib/validators/sales";
@@ -8,11 +10,12 @@ import { listItems } from "@/lib/data/items";
 import { listTaxCategories } from "@/lib/data/tax-categories";
 import { getCompanyDefaults } from "@/lib/data/company-defaults";
 import { getCompanyConfig } from "@/lib/data/company-config";
-import { calculateLineAmounts } from "@/lib/utils/invoice";
+import { calculateLineAmounts, resolveTaxRate, sumLineAmounts } from "@/lib/utils/invoice";
 import { toBaseQuantity } from "@/lib/utils/units";
 import { applyItemStockDeltas } from "@/lib/data/items";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { findFiledVatPeriod } from "@/lib/data/vat-periods";
+import type { InvoiceLine } from "@/lib/data/sales-invoices";
 
 export const runtime = "nodejs";
 
@@ -108,7 +111,7 @@ export async function PUT(request: Request, context: RouteContext) {
   }
 
   const lines = parsed.data.lines ?? current.lines;
-  const computedLines = [];
+  const computedLines: InvoiceLine[] = [];
   const itemReserveMap = new Map<string, number>();
 
   for (const line of lines) {
@@ -128,7 +131,7 @@ export async function PUT(request: Request, context: RouteContext) {
       defaults.defaultSalesTaxCategoryId ??
       null;
     const taxCategory = taxCategoryId ? taxMap.get(taxCategoryId) : null;
-    const taxRate = taxCategory ? (taxCategory.rate ?? 0) / 100 : 0;
+    const taxRate = resolveTaxRate(taxCategory, config.vatEnabled);
 
     const amounts = calculateLineAmounts({
       quantity: line.quantity,
@@ -167,72 +170,62 @@ export async function PUT(request: Request, context: RouteContext) {
     }
   }
 
-  const subtotal = computedLines.reduce((sum, line) => sum + line.netAmount, 0);
-  const discountTotal = computedLines.reduce(
-    (sum, line) => sum + line.discountAmount,
-    0
-  );
-  const taxTotal = computedLines.reduce((sum, line) => sum + line.taxAmount, 0);
-  const total = computedLines.reduce((sum, line) => sum + line.totalAmount, 0);
+  const { subtotal, discountTotal, taxTotal, total } = sumLineAmounts(computedLines);
 
-  const previousMap = buildQuantityMap(current.lines);
-  const updates: Array<{
-    itemId: string;
-    stockReservedDelta?: number;
-    stockOnHandDelta?: number;
-  }> = [];
-  let insufficientStock = false;
-
-  itemReserveMap.forEach((nextQty, itemId) => {
-    const prevQty = previousMap.get(itemId) ?? 0;
-    const delta = nextQty - prevQty;
-    if (delta !== 0) {
-      const item = itemMap.get(itemId);
-      if (item && delta > 0) {
-        const available = item.stockOnHand - item.stockReserved;
-        if (available < delta) {
-          insufficientStock = true;
-        }
+  try {
+    await db.runTransaction(async (tx) => {
+      const latest = await getSalesInvoiceById(invoiceId, tx);
+      if (latest?.status !== "draft") {
+        throw new PostingError("Invoice is locked");
       }
-      updates.push({ itemId, stockReservedDelta: delta });
-    }
-  });
 
-  previousMap.forEach((prevQty, itemId) => {
-    if (!itemReserveMap.has(itemId)) {
-      updates.push({ itemId, stockReservedDelta: -prevQty });
-    }
-  });
+      // Only tracked items reserve stock, so only those can give it back.
+      const previousMap = buildQuantityMap(
+        latest.lines.filter((line) => line.itemId && itemMap.get(line.itemId)?.trackInventory)
+      );
+      const updates: Array<{ itemId: string; stockReservedDelta: number }> = [];
+      new Set([...itemReserveMap.keys(), ...previousMap.keys()]).forEach((itemId) => {
+        const delta = (itemReserveMap.get(itemId) ?? 0) - (previousMap.get(itemId) ?? 0);
+        if (delta === 0) {
+          return;
+        }
+        const item = itemMap.get(itemId);
+        if (item && delta > 0 && item.stockOnHand - item.stockReserved < delta) {
+          throw new PostingError("Insufficient stock");
+        }
+        updates.push({ itemId, stockReservedDelta: delta });
+      });
 
-  if (insufficientStock) {
-    return NextResponse.json({ error: "Insufficient stock" }, { status: 400 });
+      await applyItemStockDeltas(updates, tx);
+      await updateSalesInvoice(
+        invoiceId,
+        {
+          customerId: customer?.id ?? current.customerId,
+          customerName: customer?.name ?? current.customerName,
+          customerVatNumber: customer ? customer.vatNumber ?? null : current.customerVatNumber ?? null,
+          billingAddress: customer ? customer.billingAddress ?? null : current.billingAddress ?? null,
+          invoiceDate: parsed.data.invoiceDate ?? current.invoiceDate,
+          dueDate: parsed.data.dueDate ?? current.dueDate,
+          currency: parsed.data.currency ?? current.currency,
+          paymentTermId:
+            parsed.data.paymentTermId !== undefined
+              ? parsed.data.paymentTermId
+              : current.paymentTermId ?? null,
+          notes: parsed.data.notes ?? current.notes ?? null,
+          terms: parsed.data.terms ?? current.terms ?? null,
+          subtotal,
+          discountTotal,
+          taxTotal,
+          total,
+          balance: total,
+          lines: computedLines,
+        },
+        tx
+      );
+    });
+  } catch (error) {
+    return postingErrorResponse(error);
   }
-
-  if (updates.length > 0) {
-    await applyItemStockDeltas(updates);
-  }
-
-  await updateSalesInvoice(invoiceId, {
-    customerId: customer?.id ?? current.customerId,
-    customerName: customer?.name ?? current.customerName,
-    customerVatNumber: customer ? customer.vatNumber ?? null : current.customerVatNumber ?? null,
-    billingAddress: customer ? customer.billingAddress ?? null : current.billingAddress ?? null,
-    invoiceDate: parsed.data.invoiceDate ?? current.invoiceDate,
-    dueDate: parsed.data.dueDate ?? current.dueDate,
-    currency: parsed.data.currency ?? current.currency,
-    paymentTermId:
-      parsed.data.paymentTermId !== undefined
-        ? parsed.data.paymentTermId
-        : current.paymentTermId ?? null,
-    notes: parsed.data.notes ?? current.notes ?? null,
-    terms: parsed.data.terms ?? current.terms ?? null,
-    subtotal,
-    discountTotal,
-    taxTotal,
-    total,
-    balance: total - current.amountPaid - current.amountCredited,
-    lines: computedLines,
-  });
 
   await recordAuditEvent({
     companyId: current.companyId,

@@ -8,6 +8,7 @@ import { useToast } from "@/components/toast";
 import { SkeletonBlock } from "@/components/skeleton";
 import { useTranslations } from "@/i18n/provider";
 import { uploadToCloudinary } from "@/lib/cloudinary-client";
+import { changedFields } from "@/lib/utils/changed-fields";
 
 type CompanyProfile = {
   name: string;
@@ -91,6 +92,7 @@ export default function CompanyProfilePage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [initialSnapshot, setInitialSnapshot] = useState<string | null>(null);
+  const [savedConfig, setSavedConfig] = useState<CompanyConfig | null>(null);
 
   const snapshot = useMemo(
     () => JSON.stringify({ profile, config, logoUrl }),
@@ -150,6 +152,7 @@ export default function CompanyProfilePage() {
         const nextLogo = brandingData?.branding?.logoUrl ?? null;
         setProfile(nextProfile);
         setConfig(nextConfig);
+        setSavedConfig(nextConfig);
         setLogoUrl(nextLogo);
         setInitialSnapshot(JSON.stringify({ profile: nextProfile, config: nextConfig, logoUrl: nextLogo }));
         markClean();
@@ -236,13 +239,21 @@ export default function CompanyProfilePage() {
       const response = await fetch(`/api/companies/${activeCompanyId}/config`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
+        body: JSON.stringify(
+          savedConfig ? changedFields(savedConfig, config) : config
+        ),
       });
       if (!response.ok) {
-        setErrorKey("error.saveFailed");
+        const data = await response.json().catch(() => ({}));
+        setErrorKey(
+          data?.error === "NEXT_NUMBER_TOO_LOW"
+            ? "numbering.nextTooLow"
+            : "error.saveFailed"
+        );
       }
       if (response.ok) {
         setInitialSnapshot(JSON.stringify({ profile, config, logoUrl }));
+        setSavedConfig(config);
         markClean();
         toast(t("common.saved"), "success");
       }

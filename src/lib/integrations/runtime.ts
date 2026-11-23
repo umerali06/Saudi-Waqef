@@ -5,6 +5,15 @@ import { listPayrollRunItems } from "@/lib/data/payroll-run-items";
 import { listPayrollRuns } from "@/lib/data/payroll-runs";
 import { listSalesInvoices } from "@/lib/data/sales-invoices";
 import { listEmployees } from "@/lib/data/employees";
+import { getCompanyById } from "@/lib/data/companies";
+import { getEmployeeContractById } from "@/lib/data/employee-contracts";
+import {
+  buildFilingRows,
+  describeFilingIssues,
+  findFilingIssues,
+  findFilingRun,
+} from "@/lib/integrations/payroll-source";
+import { assertPublicUrl } from "@/lib/integrations/url-guard";
 import { buildGosiPayload } from "@/lib/integrations/gosi/payload";
 import { buildMudadPayload } from "@/lib/integrations/mudad/payload";
 
@@ -331,8 +340,57 @@ const filterBasePayload = (
   return filtered;
 };
 
+/** GOSI and Mudad file one approved payroll run; incomplete records stop the filing. */
+const buildPayrollFiling = async (integration: IntegrationRecord) => {
+  const config = integration.config ?? {};
+  const [company, employees, runs] = await Promise.all([
+    getCompanyById(integration.companyId),
+    listEmployees(integration.companyId),
+    listPayrollRuns(integration.companyId),
+  ]);
+  const run = findFilingRun(runs);
+  if (!run) throw new Error("PAYROLL_RUN_REQUIRED: approve a payroll run before filing.");
+  const items = await listPayrollRunItems(run.id);
+  const contracts = new Map(
+    await Promise.all(
+      [...new Set(items.map((item) => item.contractId))].map(
+        async (id) => [id, id ? await getEmployeeContractById(id) : null] as const
+      )
+    )
+  );
+  const rows = buildFilingRows({ employees, items, contracts });
+  const issues = findFilingIssues(rows, { requireIban: integration.connector === "mudad" });
+  if (issues.length > 0) throw new Error(describeFilingIssues(issues));
+
+  const establishment = {
+    name: company?.legalName || company?.name || "",
+    crNumber: company?.crNumber ?? null,
+  };
+  return integration.connector === "gosi"
+    ? buildGosiPayload({
+        establishment: {
+          ...establishment,
+          gosiNumber: trimString(getConfigValue(config, "establishmentNumber")) || null,
+        },
+        run,
+        rows,
+      })
+    : buildMudadPayload({
+        establishment: {
+          ...establishment,
+          molNumber: trimString(getConfigValue(config, "establishmentNumber")) || null,
+          payerIban: trimString(getConfigValue(config, "payerIban")) || null,
+        },
+        run,
+        rows,
+      });
+};
+
 export const buildRequestPayload = async (integration: IntegrationRecord) => {
   const config = integration.config ?? {};
+  if (integration.connector === "gosi" || integration.connector === "mudad") {
+    return buildPayrollFiling(integration);
+  }
   const basePayload = await buildBasePayload(integration);
   const includeDatasets = getStringArrayConfig(config, "includeDatasets");
   const filteredBase = filterBasePayload(basePayload as Record<string, unknown>, includeDatasets);
@@ -352,14 +410,6 @@ export const buildRequestPayload = async (integration: IntegrationRecord) => {
   const template = getConfigValue(config, "payloadTemplate");
   if (payloadMode === "template" && template && typeof template === "object") {
     return applyTemplate(template, filteredBase);
-  }
-
-  if (integration.connector === "gosi") {
-    return buildGosiPayload(filteredBase as Record<string, unknown>);
-  }
-
-  if (integration.connector === "mudad") {
-    return buildMudadPayload(filteredBase as Record<string, unknown>);
   }
 
   return filteredBase;
@@ -398,8 +448,11 @@ const executeCallback = async (params: {
   }
 
   try {
+    await assertPublicUrl(callbackUrl);
     const res = await fetch(callbackUrl, {
       method: "POST",
+      redirect: "error",
+      signal: AbortSignal.timeout(10000),
       headers: {
         "Content-Type": "application/json",
       },
@@ -447,6 +500,7 @@ export const executeIntegrationRequest = async (params: {
     return executeZatcaSubmission(params.integration);
   }
   const requestUrl = resolveRequestUrl(params.integration, params.mode);
+  await assertPublicUrl(requestUrl);
   const method = getMethod(params.integration, params.mode);
   const timeoutMs = parseTimeout(getConfigValue(params.integration.config, "timeoutMs"));
   const retries = parseRetries(getConfigValue(params.integration.config, "retries"));
@@ -483,10 +537,16 @@ export const executeIntegrationRequest = async (params: {
           ...authHeaders,
         },
         signal: controller.signal,
+        // Following a redirect would forward credentials to an unchecked host.
+        redirect: "manual",
       };
 
       if (params.mode === "sync" || !["GET", "HEAD"].includes(method)) {
-        const payload = await buildRequestPayload(params.integration);
+        // A connection test must not push business records.
+        const payload =
+          params.mode === "test"
+            ? { source: "saudi-waqef", connector: params.integration.connector, test: true }
+            : await buildRequestPayload(params.integration);
         init.headers = {
           "Content-Type": "application/json",
           ...(init.headers ?? {}),

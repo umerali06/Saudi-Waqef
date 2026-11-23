@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAdminAccess } from "@/lib/access";
+import { requireSystemAdmin } from "@/lib/admin/access";
 import {
   ensureSubscription,
   getSubscription,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/validators/billing";
 import { buildBillingPeriod, calculatePlanAmount } from "@/lib/utils/billing";
 import { createBillingInvoice } from "@/lib/data/billing-invoices";
+import { reportPlatformEvent } from "@/lib/notifications/platform-events";
 
 export const runtime = "nodejs";
 
@@ -76,6 +78,9 @@ export async function POST(request: Request) {
   }
 
   const existing = await getSubscription(parsed.data.companyId);
+  if (existing?.status === "suspended") {
+    return NextResponse.json({ error: "Subscription suspended" }, { status: 403 });
+  }
   const now = new Date();
   const period = buildBillingPeriod(now, parsed.data.billingCycle);
   const amount = calculatePlanAmount({
@@ -123,7 +128,8 @@ export async function POST(request: Request) {
     await updateSubscription(parsed.data.companyId, {
       planId: plan.id,
       billingCycle: parsed.data.billingCycle,
-      status: "active",
+      // Changing plan never clears an unpaid balance.
+      status: existing.status === "past_due" ? "past_due" : "active",
       trialEndsAt: null,
       currentPeriodStart: period.startDate,
       currentPeriodEnd: period.endDate,
@@ -149,24 +155,36 @@ export async function POST(request: Request) {
   }
 
   const updated = await getSubscription(parsed.data.companyId);
+  await reportPlatformEvent({
+    kind: "subscription_changed",
+    severity: "medium",
+    title: { ar: "تغيير اشتراك", en: "Subscription changed" },
+    message: {
+      ar: `انتقلت شركة إلى باقة ${plan.name}.`,
+      en: `A company moved to the ${plan.name} plan.`,
+    },
+    details: [
+      [{ ar: "المستخدم", en: "User" }, user.email ?? ""],
+      [{ ar: "الباقة", en: "Plan" }, plan.name],
+      [{ ar: "المبلغ", en: "Amount" }, `${amount} ${plan.currency}`],
+    ],
+    path: "/admin/tenants",
+    entityId: parsed.data.companyId,
+    companyId: parsed.data.companyId,
+  });
   return NextResponse.json({ subscription: updated, plan });
 }
 
 export async function PATCH(request: Request) {
-  const user = await getSessionUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requireSystemAdmin();
+  if (access.response) {
+    return access.response;
   }
 
   const body = await request.json().catch(() => null);
   const parsed = subscriptionOverrideSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
-  }
-
-  const membership = await requireAdminAccess(user.id, parsed.data.companyId);
-  if (!membership) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   await updateSubscription(parsed.data.companyId, {

@@ -11,10 +11,18 @@ import {
   createPayrollRun,
   listPayrollRuns,
 } from "@/lib/data/payroll-runs";
-import { createPayrollRunItem } from "@/lib/data/payroll-run-items";
+import { createPayrollRunItem, listPayrollRunItems } from "@/lib/data/payroll-run-items";
 import { getPayrollSettings } from "@/lib/data/payroll-settings";
 import { payrollRunCreateSchema } from "@/lib/validators/payroll";
 import { computePayrollForEmployee } from "@/lib/utils/payroll";
+import { roundMoney } from "@/lib/utils/invoice";
+import { isSaudiNational } from "@/lib/utils/gosi";
+import {
+  capContractEnd,
+  getPayableUntil,
+  periodsOverlap,
+  pickPayrollContract,
+} from "@/lib/utils/payroll-run";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { createTelemetryEvent } from "@/lib/data/telemetry";
 
@@ -22,9 +30,6 @@ export const runtime = "nodejs";
 
 const isDateInRange = (date: string, start: string, end: string) =>
   date >= start && date <= end;
-
-const pickActiveContract = (contracts: Awaited<ReturnType<typeof listEmployeeContracts>>) =>
-  contracts.find((contract) => contract.status === "active") ?? contracts[0] ?? null;
 
 export async function GET(request: Request) {
   const user = await getSessionUser();
@@ -72,15 +77,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const existingRuns = await listPayrollRuns(parsed.data.companyId);
-  const duplicate = existingRuns.find(
-    (run) =>
-      run.periodStart === parsed.data.periodStart &&
-      run.periodEnd === parsed.data.periodEnd
+  const period = {
+    periodStart: parsed.data.periodStart,
+    periodEnd: parsed.data.periodEnd,
+  };
+  const overlappingRuns = (await listPayrollRuns(parsed.data.companyId)).filter((run) =>
+    periodsOverlap(run, period)
   );
-  if (duplicate) {
-    return NextResponse.json({ error: "Payroll run exists" }, { status: 409 });
-  }
+  const alreadyPaid = new Set(
+    (await Promise.all(overlappingRuns.map((run) => listPayrollRunItems(run.id))))
+      .flat()
+      .map((item) => item.employeeId)
+  );
 
   const [settings, attendanceSettings, employees, attendanceRecords, leaveRequests, leaveTypes] =
     await Promise.all([
@@ -95,28 +103,38 @@ export async function POST(request: Request) {
   const employeeFilter = parsed.data.employeeIds?.length
     ? new Set(parsed.data.employeeIds)
     : null;
-  const eligibleEmployees = employees.filter((employee) => {
-    if (employee.status !== "active") {
+  const payableEmployees = employees.filter((employee) => {
+    if (!getPayableUntil(employee, period)) {
       return false;
     }
-    if (employeeFilter && !employeeFilter.has(employee.id)) {
-      return false;
-    }
-    return true;
+    return !employeeFilter || employeeFilter.has(employee.id);
   });
+  const eligibleEmployees = payableEmployees.filter(
+    (employee) => !alreadyPaid.has(employee.id)
+  );
+  if (payableEmployees.length > 0 && eligibleEmployees.length === 0) {
+    return NextResponse.json({ error: "Payroll run exists" }, { status: 409 });
+  }
 
   const items = [];
   for (const employee of eligibleEmployees) {
-    const contracts = await listEmployeeContracts(employee.id);
-    const contract = pickActiveContract(contracts);
-    if (!contract || contract.companyId !== parsed.data.companyId) {
+    const payableUntil = getPayableUntil(employee, period)!;
+    const contracts = (await listEmployeeContracts(employee.id)).filter(
+      (contract) => contract.companyId === parsed.data.companyId
+    );
+    const contract = pickPayrollContract(contracts, {
+      periodStart: period.periodStart,
+      payableUntil,
+      isTerminated: employee.status === "terminated",
+    });
+    if (!contract) {
       continue;
     }
 
     const employeeAttendance = attendanceRecords.filter(
       (record) =>
         record.employeeId === employee.id &&
-        isDateInRange(record.date, parsed.data.periodStart, parsed.data.periodEnd)
+        isDateInRange(record.date, period.periodStart, payableUntil)
     );
     const employeeLeaves = leaveRequests.filter(
       (request) =>
@@ -126,7 +144,7 @@ export async function POST(request: Request) {
     );
 
     const computed = computePayrollForEmployee({
-      contract,
+      contract: capContractEnd(contract, payableUntil),
       attendanceRecords: employeeAttendance,
       leaveRequests: employeeLeaves,
       leaveTypes,
@@ -134,6 +152,7 @@ export async function POST(request: Request) {
       payrollSettings: settings,
       periodStart: parsed.data.periodStart,
       periodEnd: parsed.data.periodEnd,
+      isSaudi: isSaudiNational(employee),
     });
 
     items.push({
@@ -149,6 +168,7 @@ export async function POST(request: Request) {
       unpaidLeaveDeduction: computed.unpaidLeaveDeduction,
       absenceDeduction: computed.absenceDeduction,
       gosiDeduction: computed.gosiDeduction,
+      gosiEmployerContribution: computed.gosiEmployerContribution,
       incomeTaxDeduction: computed.incomeTaxDeduction,
       statutoryDeduction: computed.statutoryDeduction,
       adjustmentsTotal: 0,
@@ -175,11 +195,17 @@ export async function POST(request: Request) {
       acc.grossPay += item.grossPay;
       acc.totalDeductions += item.totalDeductions;
       acc.netPay += item.netPay;
+      acc.gosiEmployer += item.gosiEmployerContribution;
       acc.employeeCount += 1;
       return acc;
     },
-    { grossPay: 0, totalDeductions: 0, netPay: 0, employeeCount: 0 }
+    { grossPay: 0, totalDeductions: 0, netPay: 0, gosiEmployer: 0, employeeCount: 0 }
   );
+
+  totals.grossPay = roundMoney(totals.grossPay);
+  totals.totalDeductions = roundMoney(totals.totalDeductions);
+  totals.netPay = roundMoney(totals.netPay);
+  totals.gosiEmployer = roundMoney(totals.gosiEmployer);
 
   const runId = await createPayrollRun({
     companyId: parsed.data.companyId,

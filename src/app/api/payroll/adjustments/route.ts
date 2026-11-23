@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
-import { requireAccountingAccess, requireCompanyRole } from "@/lib/access";
+import { requireHrAccess, requireCompanyRole } from "@/lib/access";
 import { payrollAdjustmentSchema } from "@/lib/validators/payroll";
 import { createPayrollAdjustment, listPayrollAdjustments } from "@/lib/data/payroll-adjustments";
 import { getPayrollRun, updatePayrollRun } from "@/lib/data/payroll-runs";
 import { getPayrollRunItem, listPayrollRunItems, updatePayrollRunItem } from "@/lib/data/payroll-run-items";
 import { recordAuditEvent } from "@/lib/data/audit-log";
+import { roundMoney } from "@/lib/utils/invoice";
 
 export const runtime = "nodejs";
 
@@ -23,9 +24,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "companyId and runId are required" }, { status: 400 });
   }
 
-  const membership = await requireAccountingAccess(user.id, companyId);
+  const membership = await requireHrAccess(user.id, companyId);
   if (!membership) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const run = await getPayrollRun(runId);
+  if (!run || run.companyId !== companyId) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   const adjustments = await listPayrollAdjustments(runId);
@@ -66,13 +72,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const adjustmentsTotal = roundMoney((item.adjustmentsTotal ?? 0) + parsed.data.amount);
+  const netPay = roundMoney(item.grossPay - item.totalDeductions + adjustmentsTotal);
+  if (netPay < 0) {
+    return NextResponse.json({ error: "Adjustment exceeds net pay" }, { status: 400 });
+  }
+
   const adjustmentId = await createPayrollAdjustment({
     ...parsed.data,
     createdBy: user.id,
   });
-
-  const adjustmentsTotal = (item.adjustmentsTotal ?? 0) + parsed.data.amount;
-  const netPay = item.grossPay - item.totalDeductions + adjustmentsTotal;
 
   await updatePayrollRunItem(item.id, { adjustmentsTotal, netPay });
 
@@ -82,11 +91,16 @@ export async function POST(request: Request) {
       acc.grossPay += entry.grossPay;
       acc.totalDeductions += entry.totalDeductions;
       acc.netPay += entry.netPay;
+      acc.gosiEmployer += entry.gosiEmployerContribution;
       acc.employeeCount += 1;
       return acc;
     },
-    { grossPay: 0, totalDeductions: 0, netPay: 0, employeeCount: 0 }
+    { grossPay: 0, totalDeductions: 0, netPay: 0, gosiEmployer: 0, employeeCount: 0 }
   );
+  totals.grossPay = roundMoney(totals.grossPay);
+  totals.totalDeductions = roundMoney(totals.totalDeductions);
+  totals.netPay = roundMoney(totals.netPay);
+  totals.gosiEmployer = roundMoney(totals.gosiEmployer);
   await updatePayrollRun(run.id, { totals });
 
   await recordAuditEvent({

@@ -44,6 +44,8 @@ export const receiptAllocationSchema = z.object({
 
 export const paymentReceiptSchema = z.object({
   companyId: z.string().min(1),
+  /** Same value on a retry of the same request, so it is recorded once. */
+  requestId: z.string().uuid().optional(),
   receiptDate: dateSchema,
   customerId: z.string().min(1),
   method: z.string().min(1),
@@ -61,6 +63,8 @@ export const vendorPaymentAllocationSchema = z.object({
 
 export const vendorPaymentSchema = z.object({
   companyId: z.string().min(1),
+  /** Same value on a retry of the same request, so it is recorded once. */
+  requestId: z.string().uuid().optional(),
   paymentDate: dateSchema,
   vendorId: z.string().min(1),
   method: z.string().min(1),
@@ -73,6 +77,8 @@ export const vendorPaymentSchema = z.object({
 
 export const transferSchema = z.object({
   companyId: z.string().min(1),
+  /** Same value on a retry of the same request, so it is recorded once. */
+  requestId: z.string().uuid().optional(),
   transferDate: dateSchema,
   fromAccountId: z.string().min(1),
   toAccountId: z.string().min(1),
@@ -83,6 +89,8 @@ export const transferSchema = z.object({
 
 export const adjustmentSchema = z.object({
   companyId: z.string().min(1),
+  /** Same value on a retry of the same request, so it is recorded once. */
+  requestId: z.string().uuid().optional(),
   adjustmentDate: dateSchema,
   accountId: z.string().min(1),
   offsetAccountId: z.string().min(1),
@@ -109,4 +117,16 @@ export const reconciliationImportSchema = z.object({
 export const reconciliationMatchSchema = z.object({
   companyId: z.string().min(1),
   accountId: z.string().min(1),
+});
+
+export const applyCreditSchema = z.object({
+  companyId: z.string().min(1),
+  allocations: z
+    .array(
+      z.object({
+        documentId: z.string().min(1),
+        amount: z.number().positive(),
+      })
+    )
+    .min(1),
 });

@@ -4,6 +4,7 @@ import { requireAdminAccess, requireCompanyRole } from "@/lib/access";
 import { integrationUpdateSchema, PRODUCTION_ACTIVATION_PHRASE } from "@/lib/validators/integrations";
 import { getIntegrationById, updateIntegration } from "@/lib/data/integrations";
 import { recordAuditEvent } from "@/lib/data/audit-log";
+import { withoutServerManagedConfig } from "@/lib/integrations/zatca/environment";
 
 export const runtime = "nodejs";
 
@@ -119,7 +120,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   delete updates.confirmProductionActivation;
   await updateIntegration(integrationId, {
     ...updates,
-    ...(parsed.data.config ? { config: { ...(integration.config ?? {}), ...parsed.data.config } } : {}),
+    ...(parsed.data.config ? { config: withoutServerManagedConfig(parsed.data.config) } : {}),
     ...(parsed.data.credentials ? {
       credentials: { ...(integration.credentials ?? {}), ...parsed.data.credentials },
     } : {}),

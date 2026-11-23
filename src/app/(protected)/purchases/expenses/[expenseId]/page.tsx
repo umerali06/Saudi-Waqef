@@ -110,6 +110,8 @@ const mapExpenseError = (error?: string) => {
       return "expense.reimbursementAlreadyPaid";
     case "VAT period is filed":
       return "vat.periodLocked";
+    case "PERIOD_CLOSED":
+      return "error.periodClosed";
     default:
       return "error.saveFailed";
   }
@@ -253,7 +255,7 @@ export default function ExpenseDetailPage() {
   }, [amount, taxCategoryId, taxMap, expense]);
 
   const formatCurrency = (value: number, currency?: string) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       style: "currency",
       currency: currency || "SAR",
     }).format(value);
@@ -263,7 +265,7 @@ export default function ExpenseDetailPage() {
       return "-";
     }
     const date = new Date(`${value}T00:00:00Z`);
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       dateStyle: "medium",
     }).format(date);
   };

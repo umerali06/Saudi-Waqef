@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRegistrationRequest } from "@/lib/data/registration-requests";
-import { sendEmail } from "@/lib/email/sender";
-import { listSystemAdmins } from "@/lib/data/system-admins";
+import { createRegistrationRequest, listRecentRequests } from "@/lib/data/registration-requests";
+import { queueEmailWithDispatch } from "@/lib/email/queue";
+import {
+  ownerAccessRequestMail,
+  platformRequestMail,
+  registrationReceivedMail,
+  roleLabel,
+} from "@/lib/email/registration-mails";
 import { createNotification } from "@/lib/data/notifications";
 import { listUserIdsByCompanyRoles } from "@/lib/data/memberships";
-import { getUserById } from "@/lib/data/users";
+import { getUserByEmail, getUserById } from "@/lib/data/users";
 import { findActiveCompanyByName } from "@/lib/data/companies";
+import { createSystemAlert } from "@/lib/data/system-alerts";
+import { notifySystemAdmins } from "@/lib/notifications/system-admins";
+import { registrationErrorFields, registrationSchema } from "@/lib/validators/registration";
 
-const ALLOWED_REQUEST_ROLES = new Set(["admin", "accountant", "hr", "employee", "viewer"]);
+const MAX_REQUESTS_PER_EMAIL = 3;
+const MAX_REQUESTS_PER_IP = 10;
 
 function normalizeBaseUrl(value?: string | null) {
   const trimmed = value?.trim();
@@ -21,105 +30,155 @@ function normalizeBaseUrl(value?: string | null) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { name, email, companyName, phone, requestedRole } = body;
-
-    if (!name || !email || !companyName || !requestedRole) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    const body = await req.json().catch(() => null);
+    const parsed = registrationSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid payload", fields: registrationErrorFields(parsed.error) },
+        { status: 400 }
+      );
     }
-    const normalizedRequestedRole = String(requestedRole).trim().toLowerCase();
-    if (!ALLOWED_REQUEST_ROLES.has(normalizedRequestedRole)) {
-      return NextResponse.json({ error: "Invalid requested role" }, { status: 400 });
+    const { kind, name, email, companyName, locale } = parsed.data;
+    // Opening a company always makes the applicant its owner.
+    const requestedRole = parsed.data.kind === "new" ? "owner" : parsed.data.requestedRole;
+    const phone = parsed.data.kind === "new" ? parsed.data.phone : null;
+    const crNumber = parsed.data.kind === "new" ? parsed.data.crNumber : null;
+    const vatNumber = parsed.data.kind === "new" ? parsed.data.vatNumber : null;
+
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+    const recent = await listRecentRequests({ emailLower: email.toLowerCase(), ip });
+    const duplicate = recent.pending.find(
+      (entry) =>
+        entry.kind === kind &&
+        entry.companyName.trim().toLowerCase() === companyName.toLowerCase()
+    );
+    if (duplicate) {
+      return NextResponse.json({ success: true, id: duplicate.id });
+    }
+    if (recent.emailCount >= MAX_REQUESTS_PER_EMAIL || recent.ipCount >= MAX_REQUESTS_PER_IP) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    const normalizedCompanyName = String(companyName).trim();
-    if (normalizedCompanyName.length < 2) {
-      return NextResponse.json({ error: "Invalid company name" }, { status: 400 });
-    }
-
-    const company = await findActiveCompanyByName(normalizedCompanyName);
-
+    const company = kind === "join" ? await findActiveCompanyByName(companyName) : null;
     const id = await createRegistrationRequest({
       name,
       email,
       companyId: company?.id,
-      companyName: normalizedCompanyName,
-      phone,
-      requestedRole: normalizedRequestedRole,
-    });
-    const baseUrl =
-      normalizeBaseUrl(process.env.NEXTAUTH_URL) ||
-      normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL) ||
-      req.nextUrl.origin.replace(/\/+$/, "");
-    const reviewUrl = `${baseUrl}/admin/registrations`;
-
-    // Send acknowledgement email
-    await sendEmail({
-      to: email,
-      subject: "Registration Request Received - Saudi Waqef",
-      body: `
-        <div style="font-family: sans-serif; padding: 20px;">
-          <h2>Request Received</h2>
-          <p>Dear ${name},</p>
-          <p>We have received your request for <strong>${normalizedRequestedRole}</strong> access to <strong>${normalizedCompanyName}</strong>.</p>
-          <p>An administrator will review your request. You will receive another email once it is approved or rejected.</p>
-          <br/>
-          <p>Best regards,</p>
-          <p>The Saudi Waqef Team</p>
-        </div>
-      `,
+      companyName,
+      phone: phone ?? undefined,
+      requestedRole,
+      kind,
+      crNumber,
+      vatNumber,
+      locale,
+      ip,
     });
 
-    // Notify company owners and system admins.
+    // The request is stored; a mail failure must not make the visitor submit it again.
     try {
-      const [admins, ownerUserIds] = await Promise.all([
-        listSystemAdmins(),
+      const baseUrl =
+        normalizeBaseUrl(process.env.NEXTAUTH_URL) ||
+        normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL) ||
+        req.nextUrl.origin.replace(/\/+$/, "");
+      const requestInfo = {
+        kind,
+        name,
+        email,
+        companyName,
+        requestedRole,
+        phone,
+        crNumber,
+        vatNumber,
+      };
+      const notification = {
+        type: "registration_received" as const,
+        data: { requestId: id },
+      };
+      const inApp = (language: "ar" | "en") =>
+        language === "ar"
+          ? {
+              title: "طلب انضمام جديد",
+              body: `${name}: ${companyName} (${roleLabel(requestedRole, "ar")})`,
+            }
+          : {
+              title: "New access request",
+              body: `${name}: ${companyName} (${roleLabel(requestedRole, "en")})`,
+            };
+
+      const [existingUser, ownerUserIds] = await Promise.all([
+        getUserByEmail(email),
         company ? listUserIdsByCompanyRoles(company.id, ["owner"]) : Promise.resolve([]),
       ]);
-      const recipientUserIds = Array.from(
-        new Set([
-          ...ownerUserIds,
-          ...admins.map((admin) => admin.userId).filter(Boolean),
-        ])
-      );
+      const owners = await Promise.all(ownerUserIds.map((userId) => getUserById(userId)));
+      const companyLocale = company?.defaultLanguage ?? "ar";
 
-      await Promise.all(
-        recipientUserIds.map((userId) =>
+      const received = registrationReceivedMail({
+        locale,
+        request: requestInfo,
+        hasAccount: Boolean(existingUser),
+        loginUrl: `${baseUrl}/login`,
+        forgotUrl: `${baseUrl}/forgot-password`,
+      });
+      const platform = platformRequestMail({
+        locale: "ar",
+        request: requestInfo,
+        linked: Boolean(company),
+        reviewUrl: `${baseUrl}/admin/access-requests`,
+      });
+
+      await Promise.allSettled([
+        queueEmailWithDispatch({
+          companyId: "system",
+          to: email,
+          subject: received.subject,
+          body: received.body,
+          sourceType: "registration_received",
+          sourceId: id,
+        }),
+        ...ownerUserIds.map((userId) =>
           createNotification({
+            ...notification,
+            ...inApp(companyLocale),
             userId,
             companyId: company?.id ?? null,
-            type: "registration_received",
-            title: "New Access Request",
-            body: `${name} requested ${normalizedRequestedRole} access to ${normalizedCompanyName}`,
-            data: { requestId: id },
           })
-        )
-      );
-
-      const ownerUsers = await Promise.all(ownerUserIds.map((userId) => getUserById(userId)));
-      await Promise.all(
-        ownerUsers
+        ),
+        ...owners
           .filter((owner): owner is NonNullable<typeof owner> => Boolean(owner?.email))
-          .map((owner) =>
-            sendEmail({
+          .map((owner) => {
+            const mail = ownerAccessRequestMail({
+              locale: companyLocale,
+              companyName: company?.name ?? companyName,
+              request: requestInfo,
+              reviewUrl: `${baseUrl}/admin/registrations`,
+            });
+            return queueEmailWithDispatch({
+              companyId: "system",
               to: owner.email,
-              subject: `Access Request for ${normalizedCompanyName} - Saudi Waqef`,
-              body: `
-                <div style="font-family: sans-serif; padding: 20px;">
-                  <h2>New Access Request</h2>
-                  <p>Dear ${owner.name},</p>
-                  <p>${name} (${email}) requested <strong>${normalizedRequestedRole}</strong> access to <strong>${normalizedCompanyName}</strong>.</p>
-                  ${phone ? `<p>Phone: ${phone}</p>` : ""}
-                  <p>Only a company owner can approve this request.</p>
-                  <p><a href="${reviewUrl}">Review request</a></p>
-                  <br/>
-                  <p>Best regards,</p>
-                  <p>The Saudi Waqef Team</p>
-                </div>
-              `,
-            })
-          )
-      );
+              subject: mail.subject,
+              body: mail.body,
+              sourceType: "registration_request",
+              sourceId: id,
+            });
+          }),
+        notifySystemAdmins({
+          ...notification,
+          ...inApp("ar"),
+          subject: platform.subject,
+          html: platform.body,
+          sourceType: "registration_request",
+          sourceId: id,
+          data: { url: "/admin/access-requests", requestId: id },
+        }),
+        createSystemAlert({
+          title: "طلب تسجيل جديد | New registration request",
+          message: `${requestInfo.name} - ${requestInfo.email} - ${companyName}`,
+          type: "registration_request",
+          severity: "medium",
+          source: "registration",
+          entityId: id,
+        }),
+      ]);
     } catch (error) {
       console.error("Failed to notify access request recipients:", error);
     }

@@ -10,7 +10,7 @@ import { listEmployees, getEmployeeByUserId } from "@/lib/data/employees";
 import { getAttendanceSettings } from "@/lib/data/attendance-settings";
 import { listAttendanceHolidays } from "@/lib/data/attendance-holidays";
 import { attendanceRecordSchema } from "@/lib/validators/attendance";
-import { computeAttendanceMetrics } from "@/lib/utils/attendance";
+import { computeAttendanceMetrics, isRestDay } from "@/lib/utils/attendance";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 
 export const runtime = "nodejs";
@@ -23,11 +23,6 @@ const isDateInRange = (date: string, start?: string | null, end?: string | null)
     return false;
   }
   return true;
-};
-
-const isWeekend = (date: string, weekendDays: number[]) => {
-  const day = new Date(date).getDay();
-  return weekendDays.includes(day);
 };
 
 export async function GET(request: Request) {
@@ -116,8 +111,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid employee" }, { status: 400 });
   }
 
-  const isHoliday = holidays.some((holiday) => holiday.date === parsed.data.date);
-  const weekend = isWeekend(parsed.data.date, settings.weekendDays);
+  const restDay = isRestDay(parsed.data.date, settings.weekendDays, holidays);
 
   const metrics = computeAttendanceMetrics({
     checkIn: parsed.data.checkIn ?? null,
@@ -127,11 +121,10 @@ export async function POST(request: Request) {
     graceMinutes: settings.graceMinutes,
     roundingMinutes: settings.roundingMinutes,
     overtimeThresholdMinutes: settings.overtimeThresholdMinutes,
+    isRestDay: restDay,
   });
 
-  const status =
-    parsed.data.status ??
-    (isHoliday ? "holiday" : weekend ? "holiday" : metrics.status);
+  const status = parsed.data.status ?? (restDay ? "holiday" : metrics.status);
 
   const recordId = await createAttendanceRecord({
     companyId: parsed.data.companyId,

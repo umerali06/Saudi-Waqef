@@ -3,13 +3,13 @@ import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAccountingAccess, requireCompanyRole } from "@/lib/access";
 import { importPayloadSchema } from "@/lib/validators/parties";
 import { listChartAccounts } from "@/lib/data/chart-accounts";
-import { saveOpeningBalances } from "@/lib/data/opening-balances";
+import { openingEntryId, saveOpeningBalances } from "@/lib/data/opening-balances";
 import { parseCsv, toCsv } from "@/lib/utils/csv";
 import { normalizeSearch } from "@/lib/utils/search";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { createImportJob } from "@/lib/data/import-jobs";
-import { getCompanyConfig } from "@/lib/data/company-config";
-import { findClosedPeriod } from "@/lib/data/accounting-periods";
+import { getJournalEntry } from "@/lib/data/journal-entries";
+import { isPeriodClosed } from "@/lib/accounting/period-guard";
 
 export const runtime = "nodejs";
 
@@ -265,25 +265,11 @@ export async function POST(request: Request) {
   }
 
   const finalAsOfDate = asOfDate ?? new Date().toISOString().slice(0, 10);
-  const config = await getCompanyConfig(parsed.data.companyId);
-  if (config.periodLockDate && finalAsOfDate <= config.periodLockDate) {
-    if (!dryRun) {
-      await createImportJob({
-        companyId: parsed.data.companyId,
-        entity: "opening_balances",
-        status: "failed",
-        totalRows: rows.length,
-        createdCount: 0,
-        errorCount: 1,
-        createdBy: user.id,
-        createdByEmail: user.email ?? null,
-      });
-    }
-    return NextResponse.json({ created: 0, errors: [{ row: 0, code: "period_locked" }] });
-  }
-
-  const closedPeriod = await findClosedPeriod(parsed.data.companyId, finalAsOfDate);
-  if (closedPeriod) {
+  const posted = await getJournalEntry(openingEntryId(parsed.data.companyId));
+  const isClosed =
+    (await isPeriodClosed(parsed.data.companyId, finalAsOfDate)) ||
+    (posted ? await isPeriodClosed(parsed.data.companyId, posted.date) : false);
+  if (isClosed) {
     if (!dryRun) {
       await createImportJob({
         companyId: parsed.data.companyId,
@@ -318,7 +304,7 @@ export async function POST(request: Request) {
   }
 
   if (!dryRun) {
-    await saveOpeningBalances(parsed.data.companyId, entries, finalAsOfDate);
+    await saveOpeningBalances(parsed.data.companyId, entries, finalAsOfDate, user.id);
     await recordAuditEvent({
       companyId: parsed.data.companyId,
       userId: user.id,

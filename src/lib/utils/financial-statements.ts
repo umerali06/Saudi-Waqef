@@ -1,3 +1,9 @@
+/** Source type of the journal entry that carries opening balances. */
+export const OPENING_BALANCE_SOURCE = "opening_balance";
+
+/** Balance sheet row for earnings not yet closed to retained earnings. */
+export const CURRENT_EARNINGS_ID = "current-earnings";
+
 export type ProfitLossAccountRow = {
   accountId: string;
   code: string;
@@ -88,6 +94,7 @@ type Account = {
 type JournalEntry = {
   date: string;
   status: "posted" | "draft" | "void";
+  sourceType?: string;
   lines: { accountId: string; debit: number; credit: number }[];
 };
 
@@ -152,6 +159,11 @@ const buildIncomeStatementSection = (
   const total = rows.reduce((sum, row) => sum + row.amount, 0);
   return { total, accounts: rows };
 };
+
+export const hasOpeningEntry = (entries: JournalEntry[]) =>
+  entries.some(
+    (entry) => entry.status === "posted" && entry.sourceType === OPENING_BALANCE_SOURCE
+  );
 
 export const buildProfitLossReport = (params: {
   accounts: Account[];
@@ -244,6 +256,7 @@ export const buildBalanceSheetReport = (params: {
 }): BalanceSheetReport => {
   const accountMap = new Map(params.accounts.map((account) => [account.id, account]));
   const balances = new Map<string, number>();
+  let earnings = 0;
 
   params.entries.forEach((entry) => {
     if (entry.status !== "posted") {
@@ -261,6 +274,8 @@ export const buildBalanceSheetReport = (params: {
         addToMap(balances, account.id, line.debit - line.credit);
       } else if (account.type === "liability" || account.type === "equity") {
         addToMap(balances, account.id, line.credit - line.debit);
+      } else {
+        earnings += line.credit - line.debit;
       }
     });
   });
@@ -283,6 +298,15 @@ export const buildBalanceSheetReport = (params: {
   const assets = buildSection("asset");
   const liabilities = buildSection("liability");
   const equity = buildSection("equity");
+  if (Math.abs(earnings) > 0.0001) {
+    equity.accounts.push({
+      accountId: CURRENT_EARNINGS_ID,
+      code: "",
+      name: "Current earnings",
+      amount: earnings,
+    });
+    equity.total += earnings;
+  }
   const liabilitiesEquity = liabilities.total + equity.total;
   const difference = assets.total - liabilitiesEquity;
 
@@ -311,10 +335,15 @@ export const buildCashFlowReport = (params: {
   const accountMap = new Map(params.accounts.map((account) => [account.id, account]));
   const cashAccountIds = new Set(params.cashAccounts.map((account) => account.accountId));
 
+  // Once opening balances are posted they already include the cash accounts.
+  const openingPosted = hasOpeningEntry(params.entries);
+  const openingOf = (account: { openingBalance?: number }) =>
+    openingPosted ? 0 : account.openingBalance ?? 0;
+
   const cashLinesByAccount = new Map<string, { opening: number; movement: number }>();
   params.cashAccounts.forEach((account) => {
     cashLinesByAccount.set(account.accountId, {
-      opening: account.openingBalance ?? 0,
+      opening: openingOf(account),
       movement: 0,
     });
   });
@@ -326,8 +355,9 @@ export const buildCashFlowReport = (params: {
     if (entry.status !== "posted") {
       return;
     }
-    const beforeStart = entry.date < params.startDate;
+    const isOpening = entry.sourceType === OPENING_BALANCE_SOURCE;
     const inRange = isDateInRange(entry.date, params.startDate, params.endDate);
+    const beforeStart = entry.date < params.startDate || (isOpening && inRange);
     const beforeEnd = entry.date <= params.endDate;
 
     entry.lines.forEach((line) => {
@@ -365,7 +395,7 @@ export const buildCashFlowReport = (params: {
 
   const cashAccounts = params.cashAccounts.map((account) => {
     const data = cashLinesByAccount.get(account.accountId) ?? {
-      opening: account.openingBalance ?? 0,
+      opening: openingOf(account),
       movement: 0,
     };
     const closing = data.opening + data.movement;

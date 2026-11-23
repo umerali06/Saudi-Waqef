@@ -67,6 +67,8 @@ const mapLeaveError = (error?: string) => {
       return "leave.errors.invalidEmployee";
     case "Invalid leave duration":
       return "leave.errors.invalidDuration";
+    case "Overlapping leave request":
+      return "leave.errors.overlapping";
     case "Insufficient leave balance":
       return "leave.errors.insufficientBalance";
     case "Request already processed":
@@ -452,6 +454,7 @@ export default function LeavePage() {
           employeeId: adjustEmployeeId,
           leaveTypeId: adjustLeaveTypeId,
           amount,
+          year: Number(balanceYear) || undefined,
           reason: adjustReason.trim(),
         }),
       });
@@ -779,6 +782,18 @@ export default function LeavePage() {
                                 </button>
                               )}
                             </div>
+                          ) : request.status === "approved" && isPrivileged ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (window.confirm(t("leave.cancelApprovedConfirm"))) {
+                                  handleRequestAction(request.id, "cancelled");
+                                }
+                              }}
+                              className="cursor-pointer text-xs font-semibold text-rose-600"
+                            >
+                              {t("leave.requestCancel")}
+                            </button>
                           ) : (
                             <span className="text-xs text-muted">-</span>
                           )}

@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
-import { requireAccountingAccess, requireCompanyRole } from "@/lib/access";
+import { requireHrAccess, requireCompanyRole } from "@/lib/access";
 import { leaveAdjustmentSchema } from "@/lib/validators/leave";
 import { listLeaveAdjustments, createLeaveAdjustment } from "@/lib/data/leave-adjustments";
+import { getEmployeeById } from "@/lib/data/employees";
+import { riyadhYear } from "@/lib/utils/riyadh";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 
 export const runtime = "nodejs";
@@ -22,7 +24,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "companyId is required" }, { status: 400 });
   }
 
-  const membership = await requireAccountingAccess(user.id, companyId);
+  const membership = await requireHrAccess(user.id, companyId);
   if (!membership) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -62,8 +64,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const employee = await getEmployeeById(parsed.data.employeeId);
+  if (!employee || employee.companyId !== parsed.data.companyId) {
+    return NextResponse.json({ error: "Invalid employee" }, { status: 400 });
+  }
+
   const adjustmentId = await createLeaveAdjustment({
     ...parsed.data,
+    year: parsed.data.year ?? riyadhYear(),
     createdBy: user.id,
   });
 

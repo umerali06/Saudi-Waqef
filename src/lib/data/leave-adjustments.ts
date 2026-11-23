@@ -9,6 +9,7 @@ export type LeaveAdjustment = {
   leaveTypeId: string;
   amount: number;
   reason: string;
+  year?: number | null;
   createdBy?: string | null;
   createdAt: Date;
 };
@@ -28,6 +29,7 @@ export async function listLeaveAdjustments(companyId: string) {
       leaveTypeId: data.leaveTypeId,
       amount: data.amount ?? 0,
       reason: data.reason ?? "",
+      year: data.year ?? null,
       createdBy: data.createdBy ?? null,
       createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
     } as LeaveAdjustment;
@@ -42,6 +44,7 @@ export async function createLeaveAdjustment(params: {
   leaveTypeId: string;
   amount: number;
   reason: string;
+  year?: number | null;
   createdBy?: string | null;
 }) {
   const id = uuidv4();
@@ -51,6 +54,7 @@ export async function createLeaveAdjustment(params: {
     leaveTypeId: params.leaveTypeId,
     amount: params.amount,
     reason: params.reason.trim(),
+    year: params.year ?? null,
     createdBy: params.createdBy ?? null,
     createdAt: Timestamp.now(),
   });

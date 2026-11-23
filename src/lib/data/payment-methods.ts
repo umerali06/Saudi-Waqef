@@ -40,6 +40,14 @@ export async function listPaymentMethods(companyId: string) {
   return methods.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
 }
 
+export async function getPaymentMethod(methodId: string) {
+  const doc = await db.collection("payment_methods").doc(methodId).get();
+  if (!doc.exists) {
+    return null;
+  }
+  return { id: doc.id, companyId: doc.data()!.companyId as string };
+}
+
 export async function createPaymentMethod(params: {
   companyId: string;
   type: "card" | "bank";

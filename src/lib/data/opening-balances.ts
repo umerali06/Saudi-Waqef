@@ -1,5 +1,8 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { db } from "@/lib/firebase/admin";
+import { createJournalEntry, deleteJournalEntry } from "@/lib/data/journal-entries";
+import { OPENING_BALANCE_SOURCE } from "@/lib/utils/financial-statements";
+import { roundMoney } from "@/lib/utils/invoice";
 
 export type OpeningBalance = {
   accountId: string;
@@ -25,33 +28,57 @@ export async function listOpeningBalances(companyId: string) {
   });
 }
 
+/** The single journal entry that carries a company's opening balances. */
+export const openingEntryId = (companyId: string) => `opening_${companyId}`;
+
+/** Replaces the opening balances together with the journal entry that posts them. */
 export async function saveOpeningBalances(
   companyId: string,
   entries: OpeningBalance[],
-  asOfDate?: string
+  asOfDate: string,
+  userId: string
 ) {
-  const batch = db.batch();
-
-  const existingSnapshot = await db
-    .collection("opening_balances")
-    .where("companyId", "==", companyId)
-    .get();
-
-  existingSnapshot.docs.forEach((doc) => {
-    batch.delete(doc.ref);
-  });
-
-  entries.forEach((entry) => {
-    const ref = db.collection("opening_balances").doc();
-    batch.set(ref, {
-      companyId,
+  const lines = entries
+    .map((entry) => ({
       accountId: entry.accountId,
-      debit: entry.debit,
-      credit: entry.credit,
-      asOfDate: asOfDate ?? null,
-      updatedAt: Timestamp.now(),
-    });
-  });
+      debit: roundMoney(entry.debit),
+      credit: roundMoney(entry.credit),
+    }))
+    .filter((line) => line.debit !== 0 || line.credit !== 0);
 
-  await batch.commit();
+  await db.runTransaction(async (tx) => {
+    const existing = await tx.get(
+      db.collection("opening_balances").where("companyId", "==", companyId)
+    );
+    existing.docs.forEach((doc) => tx.delete(doc.ref));
+
+    entries.forEach((entry) => {
+      tx.set(db.collection("opening_balances").doc(), {
+        companyId,
+        accountId: entry.accountId,
+        debit: entry.debit,
+        credit: entry.credit,
+        asOfDate,
+        updatedAt: Timestamp.now(),
+      });
+    });
+
+    if (lines.length === 0) {
+      await deleteJournalEntry(openingEntryId(companyId), tx);
+      return;
+    }
+    await createJournalEntry(
+      {
+        id: openingEntryId(companyId),
+        companyId,
+        sourceType: OPENING_BALANCE_SOURCE,
+        date: asOfDate,
+        memo: "Opening balances",
+        lines,
+        createdBy: userId,
+        approvedBy: userId,
+      },
+      tx
+    );
+  });
 }
