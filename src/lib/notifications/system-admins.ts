@@ -25,14 +25,16 @@ export async function notifySystemAdmins(params: {
   const userIds = new Set<string>();
   admins.forEach((admin) => {
     userIds.add(admin.userId);
-    if (admin.email) {
+    if (admin.email && !admin.loginOnly) {
       emails.set(admin.email.trim().toLowerCase(), admin.userId);
     }
   });
   for (const email of getSystemAdminEmails()) {
     if (!emails.has(email)) {
       const user = await getUserByEmail(email);
-      emails.set(email, user?.id ?? null);
+      if (!user?.loginOnly) {
+        emails.set(email, user?.id ?? null);
+      }
       if (user) {
         userIds.add(user.id);
       }

@@ -8,6 +8,8 @@ export type UserRecord = {
   name: string;
   passwordHash: string;
   status: "active" | "invited";
+  /** The address has no mailbox of ours, so nothing secret may be mailed to it. */
+  loginOnly: boolean;
   createdAt: Date;
 };
 
@@ -36,6 +38,7 @@ export async function getUserByEmail(email: string) {
     name: data.name,
     passwordHash: data.passwordHash,
     status: data.status,
+    loginOnly: data.loginOnly === true,
     createdAt: data.createdAt.toDate(),
   } as UserRecord;
 }
@@ -52,6 +55,7 @@ export async function getUserById(userId: string) {
     name: data.name,
     passwordHash: data.passwordHash,
     status: data.status,
+    loginOnly: data.loginOnly === true,
     createdAt: data.createdAt.toDate(),
   } as UserRecord;
 }

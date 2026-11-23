@@ -9,6 +9,7 @@ export type SystemAdminRecord = {
   email?: string;
   name?: string;
   role: SystemAdminRole;
+  loginOnly: boolean;
   mfaVerifiedAt?: Date | null;
   createdAt: Date;
   updatedAt?: Date;
@@ -36,6 +37,7 @@ export async function getSystemAdmin(userId: string) {
     email: data.email ?? undefined,
     name: data.name ?? undefined,
     role: (data.role ?? "admin") as SystemAdminRole,
+    loginOnly: data.loginOnly === true,
     mfaVerifiedAt: data.mfaVerifiedAt?.toDate ? data.mfaVerifiedAt.toDate() : null,
     createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
     updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : undefined,
@@ -52,6 +54,7 @@ export async function listSystemAdmins() {
       email: data.email ?? undefined,
       name: data.name ?? undefined,
       role: (data.role ?? "admin") as SystemAdminRole,
+      loginOnly: data.loginOnly === true,
       mfaVerifiedAt: data.mfaVerifiedAt?.toDate ? data.mfaVerifiedAt.toDate() : null,
       createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
       updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : undefined,
