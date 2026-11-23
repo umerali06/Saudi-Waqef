@@ -6,52 +6,15 @@ import { listJournalEntries } from "@/lib/data/journal-entries";
 import { buildBalanceSheetReport } from "@/lib/utils/financial-statements";
 import { toCsv } from "@/lib/utils/csv";
 import { createReportExport } from "@/lib/data/report-exports";
+import { balanceSheetModel } from "@/lib/pdf/financial-reports";
+import { loadReportContext, renderReport } from "@/lib/pdf/report";
+import { pdfResponse } from "@/lib/pdf/respond";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
-const renderPdf = (lines: string[]) => {
-  const escapeText = (value: string) =>
-    value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
-
-  const contentLines: string[] = [];
-  let y = 760;
-  lines.forEach((line) => {
-    contentLines.push(`BT /F1 11 Tf 40 ${y} Td (${escapeText(line)}) Tj ET`);
-    y -= 16;
-  });
-
-  const stream = contentLines.join("\n");
-  const streamLength = Buffer.byteLength(stream, "utf8");
-
-  const objects = [
-    "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n",
-    "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n",
-    "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >> endobj\n",
-    `4 0 obj << /Length ${streamLength} >> stream\n${stream}\nendstream endobj\n`,
-    "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\n",
-  ];
-
-  let offset = 0;
-  const header = "%PDF-1.4\n";
-  offset += header.length;
-  const offsets = [0];
-  const body = objects
-    .map((obj) => {
-      offsets.push(offset);
-      offset += obj.length;
-      return obj;
-    })
-    .join("");
-
-  const xrefStart = header.length + body.length;
-  let xref = "xref\n0 6\n0000000000 65535 f \n";
-  offsets.slice(1).forEach((objOffset) => {
-    xref += `${String(objOffset).padStart(10, "0")} 00000 n \n`;
-  });
-  const trailer = `trailer << /Size 6 /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
-
-  return Buffer.from(header + body + xref + trailer, "utf8");
-};
+const accountLabel = (account: { code: string; name: string }) =>
+  account.code ? `${account.code} - ${account.name}` : account.name;
 
 export async function GET(request: Request) {
   const user = await getSessionUser();
@@ -90,32 +53,9 @@ export async function GET(request: Request) {
   });
 
   if (format === "pdf") {
-    const lines: string[] = [];
-    lines.push("Balance Sheet");
-    lines.push(`As of: ${report.asOfDate}`);
-    lines.push("");
-    lines.push(`Assets: ${report.assets.total.toFixed(2)}`);
-    report.assets.accounts.forEach((account) => {
-      lines.push(`  ${account.code} - ${account.name}: ${account.amount.toFixed(2)}`);
-    });
-    lines.push(`Liabilities: ${report.liabilities.total.toFixed(2)}`);
-    report.liabilities.accounts.forEach((account) => {
-      lines.push(`  ${account.code} - ${account.name}: ${account.amount.toFixed(2)}`);
-    });
-    lines.push(`Equity: ${report.equity.total.toFixed(2)}`);
-    report.equity.accounts.forEach((account) => {
-      lines.push(`  ${account.code} - ${account.name}: ${account.amount.toFixed(2)}`);
-    });
-    lines.push(`Liabilities + Equity: ${report.totals.liabilitiesEquity.toFixed(2)}`);
-    lines.push(`Difference: ${report.difference.toFixed(2)}`);
-
-    const buffer = renderPdf(lines);
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": "attachment; filename=\"balance-sheet.pdf\"",
-      },
-    });
+    const context = await loadReportContext(request, companyId);
+    const pdf = await renderReport(balanceSheetModel(context, report));
+    return pdfResponse(pdf, "balance-sheet.pdf", request);
   }
 
   const headers = ["Section", "Account", "Amount"];
@@ -124,7 +64,7 @@ export async function GET(request: Request) {
   const pushSection = (label: string, section: typeof report.assets) => {
     rows.push([label, "", section.total.toFixed(2)]);
     section.accounts.forEach((account) => {
-      rows.push([label, `${account.code} - ${account.name}`, account.amount.toFixed(2)]);
+      rows.push([label, accountLabel(account), account.amount.toFixed(2)]);
     });
   };
 

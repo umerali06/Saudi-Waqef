@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
 import { addDays } from "@/lib/utils/dates";
-import { calculateLineAmounts } from "@/lib/utils/invoice";
+import { calculateLineAmounts, resolveTaxRate } from "@/lib/utils/invoice";
 import { getUnitOptions } from "@/lib/utils/units";
 
 type Customer = {
@@ -49,6 +49,7 @@ type CompanyDefaults = {
 
 type CompanyConfig = {
   taxInclusive: boolean;
+  vatEnabled: boolean;
 };
 
 type LineForm = {
@@ -129,7 +130,10 @@ export default function NewInvoicePage() {
           );
           setTerms(termData.terms ?? []);
           setDefaults(defaultsData.defaults ?? null);
-          setConfig({ taxInclusive: Boolean(configData?.config?.taxInclusive) });
+          setConfig({
+            taxInclusive: Boolean(configData?.config?.taxInclusive),
+            vatEnabled: configData?.config?.vatEnabled !== false,
+          });
         }
       )
       .catch(() => setErrorKey("error.loadFailed"));
@@ -173,7 +177,7 @@ export default function NewInvoicePage() {
           defaults?.defaultSalesTaxCategoryId ||
           "";
         const taxCategory = taxCategoryId ? taxMap.get(taxCategoryId) : null;
-        const taxRate = taxCategory ? (taxCategory.rate ?? 0) / 100 : 0;
+        const taxRate = resolveTaxRate(taxCategory, config?.vatEnabled ?? true);
         const amounts = calculateLineAmounts({
           quantity,
           unitPrice,
@@ -265,7 +269,7 @@ export default function NewInvoicePage() {
           companyId: activeCompanyId,
           customerId,
           invoiceDate,
-          dueDate,
+          dueDate: dueDate || invoiceDate,
           paymentTermId: paymentTermId || null,
           notes: notes || null,
           terms: termsText || null,
@@ -278,6 +282,8 @@ export default function NewInvoicePage() {
           setErrorKey("invoice.insufficientStock");
         } else if (data?.error === "Invalid customer") {
           setErrorKey("invoice.invalidCustomer");
+        } else if (data?.error === "Customer is blacklisted") {
+          setErrorKey("receipt.customerBlocked");
         } else if (data?.error === "VAT period is filed") {
           setErrorKey("vat.periodLocked");
         } else {
@@ -367,7 +373,7 @@ export default function NewInvoicePage() {
               defaults?.defaultSalesTaxCategoryId ||
               "";
             const taxCategory = taxCategoryId ? taxMap.get(taxCategoryId) : null;
-            const taxRate = taxCategory ? (taxCategory.rate ?? 0) / 100 : 0;
+            const taxRate = resolveTaxRate(taxCategory, config?.vatEnabled ?? true);
             const amounts = calculateLineAmounts({
               quantity: Number(line.quantity) || 0,
               unitPrice: Number(line.unitPrice) || 0,

@@ -35,6 +35,8 @@ export type DocumentRecord = {
   updatedAt?: Date;
 };
 
+const MAX_DOCUMENT_CONTENT_BYTES = 1000 * 1024;
+
 const normalizeTags = (tags?: string[] | null) =>
   (tags ?? []).map((tag) => tag.trim()).filter(Boolean);
 
@@ -188,7 +190,17 @@ export async function replaceDocument(params: {
     replacedBy: params.replacedBy ?? null,
   };
 
-  const versions = [version, ...(existing.versions ?? [])].slice(0, 3);
+  // A Firestore document holds at most 1 MiB, so old file contents are kept only while
+  // they fit next to the new one. Their metadata always stays in the history.
+  let budget = MAX_DOCUMENT_CONTENT_BYTES - Buffer.byteLength(params.content ?? "", "utf8");
+  const versions = [version, ...(existing.versions ?? [])].slice(0, 3).map((entry) => {
+    const size = Buffer.byteLength(entry.content ?? "", "utf8");
+    if (size > budget) {
+      return { ...entry, content: null };
+    }
+    budget -= size;
+    return entry;
+  });
 
   await db.collection("documents").doc(params.documentId).set(
     {

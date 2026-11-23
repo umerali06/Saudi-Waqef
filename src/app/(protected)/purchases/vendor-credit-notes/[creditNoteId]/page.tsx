@@ -7,6 +7,7 @@ import { SkeletonBlock } from "@/components/skeleton";
 import { useTranslations } from "@/i18n/provider";
 import { calculateLineAmounts } from "@/lib/utils/invoice";
 import { getUnitOptions } from "@/lib/utils/units";
+import { ApplyCreditPanel } from "@/components/apply-credit-panel";
 
 type CreditNoteStatus = "draft" | "issued" | "canceled";
 
@@ -41,6 +42,8 @@ type VendorCreditNote = {
   discountTotal: number;
   taxTotal: number;
   total: number;
+  unappliedAmount?: number;
+  creditOpenItemId?: string | null;
   lines: CreditNoteLine[];
 };
 
@@ -124,6 +127,8 @@ const mapCreditNoteError = (error?: string) => {
       return "vendorCreditNote.missingDiscountAccount";
     case "VAT period is filed":
       return "vat.periodLocked";
+    case "PERIOD_CLOSED":
+      return "error.periodClosed";
     default:
       return "error.saveFailed";
   }
@@ -156,7 +161,7 @@ export default function VendorCreditNoteDetailPage() {
   );
 
   const formatCurrency = (value: number, currency?: string) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       style: "currency",
       currency: currency || note?.currency || "SAR",
     }).format(value);
@@ -709,6 +714,18 @@ export default function VendorCreditNoteDetailPage() {
           </button>
         ) : null}
       </form>
+
+      {note.status === "issued" && note.creditOpenItemId && (note.unappliedAmount ?? 0) > 0 ? (
+        <ApplyCreditPanel
+          openItemId={note.creditOpenItemId}
+          companyId={note.companyId}
+          partyType="vendor"
+          partyId={note.vendorId}
+          available={note.unappliedAmount ?? 0}
+          currency={note.currency}
+          onApplied={loadCreditNote}
+        />
+      ) : null}
     </section>
   );
 }

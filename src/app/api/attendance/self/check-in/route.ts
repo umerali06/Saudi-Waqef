@@ -9,7 +9,7 @@ import {
 import { getEmployeeByUserId } from "@/lib/data/employees";
 import { getAttendanceSettings } from "@/lib/data/attendance-settings";
 import { listAttendanceHolidays } from "@/lib/data/attendance-holidays";
-import { computeAttendanceMetrics } from "@/lib/utils/attendance";
+import { computeAttendanceMetrics, isRestDay } from "@/lib/utils/attendance";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 
 export const runtime = "nodejs";
@@ -61,48 +61,40 @@ export async function POST(request: Request) {
     listAttendanceHolidays(companyId),
   ]);
 
-  const isHoliday = holidays.some((holiday) => holiday.date === date);
+  const restDay = isRestDay(date, settings.weekendDays, holidays);
   const existing = await findAttendanceRecord({
     companyId,
     employeeId: employee.id,
     date,
   });
 
-  if (existing) {
-    const metrics = computeAttendanceMetrics({
-      checkIn: time,
-      checkOut: existing.checkOut ?? null,
-      shiftStart: settings.shiftStart,
-      shiftEnd: settings.shiftEnd,
-      graceMinutes: settings.graceMinutes,
-      roundingMinutes: settings.roundingMinutes,
-      overtimeThresholdMinutes: settings.overtimeThresholdMinutes,
-    });
-    const status = existing.checkOut
-      ? metrics.status
-      : isHoliday
-      ? "holiday"
-      : "present";
-    await updateAttendanceRecord(existing.id, {
-      checkIn: time,
-      status,
-      totalMinutes: existing.checkOut ? metrics.totalMinutes : existing.totalMinutes,
-      overtimeMinutes: existing.checkOut ? metrics.overtimeMinutes : existing.overtimeMinutes,
-      lateMinutes: existing.checkOut ? metrics.lateMinutes : existing.lateMinutes,
-      earlyMinutes: existing.checkOut ? metrics.earlyMinutes : existing.earlyMinutes,
-    });
-    return NextResponse.json({ ok: true, recordId: existing.id });
+  if (existing?.checkIn) {
+    return NextResponse.json({ error: "Already checked in" }, { status: 409 });
   }
 
   const metrics = computeAttendanceMetrics({
     checkIn: time,
-    checkOut: null,
+    checkOut: existing?.checkOut ?? null,
     shiftStart: settings.shiftStart,
     shiftEnd: settings.shiftEnd,
     graceMinutes: settings.graceMinutes,
     roundingMinutes: settings.roundingMinutes,
     overtimeThresholdMinutes: settings.overtimeThresholdMinutes,
+    isRestDay: restDay,
   });
+  const status = restDay ? "holiday" : metrics.status;
+
+  if (existing) {
+    await updateAttendanceRecord(existing.id, {
+      checkIn: time,
+      status,
+      totalMinutes: metrics.totalMinutes,
+      overtimeMinutes: metrics.overtimeMinutes,
+      lateMinutes: metrics.lateMinutes,
+      earlyMinutes: metrics.earlyMinutes,
+    });
+    return NextResponse.json({ ok: true, recordId: existing.id });
+  }
 
   const recordId = await createAttendanceRecord({
     companyId,
@@ -110,7 +102,7 @@ export async function POST(request: Request) {
     date,
     checkIn: time,
     checkOut: null,
-    status: isHoliday ? "holiday" : "present",
+    status,
     totalMinutes: 0,
     overtimeMinutes: 0,
     lateMinutes: metrics.lateMinutes,

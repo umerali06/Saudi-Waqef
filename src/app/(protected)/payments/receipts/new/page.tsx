@@ -56,6 +56,10 @@ const mapReceiptError = (error?: string) => {
       return "receipt.amountExceedsBalance";
     case "Applied exceeds total":
       return "receipt.appliedExceedsTotal";
+    case "PERIOD_CLOSED":
+      return "error.periodClosed";
+    case "DUPLICATE_REQUEST":
+      return "error.duplicateRequest";
     default:
       return "error.saveFailed";
   }
@@ -78,6 +82,7 @@ export default function NewReceiptPage() {
   const [totalAmount, setTotalAmount] = useState("");
   const [allocations, setAllocations] = useState<Record<string, string>>({});
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [requestId] = useState(() => crypto.randomUUID());
   const [isPending, startTransition] = useTransition();
 
   const methodOptions = useMemo(
@@ -101,7 +106,7 @@ export default function NewReceiptPage() {
   const unappliedAmount = Math.max(numericTotal - appliedAmount, 0);
 
   const formatCurrency = (value: number, currency?: string) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       style: "currency",
       currency: currency || "SAR",
     }).format(value);
@@ -111,7 +116,7 @@ export default function NewReceiptPage() {
       return "-";
     }
     const date = new Date(`${value}T00:00:00Z`);
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       dateStyle: "medium",
     }).format(date);
   };
@@ -231,6 +236,7 @@ export default function NewReceiptPage() {
           reference: reference || null,
           totalAmount: numericTotal,
           allocations: allocationList,
+          requestId,
         }),
       });
       const data = await response.json().catch(() => ({}));

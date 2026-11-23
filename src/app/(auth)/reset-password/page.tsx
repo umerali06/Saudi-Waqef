@@ -45,10 +45,9 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="flex h-full flex-col gap-6 py-6 lg:py-8">
+    <div className="flex flex-col">
       <div className={`mb-6 ${alignClass}`}>
-        <p className="text-xs text-muted">{t("app.name")}</p>
-        <h1 className="text-2xl font-semibold">{t("auth.reset.title")}</h1>
+        <h1 className="text-[1.7rem] font-semibold leading-tight">{t("auth.reset.title")}</h1>
         <p className="mt-2 text-sm text-muted">{t("auth.reset.subtitle")}</p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -58,7 +57,7 @@ export default function ResetPasswordPage() {
           </span>
           <input
             type="password"
-            className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+            className="auth-input"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
@@ -88,18 +87,18 @@ export default function ResetPasswordPage() {
           </ul>
         </div>
         {errorKey ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <div className="rounded-lg bg-[#fbe6e4] px-3.5 py-2.5 text-sm text-[#8f2a23]">
             {t(errorKey)}
           </div>
         ) : null}
         {success ? (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+          <div className="rounded-lg bg-[#e3f3ea] px-3.5 py-2.5 text-sm text-[#0b5c3d]">
             {t("auth.reset.success")}
           </div>
         ) : null}
         <button
           type="submit"
-          className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+          className="btn-primary auth-submit"
           disabled={isPending}
         >
           {isPending ? t("common.loading") : t("auth.reset.submit")}

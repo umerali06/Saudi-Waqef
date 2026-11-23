@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
 import { leaveTypeUpdateSchema } from "@/lib/validators/leave";
-import { updateLeaveType, deleteLeaveType } from "@/lib/data/leave-types";
+import { getLeaveType, updateLeaveType, deleteLeaveType } from "@/lib/data/leave-types";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 
 export const runtime = "nodejs";
@@ -33,7 +33,13 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const { typeId } = await context.params;
-  await updateLeaveType(typeId, parsed.data);
+  const leaveType = await getLeaveType(typeId);
+  if (!leaveType || leaveType.companyId !== body.companyId) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  const updates = { ...parsed.data };
+  delete updates.companyId;
+  await updateLeaveType(typeId, updates);
 
   await recordAuditEvent({
     companyId: body.companyId,
@@ -42,7 +48,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     action: "leave.type.update",
     entity: "leave_type",
     entityId: typeId,
-    metadata: { fields: Object.keys(parsed.data) },
+    metadata: { fields: Object.keys(updates) },
   });
 
   return NextResponse.json({ ok: true });
@@ -70,6 +76,10 @@ export async function DELETE(request: Request, context: RouteContext) {
   }
 
   const { typeId } = await context.params;
+  const leaveType = await getLeaveType(typeId);
+  if (!leaveType || leaveType.companyId !== companyId) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   await deleteLeaveType(typeId);
 
   await recordAuditEvent({

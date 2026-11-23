@@ -1,19 +1,31 @@
 import { NextResponse } from "next/server";
+import { v4 as uuidv4 } from "uuid";
+import { db } from "@/lib/firebase/admin";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAccountingAccess, requireCompanyRole } from "@/lib/access";
 import { paymentReceiptSchema } from "@/lib/validators/payments";
-import { createPaymentReceipt, listPaymentReceipts } from "@/lib/data/payment-receipts";
+import {
+  createPaymentReceipt,
+  getPaymentReceiptById,
+  listPaymentReceipts,
+} from "@/lib/data/payment-receipts";
 import { getCustomerById } from "@/lib/data/customers";
-import { getSalesInvoiceById, updateSalesInvoice } from "@/lib/data/sales-invoices";
-import { createInvoicePayment } from "@/lib/data/invoice-payments";
-import { listChartAccounts } from "@/lib/data/chart-accounts";
-import { getCompanyDefaults } from "@/lib/data/company-defaults";
-import { updateOpenItemBalance, createOpenItem } from "@/lib/data/open-items";
-import { createJournalEntry } from "@/lib/data/journal-entries";
+import type { SalesInvoice } from "@/lib/data/sales-invoices";
 import { createCashTransaction } from "@/lib/data/cash-transactions";
-import { normalizeSearch } from "@/lib/utils/search";
+import { createJournalEntry } from "@/lib/data/journal-entries";
+import { createOpenItem } from "@/lib/data/open-items";
+import { postingErrorResponse } from "@/lib/accounting/errors";
+import { periodClosedResponse } from "@/lib/accounting/period-guard";
+import {
+  assertSameRequest,
+  loadSettlementAccount,
+  payInvoice,
+  readPayableInvoices,
+} from "@/lib/accounting/payments";
 import { recordAuditEvent } from "@/lib/data/audit-log";
+import { normalizeSearch } from "@/lib/utils/search";
 import { notifyCompanyRoles } from "@/lib/notifications/service";
+import { roundMoney } from "@/lib/utils/invoice";
 
 export const runtime = "nodejs";
 
@@ -111,159 +123,160 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Customer is blacklisted" }, { status: 400 });
   }
 
-  const [defaults, accounts] = await Promise.all([
-    getCompanyDefaults(parsed.data.companyId),
-    listChartAccounts(parsed.data.companyId),
-  ]);
-
-  const accountIds = new Set(accounts.map((account) => account.id));
-  if (!accountIds.has(parsed.data.accountId)) {
-    return NextResponse.json({ error: "Invalid payment account" }, { status: 400 });
+  const closedPeriod = await periodClosedResponse(
+    parsed.data.companyId,
+    parsed.data.receiptDate
+  );
+  if (closedPeriod) {
+    return closedPeriod;
   }
 
-  const receivableId = defaults.receivableAccountId;
-  if (!receivableId || !accountIds.has(receivableId)) {
-    return NextResponse.json({ error: "Missing receivable account" }, { status: 400 });
-  }
-
-  const allocations = [];
-  let appliedAmount = 0;
-
-  for (const allocation of parsed.data.allocations) {
-    const invoice = await getSalesInvoiceById(allocation.invoiceId);
-    if (!invoice || invoice.companyId !== parsed.data.companyId) {
-      return NextResponse.json({ error: "Invalid invoice" }, { status: 400 });
-    }
-    if (["draft", "canceled"].includes(invoice.status)) {
-      return NextResponse.json({ error: "Invoice is locked" }, { status: 400 });
-    }
-    if (allocation.amount > invoice.balance) {
-      return NextResponse.json({ error: "Amount exceeds balance" }, { status: 400 });
-    }
-
-    appliedAmount += allocation.amount;
-    allocations.push({
-      invoiceId: invoice.id,
-      invoiceNumber: invoice.invoiceNumber,
-      amount: allocation.amount,
-      openItemId: invoice.openItemId ?? null,
-    });
-  }
-
-  if (appliedAmount > parsed.data.totalAmount) {
+  const totalAmount = roundMoney(parsed.data.totalAmount);
+  const appliedAmount = roundMoney(
+    parsed.data.allocations.reduce((sum, allocation) => sum + allocation.amount, 0)
+  );
+  if (appliedAmount > totalAmount) {
     return NextResponse.json({ error: "Applied exceeds total" }, { status: 400 });
   }
+  const unappliedAmount = roundMoney(totalAmount - appliedAmount);
+  const currency = parsed.data.currency ?? customer.currency ?? "SAR";
 
-  const unappliedAmount = Math.max(parsed.data.totalAmount - appliedAmount, 0);
-
-  const journalEntryId = await createJournalEntry({
-    companyId: parsed.data.companyId,
-    sourceType: "payment_receipt",
-    sourceId: null,
-    date: parsed.data.receiptDate,
-    memo: `Receipt for ${customer.name}`,
-    lines: [
-      {
-        accountId: parsed.data.accountId,
-        debit: parsed.data.totalAmount,
-        credit: 0,
-      },
-      {
-        accountId: receivableId,
-        debit: 0,
-        credit: parsed.data.totalAmount,
-      },
-    ],
-  });
-
-  const { id, receiptNumber } = await createPaymentReceipt({
-    companyId: parsed.data.companyId,
-    receiptDate: parsed.data.receiptDate,
-    customerId: customer.id,
-    customerName: customer.name,
-    method: parsed.data.method,
-    accountId: parsed.data.accountId,
-    reference: parsed.data.reference ?? null,
-    currency: parsed.data.currency ?? customer.currency ?? "SAR",
-    totalAmount: parsed.data.totalAmount,
-    appliedAmount,
-    unappliedAmount,
-    allocations,
-    journalEntryId,
-  });
-
-  for (const allocation of allocations) {
-    const invoice = await getSalesInvoiceById(allocation.invoiceId);
-    if (!invoice) {
-      continue;
-    }
-    const wasPaid = invoice.status === "paid";
-    const amountPaid = invoice.amountPaid + allocation.amount;
-    const balance = Math.max(invoice.total - amountPaid - invoice.amountCredited, 0);
-    const status = balance <= 0 ? "paid" : "partially_paid";
-
-    await updateSalesInvoice(invoice.id, {
-      amountPaid,
-      balance,
-      status,
-    });
-
-    await createInvoicePayment({
-      companyId: invoice.companyId,
-      invoiceId: invoice.id,
-      paymentDate: parsed.data.receiptDate,
-      amount: allocation.amount,
-      method: parsed.data.method,
-      reference: parsed.data.reference ?? null,
-      accountId: parsed.data.accountId,
-      journalEntryId,
-    });
-
-    if (invoice.openItemId) {
-      await updateOpenItemBalance(invoice.openItemId, balance);
-    }
-
-    if (status === "paid" && !wasPaid) {
-      await notifyCompanyRoles({
-        companyId: invoice.companyId,
-        roles: ["owner", "admin", "accountant"],
-        type: "invoice_paid",
-        actorId: user.id,
-        data: {
-          invoiceNumber: invoice.invoiceNumber,
-          amount: `${invoice.total}`,
-          currency: invoice.currency ?? "SAR",
-        },
+  const id = parsed.data.requestId ?? uuidv4();
+  let receiptNumber: string;
+  let paidDocuments: SalesInvoice[] = [];
+  try {
+    const ledgerAccountId = await loadSettlementAccount(
+      parsed.data.companyId,
+      "receivable",
+      parsed.data.accountId
+    );
+    const result = await db.runTransaction(async (tx) => {
+      const existing = await getPaymentReceiptById(id, tx);
+      if (existing) {
+        assertSameRequest(
+          { companyId: existing.companyId, amount: existing.totalAmount },
+          { companyId: parsed.data.companyId, amount: totalAmount }
+        );
+        return { receiptNumber: existing.receiptNumber, paid: [], duplicate: true };
+      }
+      const targets = await readPayableInvoices(tx, {
+        companyId: parsed.data.companyId,
+        customerId: customer.id,
+        allocations: parsed.data.allocations,
       });
+      const journalEntryId = uuidv4();
+      const creditOpenItemId = unappliedAmount > 0 ? uuidv4() : null;
+      const created = await createPaymentReceipt(
+        {
+          id,
+          companyId: parsed.data.companyId,
+          receiptDate: parsed.data.receiptDate,
+          customerId: customer.id,
+          customerName: customer.name,
+          method: parsed.data.method,
+          accountId: parsed.data.accountId,
+          reference: parsed.data.reference ?? null,
+          currency,
+          totalAmount,
+          appliedAmount,
+          unappliedAmount,
+          allocations: targets.map((target) => ({
+            invoiceId: target.invoice.id,
+            invoiceNumber: target.invoice.invoiceNumber,
+            amount: target.amount,
+            openItemId: target.invoice.openItemId ?? null,
+          })),
+          journalEntryId,
+          creditOpenItemId,
+        },
+        tx
+      );
+      await createJournalEntry(
+        {
+          id: journalEntryId,
+          companyId: parsed.data.companyId,
+          sourceType: "payment_receipt",
+          sourceId: id,
+          date: parsed.data.receiptDate,
+          memo: `Receipt for ${customer.name}`,
+          lines: [
+            { accountId: parsed.data.accountId, debit: totalAmount, credit: 0 },
+            { accountId: ledgerAccountId, debit: 0, credit: totalAmount },
+          ],
+        },
+        tx
+      );
+      const paid: SalesInvoice[] = [];
+      for (const target of targets) {
+        const { status } = await payInvoice(tx, target.invoice, {
+          amount: target.amount,
+          paymentDate: parsed.data.receiptDate,
+          method: parsed.data.method,
+          reference: parsed.data.reference ?? null,
+          accountId: parsed.data.accountId,
+          journalEntryId,
+        });
+        if (status === "paid") {
+          paid.push(target.invoice);
+        }
+      }
+      if (creditOpenItemId) {
+        await createOpenItem(
+          {
+            id: creditOpenItemId,
+            companyId: parsed.data.companyId,
+            partyType: "customer",
+            partyId: customer.id,
+            docType: "receipt_credit",
+            docNumber: created.receiptNumber,
+            sourceId: id,
+            issueDate: parsed.data.receiptDate,
+            dueDate: parsed.data.receiptDate,
+            amount: -unappliedAmount,
+            balance: -unappliedAmount,
+            currency,
+          },
+          tx
+        );
+      }
+      await createCashTransaction(
+        {
+          companyId: parsed.data.companyId,
+          accountId: parsed.data.accountId,
+          date: parsed.data.receiptDate,
+          amount: totalAmount,
+          direction: "in",
+          reference: parsed.data.reference ?? created.receiptNumber,
+          description: `Receipt ${created.receiptNumber}`,
+          sourceType: "payment_receipt",
+          sourceId: id,
+        },
+        tx
+      );
+      return { receiptNumber: created.receiptNumber, paid, duplicate: false };
+    });
+    receiptNumber = result.receiptNumber;
+    paidDocuments = result.paid;
+    if (result.duplicate) {
+      return NextResponse.json({ receiptId: id, receiptNumber });
     }
+  } catch (error) {
+    return postingErrorResponse(error);
   }
 
-  if (unappliedAmount > 0) {
-    await createOpenItem({
-      companyId: parsed.data.companyId,
-      partyType: "customer",
-      partyId: customer.id,
-      docType: "receipt_credit",
-      docNumber: receiptNumber,
-      issueDate: parsed.data.receiptDate,
-      dueDate: parsed.data.receiptDate,
-      amount: -unappliedAmount,
-      balance: -unappliedAmount,
-      currency: parsed.data.currency ?? customer.currency ?? "SAR",
+  for (const invoice of paidDocuments) {
+    await notifyCompanyRoles({
+      companyId: invoice.companyId,
+      roles: ["owner", "admin", "accountant"],
+      type: "invoice_paid",
+      actorId: user.id,
+      data: {
+        invoiceNumber: invoice.invoiceNumber,
+        amount: `${invoice.total}`,
+        currency: invoice.currency ?? "SAR",
+      },
     });
   }
-
-  await createCashTransaction({
-    companyId: parsed.data.companyId,
-    accountId: parsed.data.accountId,
-    date: parsed.data.receiptDate,
-    amount: parsed.data.totalAmount,
-    direction: "in",
-    reference: parsed.data.reference ?? receiptNumber,
-    description: `Receipt ${receiptNumber}`,
-    sourceType: "payment_receipt",
-    sourceId: id,
-  });
 
   await recordAuditEvent({
     companyId: parsed.data.companyId,

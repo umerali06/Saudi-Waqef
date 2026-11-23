@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
 import { useLocaleFormatters } from "@/i18n/formatters";
+import { ledgerSourceKey } from "@/lib/utils/ledger-sources";
 
 type Account = {
   id: string;
@@ -33,25 +34,6 @@ type LedgerResponse = {
   closingBalance: number;
   lines: LedgerLine[];
   range: { startDate: string | null; endDate: string | null };
-};
-
-const sourceTypeKeys: Record<string, string> = {
-  sales_invoice: "reports.ledger.source.salesInvoice",
-  sales_invoice_cancel: "reports.ledger.source.salesInvoiceCancel",
-  invoice_payment: "reports.ledger.source.invoicePayment",
-  payment_receipt: "reports.ledger.source.paymentReceipt",
-  purchase_bill: "reports.ledger.source.purchaseBill",
-  purchase_bill_cancel: "reports.ledger.source.purchaseBillCancel",
-  bill_payment: "reports.ledger.source.billPayment",
-  vendor_payment: "reports.ledger.source.vendorPayment",
-  vendor_credit_note: "reports.ledger.source.vendorCreditNote",
-  sales_credit_note: "reports.ledger.source.salesCreditNote",
-  expense: "reports.ledger.source.expense",
-  expense_reimbursement: "reports.ledger.source.expenseReimbursement",
-  bank_transfer: "reports.ledger.source.bankTransfer",
-  cash_adjustment: "reports.ledger.source.cashAdjustment",
-  manual: "reports.ledger.source.manual",
-  manual_reversal: "reports.ledger.source.manualReversal",
 };
 
 const sourceLinkMap: Record<string, (sourceId: string) => string> = {
@@ -153,6 +135,7 @@ export default function GeneralLedgerPage() {
       params.set("endDate", endDate);
     }
     startTransition(async () => {
+      params.set("locale", locale);
       const response = await fetch(`/api/reports/general-ledger/export?${params}`);
       if (!response.ok) {
         setErrorKey("reports.exportFailed");
@@ -321,7 +304,7 @@ export default function GeneralLedgerPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {ledger.lines.map((line) => {
-                  const sourceKey = sourceTypeKeys[line.sourceType];
+                  const sourceKey = ledgerSourceKey(line.sourceType);
                   const label = sourceKey ? t(sourceKey) : line.sourceType;
                   const linkBuilder = line.sourceId
                     ? sourceLinkMap[line.sourceType]

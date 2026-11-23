@@ -1,3 +1,4 @@
+import { buildEmailAttachments } from "@/lib/email/documents";
 import { sendEmail } from "@/lib/email/sender";
 import {
   getOutboxEmail,
@@ -26,6 +27,9 @@ async function dispatchOne(email: OutboxEmail) {
       to: email.to,
       subject: email.subject,
       body: email.body,
+      fromName: typeof email.meta?.fromName === "string" ? email.meta.fromName : null,
+      replyTo: typeof email.meta?.replyTo === "string" ? email.meta.replyTo : null,
+      attachments: await buildEmailAttachments(email),
     });
     await updateOutboxStatus({ id: email.id, status: "sent", attempts });
     return "sent" as const;
@@ -37,6 +41,23 @@ async function dispatchOne(email: OutboxEmail) {
       attempts,
       lastError: message,
     });
+    if (email.sourceType !== "platform_event") {
+      // Loaded on demand: reporting sends mail itself, so a static import would be circular.
+      const { reportPlatformEvent } = await import("@/lib/notifications/platform-events");
+      await reportPlatformEvent({
+        kind: "email_failed",
+        severity: "high",
+        title: { ar: "تعذر إرسال بريد", en: "Email could not be sent" },
+        message: {
+          ar: `لم تصل رسالة إلى ${email.to}: ${message}`,
+          en: `A message to ${email.to} was not delivered: ${message}`,
+        },
+        details: [[{ ar: "الموضوع", en: "Subject" }, email.subject]],
+        path: "/admin/alerts",
+        entityId: email.companyId,
+        quietMinutes: 60,
+      });
+    }
     return "failed" as const;
   }
 }
@@ -45,13 +66,16 @@ export async function dispatchQueuedEmails(params?: {
   limit?: number;
   retryFailed?: boolean;
   maxAttempts?: number;
+  companyId?: string;
 }) {
   const limit = params?.limit ?? 25;
   const maxAttempts = params?.maxAttempts ?? 5;
 
+  // Read past the limit so one company, or mail that keeps failing, cannot block the rest.
+  const readLimit = Math.max(limit, 500);
   const queued = await listOutboxEmails({
     status: "queued",
-    limit,
+    limit: readLimit,
     maxAttempts,
   });
 
@@ -59,12 +83,14 @@ export async function dispatchQueuedEmails(params?: {
   if (params?.retryFailed) {
     failed = await listOutboxEmails({
       status: "failed",
-      limit,
+      limit: readLimit,
       maxAttempts,
     });
   }
 
-  const items = [...queued, ...failed].slice(0, limit);
+  const items = [...queued, ...failed]
+    .filter((email) => !params?.companyId || email.companyId === params.companyId)
+    .slice(0, limit);
 
   const result: DispatchResult = { processed: 0, sent: 0, failed: 0 };
   for (const email of items) {

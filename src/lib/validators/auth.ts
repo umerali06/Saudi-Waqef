@@ -15,8 +15,8 @@ const passwordSchema = z.string().superRefine((value, ctx) => {
 });
 
 export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: z.string().trim().email(),
+  password: z.string().min(1),
   otp: z.string().trim().optional(),
 });
 

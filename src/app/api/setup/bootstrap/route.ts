@@ -4,6 +4,7 @@ import { bootstrapSchema } from "@/lib/validators/auth";
 import { hasAnyUsers, createUser } from "@/lib/data/users";
 import { createCompany } from "@/lib/data/companies";
 import { createMembership } from "@/lib/data/memberships";
+import { seedCompanyDefaults } from "@/lib/data/company-seed";
 
 export const runtime = "nodejs";
 
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
     companyId,
     role: "owner",
   });
+  await seedCompanyDefaults(companyId);
 
   return NextResponse.json({ companyId, userId });
 }

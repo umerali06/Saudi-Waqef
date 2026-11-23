@@ -33,6 +33,8 @@ export type EmployeeRecord = {
   iqamaNumber?: string | null;
   passportNumber?: string | null;
   nationality?: string | null;
+  /** Salary account, required by the Wage Protection System. */
+  iban?: string | null;
   dob?: string | null;
   gender?: EmployeeGender | null;
   email?: string | null;
@@ -72,6 +74,7 @@ export async function listEmployees(companyId: string) {
       iqamaNumber: decryptOptional(data.iqamaNumber ?? null),
       passportNumber: decryptOptional(data.passportNumber ?? null),
       nationality: data.nationality ?? null,
+      iban: decryptOptional(data.iban ?? null),
       dob: decryptOptional(data.dob ?? null),
       gender: data.gender ?? null,
       email: decryptOptional(data.email ?? null),
@@ -117,6 +120,7 @@ export async function getEmployeeById(employeeId: string) {
     iqamaNumber: decryptOptional(data.iqamaNumber ?? null),
     passportNumber: decryptOptional(data.passportNumber ?? null),
     nationality: data.nationality ?? null,
+    iban: decryptOptional(data.iban ?? null),
     dob: decryptOptional(data.dob ?? null),
     gender: data.gender ?? null,
     email: decryptOptional(data.email ?? null),
@@ -161,6 +165,7 @@ export async function getEmployeeByUserId(companyId: string, userId: string) {
     iqamaNumber: decryptOptional(data.iqamaNumber ?? null),
     passportNumber: decryptOptional(data.passportNumber ?? null),
     nationality: data.nationality ?? null,
+    iban: decryptOptional(data.iban ?? null),
     dob: decryptOptional(data.dob ?? null),
     gender: data.gender ?? null,
     email: decryptOptional(data.email ?? null),
@@ -192,6 +197,8 @@ export async function createEmployee(params: {
   iqamaNumber?: string | null;
   passportNumber?: string | null;
   nationality?: string | null;
+  /** Salary account, required by the Wage Protection System. */
+  iban?: string | null;
   dob?: string | null;
   gender?: EmployeeGender | null;
   email?: string | null;
@@ -225,6 +232,7 @@ export async function createEmployee(params: {
     iqamaNumberNormalized: normalizeSearch(params.iqamaNumber ?? ""),
     passportNumber: encryptOptional(params.passportNumber ?? null),
     nationality: params.nationality ?? null,
+    iban: encryptOptional(params.iban ?? null),
     dob: encryptOptional(params.dob ?? null),
     gender: params.gender ?? null,
     email: encryptOptional(params.email ?? null),
@@ -258,6 +266,7 @@ export async function updateEmployee(
     iqamaNumber: string | null;
     passportNumber: string | null;
     nationality: string | null;
+    iban: string | null;
     dob: string | null;
     gender: EmployeeGender | null;
     email: string | null;
@@ -300,6 +309,9 @@ export async function updateEmployee(
   }
   if (updates.passportNumber !== undefined) {
     payload.passportNumber = encryptOptional(updates.passportNumber);
+  }
+  if (updates.iban !== undefined) {
+    payload.iban = encryptOptional(updates.iban);
   }
   if (updates.dob !== undefined) {
     payload.dob = encryptOptional(updates.dob);

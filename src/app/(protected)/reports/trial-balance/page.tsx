@@ -110,6 +110,7 @@ export default function TrialBalancePage() {
       params.set("compareEndDate", compareEndDate);
     }
     startTransition(async () => {
+      params.set("locale", locale);
       const response = await fetch(`/api/reports/trial-balance/export?${params}`);
       if (!response.ok) {
         setErrorKey("reports.exportFailed");

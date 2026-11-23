@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useNotifications } from "@/components/notifications-provider";
 import { useTranslations } from "@/i18n/provider";
 
 type Alert = {
@@ -16,6 +17,8 @@ type Alert = {
 export default function AdminAlertsPage() {
   const { t, locale } = useTranslations();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
+  // Re-reads the log whenever a notification arrives.
+  const { unreadCount } = useNotifications();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [severityFilter, setSeverityFilter] = useState("all");
@@ -33,7 +36,7 @@ export default function AdminAlertsPage() {
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => setAlerts(data.alerts ?? []))
       .catch(() => setError(t("admin.errors.loadFailed")));
-  }, [statusFilter, severityFilter, t]);
+  }, [statusFilter, severityFilter, t, unreadCount]);
 
   const sortedAlerts = useMemo(
     () => alerts.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),

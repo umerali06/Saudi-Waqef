@@ -8,7 +8,7 @@ import { useCompany } from "@/components/company-provider";
 import { SkeletonBlock } from "@/components/skeleton";
 import { useTranslations } from "@/i18n/provider";
 import { addDays } from "@/lib/utils/dates";
-import { calculateLineAmounts } from "@/lib/utils/invoice";
+import { calculateLineAmounts, resolveTaxRate } from "@/lib/utils/invoice";
 import { getUnitOptions } from "@/lib/utils/units";
 import { uploadToCloudinary } from "@/lib/cloudinary-client";
 
@@ -86,6 +86,7 @@ type CompanyDefaults = {
 
 type CompanyConfig = {
   taxInclusive: boolean;
+  vatEnabled: boolean;
 };
 
 type Account = {
@@ -185,6 +186,8 @@ const mapBillError = (error?: string) => {
       return "bill.missingDiscountAccount";
     case "VAT period is filed":
       return "vat.periodLocked";
+    case "PERIOD_CLOSED":
+      return "error.periodClosed";
     default:
       return "error.saveFailed";
   }
@@ -192,6 +195,10 @@ const mapBillError = (error?: string) => {
 
 const mapPaymentError = (error?: string) => {
   switch (error) {
+    case "PERIOD_CLOSED":
+      return "error.periodClosed";
+    case "DUPLICATE_REQUEST":
+      return "error.duplicateRequest";
     case "Amount exceeds balance":
       return "bill.amountExceedsBalance";
     case "Invalid payment account":
@@ -232,6 +239,7 @@ export default function BillDetailPage() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("bank");
   const [paymentReference, setPaymentReference] = useState("");
+  const [paymentRequestId, setPaymentRequestId] = useState(() => crypto.randomUUID());
   const [paymentAccountId, setPaymentAccountId] = useState("");
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -246,7 +254,7 @@ export default function BillDetailPage() {
   const isLocked = bill ? bill.status !== "draft" : false;
 
   const formatCurrency = (value: number, currency?: string) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       style: "currency",
       currency: currency || bill?.currency || "SAR",
     }).format(value);
@@ -256,7 +264,7 @@ export default function BillDetailPage() {
       return "-";
     }
     const date = value.includes("T") ? new Date(value) : new Date(`${value}T00:00:00Z`);
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       dateStyle: "medium",
       timeStyle: value.includes("T") ? "short" : undefined,
     }).format(date);
@@ -324,7 +332,10 @@ export default function BillDetailPage() {
         );
         setTerms(termData.terms ?? []);
         setDefaults(defaultsData.defaults ?? null);
-        setConfig({ taxInclusive: Boolean(configData?.config?.taxInclusive) });
+        setConfig({
+          taxInclusive: Boolean(configData?.config?.taxInclusive),
+          vatEnabled: configData?.config?.vatEnabled !== false,
+        });
         setAccounts(
           (accountsData.accounts ?? []).filter((account: Account) => account.isPosting)
         );
@@ -427,7 +438,7 @@ export default function BillDetailPage() {
           defaults?.defaultPurchaseTaxCategoryId ||
           "";
         const taxCategory = taxCategoryId ? taxMap.get(taxCategoryId) : null;
-        const taxRate = taxCategory ? (taxCategory.rate ?? 0) / 100 : 0;
+        const taxRate = resolveTaxRate(taxCategory, bill?.status !== "draft" || (config?.vatEnabled ?? true));
         const amounts = calculateLineAmounts({
           quantity,
           unitPrice,
@@ -633,6 +644,7 @@ export default function BillDetailPage() {
           method: paymentMethod,
           reference: paymentReference || null,
           accountId: paymentAccountId,
+          requestId: paymentRequestId,
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -640,6 +652,7 @@ export default function BillDetailPage() {
         setErrorKey(mapPaymentError(data?.error));
         return;
       }
+      setPaymentRequestId(crypto.randomUUID());
       setPaymentAmount("");
       setPaymentReference("");
       await loadBill();
@@ -765,6 +778,21 @@ export default function BillDetailPage() {
                 {t("bill.cancel")}
               </button>
             ) : null}
+            {bill ? (
+              <>
+                <a
+                  href={`/api/bills/${bill.id}/pdf`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-secondary"
+                >
+                  {t("bill.print")}
+                </a>
+                <a href={`/api/bills/${bill.id}/pdf?download=1`} className="btn-secondary">
+                  {t("invoice.downloadPdf")}
+                </a>
+              </>
+            ) : null}
           </div>
         </div>
 
@@ -849,7 +877,7 @@ export default function BillDetailPage() {
               defaults?.defaultPurchaseTaxCategoryId ||
               "";
             const taxCategory = taxCategoryId ? taxMap.get(taxCategoryId) : null;
-            const taxRate = taxCategory ? (taxCategory.rate ?? 0) / 100 : 0;
+            const taxRate = resolveTaxRate(taxCategory, bill?.status !== "draft" || (config?.vatEnabled ?? true));
             const amounts = calculateLineAmounts({
               quantity: Number(line.quantity) || 0,
               unitPrice: Number(line.unitPrice) || 0,
@@ -1150,12 +1178,14 @@ export default function BillDetailPage() {
       <div className="app-card p-6 card-modern">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t("bill.creditNotesTitle")}</h2>
-          <Link
-            href={`/purchases/vendor-credit-notes/new?billId=${billId}`}
-            className="text-xs font-semibold text-primary underline decoration-dotted"
-          >
-            {t("bill.createCreditNote")}
-          </Link>
+          {bill.status !== "draft" && bill.status !== "canceled" ? (
+            <Link
+              href={`/purchases/vendor-credit-notes/new?billId=${billId}`}
+              className="text-xs font-semibold text-primary underline decoration-dotted"
+            >
+              {t("bill.createCreditNote")}
+            </Link>
+          ) : null}
         </div>
         {creditNotes.length > 0 ? (
           <div className="mt-4 overflow-x-auto">

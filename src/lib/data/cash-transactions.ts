@@ -1,6 +1,7 @@
-import { Timestamp } from "firebase-admin/firestore";
+import { Timestamp, type Transaction } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase/admin";
+import { writeDoc } from "@/lib/firebase/documents";
 
 export type CashDirection = "in" | "out";
 
@@ -44,6 +45,7 @@ export async function listCashTransactions(companyId: string, accountId: string)
 }
 
 export async function createCashTransaction(params: {
+  id?: string;
   companyId: string;
   accountId: string;
   date: string;
@@ -53,19 +55,23 @@ export async function createCashTransaction(params: {
   description?: string | null;
   sourceType: string;
   sourceId?: string | null;
-}) {
-  const id = uuidv4();
-  await db.collection("cash_transactions").doc(id).set({
-    companyId: params.companyId,
-    accountId: params.accountId,
-    date: params.date,
-    amount: params.amount,
-    direction: params.direction,
-    reference: params.reference ?? null,
-    description: params.description ?? null,
-    sourceType: params.sourceType,
-    sourceId: params.sourceId ?? null,
-    createdAt: Timestamp.now(),
-  });
+}, tx?: Transaction) {
+  const id = params.id ?? uuidv4();
+  await writeDoc(
+    db.collection("cash_transactions").doc(id),
+    {
+      companyId: params.companyId,
+      accountId: params.accountId,
+      date: params.date,
+      amount: params.amount,
+      direction: params.direction,
+      reference: params.reference ?? null,
+      description: params.description ?? null,
+      sourceType: params.sourceType,
+      sourceId: params.sourceId ?? null,
+      createdAt: Timestamp.now(),
+    },
+    { tx }
+  );
   return id;
 }

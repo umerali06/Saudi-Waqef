@@ -148,6 +148,12 @@ export async function POST(request: Request) {
     if (!linked) {
       return NextResponse.json({ error: "Invalid user" }, { status: 400 });
     }
+    const linkedElsewhere = (await listEmployees(parsed.data.companyId)).some(
+      (entry) => entry.userId === parsed.data.userId
+    );
+    if (linkedElsewhere) {
+      return NextResponse.json({ error: "User already linked" }, { status: 409 });
+    }
   }
 
   const existing = await listEmployees(parsed.data.companyId);
@@ -188,6 +194,7 @@ export async function POST(request: Request) {
     iqamaNumber: parsed.data.iqamaNumber ?? null,
     passportNumber: parsed.data.passportNumber ?? null,
     nationality: parsed.data.nationality ?? null,
+    iban: parsed.data.iban || null,
     dob: parsed.data.dob ?? null,
     gender: parsed.data.gender ?? null,
     email: parsed.data.email ?? null,

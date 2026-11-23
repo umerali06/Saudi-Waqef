@@ -40,11 +40,16 @@ type PayrollSettings = {
   gosiEnabled: boolean;
   gosiEmployeeRate: number;
   gosiEmployerRate: number;
+  gosiNonSaudiEmployerRate: number;
+  gosiMinBase: number;
+  gosiMaxBase: number;
   incomeTaxEnabled: boolean;
   incomeTaxRate: number;
   salaryExpenseAccountId: string | null;
   payrollPayableAccountId: string | null;
   salaryDeductionsAccountId: string | null;
+  gosiExpenseAccountId: string | null;
+  gosiPayableAccountId: string | null;
   paymentAccountId: string | null;
 };
 
@@ -104,6 +109,10 @@ const mapPayrollError = (error?: string) => {
       return "payroll.errors.runLocked";
     case "Approval requires owner or admin":
       return "payroll.errors.approvalThreshold";
+    case "Adjustment exceeds net pay":
+      return "payroll.errors.invalidAdjustment";
+    case "PERIOD_CLOSED":
+      return "error.periodClosed";
     case "No eligible employees":
       return "payroll.errors.noEmployees";
     default:
@@ -130,13 +139,18 @@ export default function PayrollPage() {
   const [eosbWageBasis, setEosbWageBasis] =
     useState<PayrollSettings["eosbWageBasis"]>("actual");
   const [gosiEnabled, setGosiEnabled] = useState(false);
-  const [gosiEmployeeRate, setGosiEmployeeRate] = useState("0");
-  const [gosiEmployerRate, setGosiEmployerRate] = useState("0");
+  const [gosiEmployeeRate, setGosiEmployeeRate] = useState("9.75");
+  const [gosiEmployerRate, setGosiEmployerRate] = useState("11.75");
+  const [gosiNonSaudiEmployerRate, setGosiNonSaudiEmployerRate] = useState("2");
+  const [gosiMinBase, setGosiMinBase] = useState("1500");
+  const [gosiMaxBase, setGosiMaxBase] = useState("45000");
   const [incomeTaxEnabled, setIncomeTaxEnabled] = useState(false);
   const [incomeTaxRate, setIncomeTaxRate] = useState("0");
   const [salaryExpenseAccountId, setSalaryExpenseAccountId] = useState("");
   const [payrollPayableAccountId, setPayrollPayableAccountId] = useState("");
   const [salaryDeductionsAccountId, setSalaryDeductionsAccountId] = useState("");
+  const [gosiExpenseAccountId, setGosiExpenseAccountId] = useState("");
+  const [gosiPayableAccountId, setGosiPayableAccountId] = useState("");
   const [paymentAccountId, setPaymentAccountId] = useState("");
   const [runs, setRuns] = useState<PayrollRun[]>([]);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -268,11 +282,16 @@ export default function PayrollPage() {
         setGosiEnabled(settingsData.gosiEnabled ?? false);
         setGosiEmployeeRate(String(settingsData.gosiEmployeeRate ?? 0));
         setGosiEmployerRate(String(settingsData.gosiEmployerRate ?? 0));
+        setGosiNonSaudiEmployerRate(String(settingsData.gosiNonSaudiEmployerRate ?? 2));
+        setGosiMinBase(String(settingsData.gosiMinBase ?? 1500));
+        setGosiMaxBase(String(settingsData.gosiMaxBase ?? 45000));
         setIncomeTaxEnabled(settingsData.incomeTaxEnabled ?? false);
         setIncomeTaxRate(String(settingsData.incomeTaxRate ?? 0));
         setSalaryExpenseAccountId(settingsData.salaryExpenseAccountId ?? "");
         setPayrollPayableAccountId(settingsData.payrollPayableAccountId ?? "");
         setSalaryDeductionsAccountId(settingsData.salaryDeductionsAccountId ?? "");
+        setGosiExpenseAccountId(settingsData.gosiExpenseAccountId ?? "");
+        setGosiPayableAccountId(settingsData.gosiPayableAccountId ?? "");
         setPaymentAccountId(settingsData.paymentAccountId ?? "");
       })
       .catch(() => setErrorKey("error.loadFailed"))
@@ -343,12 +362,19 @@ export default function PayrollPage() {
     const lateness = Number(latenessPenaltyPerMinute);
     const gosiEmployee = Number(gosiEmployeeRate);
     const gosiEmployer = Number(gosiEmployerRate);
+    const gosiNonSaudi = Number(gosiNonSaudiEmployerRate);
+    const gosiMin = Number(gosiMinBase);
+    const gosiMax = Number(gosiMaxBase);
     const incomeTax = Number(incomeTaxRate);
     if (
       Number.isNaN(overtime) ||
       Number.isNaN(lateness) ||
       Number.isNaN(gosiEmployee) ||
       Number.isNaN(gosiEmployer) ||
+      Number.isNaN(gosiNonSaudi) ||
+      Number.isNaN(gosiMin) ||
+      Number.isNaN(gosiMax) ||
+      gosiMin > gosiMax ||
       Number.isNaN(incomeTax)
     ) {
       setErrorKey("payroll.errors.invalidSettings");
@@ -371,11 +397,16 @@ export default function PayrollPage() {
           gosiEnabled,
           gosiEmployeeRate: gosiEmployee,
           gosiEmployerRate: gosiEmployer,
+          gosiNonSaudiEmployerRate: gosiNonSaudi,
+          gosiMinBase: gosiMin,
+          gosiMaxBase: gosiMax,
           incomeTaxEnabled,
           incomeTaxRate: incomeTax,
           salaryExpenseAccountId: salaryExpenseAccountId || null,
           payrollPayableAccountId: payrollPayableAccountId || null,
           salaryDeductionsAccountId: salaryDeductionsAccountId || null,
+          gosiExpenseAccountId: gosiExpenseAccountId || null,
+          gosiPayableAccountId: gosiPayableAccountId || null,
           paymentAccountId: paymentAccountId || null,
         }),
       });
@@ -493,47 +524,54 @@ export default function PayrollPage() {
     });
   };
 
-  const handleExportPayslips = (runId: string) => {
+  const handleWageFile = (run: { id: string; periodEnd: string }) => {
     if (!activeCompanyId) {
       return;
     }
+    setErrorKey(null);
     startTransition(async () => {
       const response = await fetch(
-        `/api/payroll/runs/${runId}/export?companyId=${activeCompanyId}&format=pdf&lang=${locale}`
+        `/api/payroll/runs/${run.id}/export?companyId=${activeCompanyId}&format=wage-file`
       );
       if (!response.ok) {
-        setErrorKey("error.loadFailed");
+        const data = await response.json().catch(() => ({}));
+        const issues = (data?.issues ?? []) as Array<{ employeeName: string }>;
+        window.alert(
+          data?.error === "PAYROLL_RUN_NOT_APPROVED"
+            ? t("payroll.wageFileDraft")
+            : t("payroll.wageFileIncomplete", {
+                names: [...new Set(issues.map((issue) => issue.employeeName))].join(", "),
+              })
+        );
         return;
       }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(await response.blob());
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = "payroll-payslips.pdf";
+      anchor.download = `wage-file-${run.periodEnd.slice(0, 7)}.csv`;
       anchor.click();
       URL.revokeObjectURL(url);
     });
   };
 
-  const handleExportPayslip = (itemId: string) => {
-    if (!activeCompanyId) {
+  const handleDeleteRun = (runId: string) => {
+    if (!activeCompanyId || !window.confirm(t("payroll.runDeleteConfirm"))) {
       return;
     }
+    setErrorKey(null);
     startTransition(async () => {
-      const response = await fetch(
-        `/api/payroll/payslips/${itemId}/export?companyId=${activeCompanyId}&format=pdf&lang=${locale}`
-      );
+      const response = await fetch(`/api/payroll/runs/${runId}?companyId=${activeCompanyId}`, {
+        method: "DELETE",
+      });
       if (!response.ok) {
-        setErrorKey("error.loadFailed");
+        const data = await response.json().catch(() => ({}));
+        setErrorKey(mapPayrollError(data?.error));
         return;
       }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = "payslip.pdf";
-      anchor.click();
-      URL.revokeObjectURL(url);
+      if (selectedRunId === runId) {
+        setSelectedRunId(null);
+      }
+      loadRuns();
     });
   };
 
@@ -744,7 +782,7 @@ export default function PayrollPage() {
               <input
                 type="number"
                 min="0"
-                step="0.1"
+                step="0.01"
                 className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={gosiEmployeeRate}
                 onChange={(event) => setGosiEmployeeRate(event.target.value)}
@@ -756,10 +794,46 @@ export default function PayrollPage() {
               <input
                 type="number"
                 min="0"
-                step="0.1"
+                step="0.01"
                 className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
                 value={gosiEmployerRate}
                 onChange={(event) => setGosiEmployerRate(event.target.value)}
+                disabled={!gosiEnabled}
+              />
+            </label>
+            <label className={`text-sm ${alignClass}`}>
+              <span className="mb-1 block text-xs text-muted">{t("payroll.gosiNonSaudiEmployerRate")}</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+                value={gosiNonSaudiEmployerRate}
+                onChange={(event) => setGosiNonSaudiEmployerRate(event.target.value)}
+                disabled={!gosiEnabled}
+              />
+            </label>
+            <label className={`text-sm ${alignClass}`}>
+              <span className="mb-1 block text-xs text-muted">{t("payroll.gosiMinBase")}</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+                value={gosiMinBase}
+                onChange={(event) => setGosiMinBase(event.target.value)}
+                disabled={!gosiEnabled}
+              />
+            </label>
+            <label className={`text-sm ${alignClass}`}>
+              <span className="mb-1 block text-xs text-muted">{t("payroll.gosiMaxBase")}</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+                value={gosiMaxBase}
+                onChange={(event) => setGosiMaxBase(event.target.value)}
                 disabled={!gosiEnabled}
               />
             </label>
@@ -824,6 +898,38 @@ export default function PayrollPage() {
                   onChange={(event) => setSalaryDeductionsAccountId(event.target.value)}
                   disabled={loadingLookups}
                 >
+                <option value="">{t("common.none")}</option>
+                {accountOptions.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.code} - {account.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={`text-sm ${alignClass}`}>
+              <span className="mb-1 block text-xs text-muted">{t("payroll.gosiExpenseAccount")}</span>
+              <select
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+                value={gosiExpenseAccountId}
+                onChange={(event) => setGosiExpenseAccountId(event.target.value)}
+                disabled={loadingLookups}
+              >
+                <option value="">{t("common.none")}</option>
+                {accountOptions.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.code} - {account.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={`text-sm ${alignClass}`}>
+              <span className="mb-1 block text-xs text-muted">{t("payroll.gosiPayableAccount")}</span>
+              <select
+                className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+                value={gosiPayableAccountId}
+                onChange={(event) => setGosiPayableAccountId(event.target.value)}
+                disabled={loadingLookups}
+              >
                 <option value="">{t("common.none")}</option>
                 {accountOptions.map((account) => (
                   <option key={account.id} value={account.id}>
@@ -975,6 +1081,15 @@ export default function PayrollPage() {
                             {t("payroll.runApprove")}
                           </button>
                         ) : null}
+                        {isPrivileged && run.status === "draft" ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRun(run.id)}
+                            className="cursor-pointer text-xs font-semibold text-rose-600"
+                          >
+                            {t("common.delete")}
+                          </button>
+                        ) : null}
                         {isPrivileged && run.status === "approved" ? (
                           <button
                             type="button"
@@ -1043,11 +1158,19 @@ export default function PayrollPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleExportPayslips(selectedRun.id)}
+                    onClick={() => handleWageFile(selectedRun)}
                     className="cursor-pointer text-xs font-semibold text-foreground"
                   >
-                    {t("payroll.exportPayslips")}
+                    {t("payroll.wageFile")}
                   </button>
+                  <a
+                    href={`/print/payroll-runs/${selectedRun.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-semibold text-foreground"
+                  >
+                    {t("payroll.exportPayslips")}
+                  </a>
                 </div>
               </div>
 
@@ -1309,13 +1432,14 @@ export default function PayrollPage() {
                           <td className="px-4 py-2">{item.absentDays}</td>
                           <td className="px-4 py-2">{formatMoney(item.adjustmentsTotal, item.currency)}</td>
                           <td className="px-4 py-2">
-                            <button
-                              type="button"
-                              onClick={() => handleExportPayslip(item.id)}
-                              className="cursor-pointer text-xs font-semibold text-foreground underline decoration-dotted"
+                            <a
+                              href={`/print/payslips/${item.id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs font-semibold text-foreground underline decoration-dotted"
                             >
                               {t("payroll.payslipExport")}
-                            </button>
+                            </a>
                           </td>
                         </tr>
                       ))}

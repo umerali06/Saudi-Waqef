@@ -1,13 +1,23 @@
 import { NextResponse } from "next/server";
+import { v4 as uuidv4 } from "uuid";
+import { db } from "@/lib/firebase/admin";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAccountingAccess, requireCompanyRole } from "@/lib/access";
 import { adjustmentSchema } from "@/lib/validators/payments";
-import { createCashAdjustment, listCashAdjustments } from "@/lib/data/cash-adjustments";
+import {
+  createCashAdjustment,
+  getCashAdjustmentById,
+  listCashAdjustments,
+} from "@/lib/data/cash-adjustments";
 import { listChartAccounts } from "@/lib/data/chart-accounts";
 import { createJournalEntry } from "@/lib/data/journal-entries";
 import { createCashTransaction } from "@/lib/data/cash-transactions";
 import { normalizeSearch } from "@/lib/utils/search";
 import { recordAuditEvent } from "@/lib/data/audit-log";
+import { postingErrorResponse } from "@/lib/accounting/errors";
+import { periodClosedResponse } from "@/lib/accounting/period-guard";
+import { assertSameRequest } from "@/lib/accounting/payments";
+import { roundMoney } from "@/lib/utils/invoice";
 
 export const runtime = "nodejs";
 
@@ -101,65 +111,82 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid offset account" }, { status: 400 });
   }
 
-  const lines =
+  const closedPeriod = await periodClosedResponse(
+    parsed.data.companyId,
+    parsed.data.adjustmentDate
+  );
+  if (closedPeriod) {
+    return closedPeriod;
+  }
+
+  const amount = roundMoney(parsed.data.amount);
+  const [debitAccountId, creditAccountId] =
     parsed.data.type === "increase"
-      ? [
-          {
-            accountId: parsed.data.accountId,
-            debit: parsed.data.amount,
-            credit: 0,
-          },
-          {
-            accountId: parsed.data.offsetAccountId,
-            debit: 0,
-            credit: parsed.data.amount,
-          },
-        ]
-      : [
-          {
-            accountId: parsed.data.offsetAccountId,
-            debit: parsed.data.amount,
-            credit: 0,
-          },
-          {
-            accountId: parsed.data.accountId,
-            debit: 0,
-            credit: parsed.data.amount,
-          },
-        ];
-
-  const journalEntryId = await createJournalEntry({
-    companyId: parsed.data.companyId,
-    sourceType: "cash_adjustment",
-    sourceId: null,
-    date: parsed.data.adjustmentDate,
-    memo: parsed.data.memo ?? parsed.data.reason ?? "Cash adjustment",
-    lines,
-  });
-
-  const { id, adjustmentNumber } = await createCashAdjustment({
-    companyId: parsed.data.companyId,
-    adjustmentDate: parsed.data.adjustmentDate,
-    accountId: parsed.data.accountId,
-    offsetAccountId: parsed.data.offsetAccountId,
-    type: parsed.data.type,
-    amount: parsed.data.amount,
-    reason: parsed.data.reason ?? null,
-    memo: parsed.data.memo ?? null,
-    journalEntryId,
-  });
-
-  await createCashTransaction({
-    companyId: parsed.data.companyId,
-    accountId: parsed.data.accountId,
-    date: parsed.data.adjustmentDate,
-    amount: parsed.data.amount,
-    direction: parsed.data.type === "increase" ? "in" : "out",
-    reference: adjustmentNumber,
-    description: `Adjustment ${adjustmentNumber}`,
-    sourceType: "cash_adjustment",
-    sourceId: id,
-  });
+      ? [parsed.data.accountId, parsed.data.offsetAccountId]
+      : [parsed.data.offsetAccountId, parsed.data.accountId];
+  const id = parsed.data.requestId ?? uuidv4();
+  let adjustmentNumber: string;
+  try {
+    const result = await db.runTransaction(async (tx) => {
+      const existing = await getCashAdjustmentById(id, tx);
+      if (existing) {
+        assertSameRequest(existing, { companyId: parsed.data.companyId, amount });
+        return { adjustmentNumber: existing.adjustmentNumber, duplicate: true };
+      }
+      const journalEntryId = uuidv4();
+      const created = await createCashAdjustment(
+        {
+          id,
+          companyId: parsed.data.companyId,
+          adjustmentDate: parsed.data.adjustmentDate,
+          accountId: parsed.data.accountId,
+          offsetAccountId: parsed.data.offsetAccountId,
+          type: parsed.data.type,
+          amount,
+          reason: parsed.data.reason ?? null,
+          memo: parsed.data.memo ?? null,
+          journalEntryId,
+        },
+        tx
+      );
+      await createJournalEntry(
+        {
+          id: journalEntryId,
+          companyId: parsed.data.companyId,
+          sourceType: "cash_adjustment",
+          sourceId: id,
+          date: parsed.data.adjustmentDate,
+          memo: parsed.data.memo ?? parsed.data.reason ?? "Cash adjustment",
+          lines: [
+            { accountId: debitAccountId, debit: amount, credit: 0 },
+            { accountId: creditAccountId, debit: 0, credit: amount },
+          ],
+        },
+        tx
+      );
+      await createCashTransaction(
+        {
+          companyId: parsed.data.companyId,
+          accountId: parsed.data.accountId,
+          date: parsed.data.adjustmentDate,
+          amount,
+          direction: parsed.data.type === "increase" ? "in" : "out",
+          reference: created.adjustmentNumber,
+          description: `Adjustment ${created.adjustmentNumber}`,
+          sourceType: "cash_adjustment",
+          sourceId: id,
+        },
+        tx
+      );
+      return { adjustmentNumber: created.adjustmentNumber, duplicate: false };
+    });
+    adjustmentNumber = result.adjustmentNumber;
+    if (result.duplicate) {
+      return NextResponse.json({ adjustmentId: id, adjustmentNumber });
+    }
+  } catch (error) {
+    return postingErrorResponse(error);
+  }
 
   await recordAuditEvent({
     companyId: parsed.data.companyId,
@@ -168,7 +195,7 @@ export async function POST(request: Request) {
     action: "adjustment.create",
     entity: "cash_adjustment",
     entityId: id,
-    metadata: { adjustmentNumber, amount: parsed.data.amount },
+    metadata: { adjustmentNumber, amount },
   });
 
   return NextResponse.json({ adjustmentId: id, adjustmentNumber });

@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireSystemAdmin } from "@/lib/admin/access";
-import { getUserByEmail, updateUserPassword } from "@/lib/data/users";
+import { getUserByEmail, getUserById, updateUserPassword } from "@/lib/data/users";
+import { clearAllLoginAttempts } from "@/lib/security/login-guard";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { getPasswordIssues } from "@/lib/security/password-policy";
 
 export const runtime = "nodejs";
 
+const emptyToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(
+    (value) => (typeof value === "string" && !value.trim() ? undefined : value),
+    schema
+  );
+
 const schema = z.object({
-  userId: z.string().trim().optional(),
-  email: z.string().trim().email().optional(),
+  userId: emptyToUndefined(z.string().trim().optional()),
+  email: emptyToUndefined(z.string().trim().email().optional()),
   password: z.string(),
 });
 
@@ -29,17 +36,17 @@ export async function POST(request: Request) {
   if (getPasswordIssues(password).length > 0) {
     return NextResponse.json({ error: "Weak password" }, { status: 400 });
   }
-  let resolvedUserId = userId ?? null;
-  if (!resolvedUserId && email) {
-    const user = await getUserByEmail(email);
-    resolvedUserId = user?.id ?? null;
-  }
-
-  if (!resolvedUserId) {
+  const target = userId
+    ? await getUserById(userId)
+    : email
+    ? await getUserByEmail(email)
+    : null;
+  if (!target) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  await updateUserPassword(resolvedUserId, password);
+  await updateUserPassword(target.id, password);
+  await clearAllLoginAttempts(target.email);
 
   await recordAuditEvent({
     companyId: "system",
@@ -47,7 +54,7 @@ export async function POST(request: Request) {
     userEmail: access.user?.email ?? undefined,
     action: "admin.user.reset_password",
     entity: "user",
-    entityId: resolvedUserId,
+    entityId: target.id,
   });
 
   return NextResponse.json({ success: true });

@@ -3,11 +3,12 @@ import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
 import { getVendorById } from "@/lib/data/vendors";
 import { listContacts } from "@/lib/data/contacts";
-import { queueEmailWithDispatch } from "@/lib/email/queue";
+import { sendStatementEmail } from "@/lib/email/statements";
 import { notifyCompanyRoles } from "@/lib/notifications/service";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 type RouteContext = {
   params: Promise<{ vendorId: string }>;
@@ -51,26 +52,18 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const locale = body?.locale === "en" ? "en" : "ar";
-  const subject =
-    locale === "ar"
-      ? `كشف حساب المورد ${vendor.name}`
-      : `Statement for ${vendor.name}`;
-  const link = `${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/purchases/vendors/${vendorId}`;
-  const html =
-    locale === "ar"
-      ? `<p>تم إعداد كشف حساب المورد ${vendor.name}.</p><p><a href="${link}">عرض داخل النظام</a></p>`
-      : `<p>Your statement for ${vendor.name} is ready.</p><p><a href="${link}">View in the system</a></p>`;
-
-  await queueEmailWithDispatch({
-    companyId: vendor.companyId,
+  const sent = await sendStatementEmail({
+    partyType: "vendor",
+    partyId: vendorId,
     to: recipientEmail,
-    subject,
-    body: html,
-    sourceType: "vendor_statement",
-    sourceId: vendorId,
-    meta: { locale, vendorName: vendor.name, recipientEmail },
+    locale: body?.locale,
+    from: body?.from,
+    until: body?.to,
+    replyTo: user.email ?? null,
   });
+  if (!sent.ok) {
+    return NextResponse.json({ error: "EMAIL_FAILED" }, { status: 502 });
+  }
 
   await notifyCompanyRoles({
     companyId: vendor.companyId,

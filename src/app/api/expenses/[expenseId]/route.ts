@@ -7,8 +7,9 @@ import { getExpenseCategoryById } from "@/lib/data/expense-categories";
 import { getVendorById } from "@/lib/data/vendors";
 import { listTaxCategories } from "@/lib/data/tax-categories";
 import { getCompanyDefaults } from "@/lib/data/company-defaults";
+import { getCompanyConfig } from "@/lib/data/company-config";
 import { listChartAccounts } from "@/lib/data/chart-accounts";
-import { calculateLineAmounts } from "@/lib/utils/invoice";
+import { calculateLineAmounts, resolveTaxRate } from "@/lib/utils/invoice";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { findFiledVatPeriod } from "@/lib/data/vat-periods";
 
@@ -110,10 +111,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
   }
 
-  const [taxCategories, defaults, accounts] = await Promise.all([
+  const [taxCategories, defaults, accounts, config] = await Promise.all([
     listTaxCategories(expense.companyId),
     getCompanyDefaults(expense.companyId),
     listChartAccounts(expense.companyId),
+    getCompanyConfig(expense.companyId),
   ]);
 
   const taxMap = new Map(taxCategories.map((tax) => [tax.id, tax]));
@@ -127,7 +129,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     defaults.defaultPurchaseTaxCategoryId ??
     null;
   const taxCategory = taxCategoryId ? taxMap.get(taxCategoryId) : null;
-  const taxRate = taxCategory ? (taxCategory.rate ?? 0) / 100 : 0;
+  const taxRate = resolveTaxRate(taxCategory, config.vatEnabled);
 
   const amount =
     updates.amount ??

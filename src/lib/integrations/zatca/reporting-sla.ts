@@ -1,5 +1,4 @@
-import { ZatcaApiClient } from "@talha7k/zatca";
-import { listAllActiveZatcaIntegrations, type IntegrationRecord } from "@/lib/data/integrations";
+import { listAllActiveZatcaIntegrations } from "@/lib/data/integrations";
 import { listAtRiskReportingArtifacts, updateZatcaArtifactStatus } from "@/lib/data/zatca-artifacts";
 import { getSalesInvoiceById } from "@/lib/data/sales-invoices";
 import { executeZatcaSubmission } from "@/lib/integrations/zatca/service";
@@ -18,23 +17,19 @@ import { logger } from "@/lib/ops/logger";
  */
 const WARNING_WINDOW_MS = 26 * 60 * 60 * 1000;
 
-const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
-
 /**
  * There is currently no other scheduled trigger anywhere in this app that
  * submits pending invoices to ZATCA -- only a manual "Sync Now" click does.
  * This job does double duty: it first attempts a catch-up submission for
  * every active integration (so real invoices don't silently miss their
  * deadline for lack of a trigger), then alerts only on what's still
- * genuinely at risk after that attempt, reconciling against ZATCA's own
- * status API first in case it was actually accepted already.
+ * genuinely at risk after that attempt.
  */
 export async function runZatcaReportingSlaCheck() {
   const integrations = await listAllActiveZatcaIntegrations();
   const summary = {
     integrationsChecked: integrations.length,
     submissionErrors: 0,
-    selfHealed: 0,
     atRisk: 0,
     breached: 0,
     alerted: 0,
@@ -67,36 +62,18 @@ export async function runZatcaReportingSlaCheck() {
     }
   }
 
-  const integrationByCompany = new Map<string, IntegrationRecord>(
-    integrations.map((integration) => [integration.companyId, integration])
+  // The catch-up run above resubmits under the same UUID, and ZATCA answers 409
+  // for documents it already holds, so anything it accepted is settled by now.
+  const liveEnvironments = new Set(
+    integrations.map((integration) => `${integration.companyId}:${integration.environment}`)
   );
-  const atRiskArtifacts = await listAtRiskReportingArtifacts(WARNING_WINDOW_MS);
+  const atRiskArtifacts = (await listAtRiskReportingArtifacts(WARNING_WINDOW_MS)).filter(
+    (artifact) =>
+      artifact.environment !== "sandbox" &&
+      liveEnvironments.has(`${artifact.companyId}:${artifact.environment}`)
+  );
 
   for (const artifact of atRiskArtifacts) {
-    const integration = integrationByCompany.get(artifact.companyId);
-    const token = text(integration?.credentials?.binarySecurityToken);
-    const secret = text(integration?.credentials?.secret);
-
-    let stillAtRisk = true;
-    if (integration && token && secret) {
-      try {
-        const client = new ZatcaApiClient({ environment: integration.environment, timeout: 30000 });
-        const status = await client.checkInvoiceStatus({ binarySecurityToken: token, secret }, artifact.uuid);
-        if (["REPORTED", "ACCEPTED", "CLEARED"].includes(status.status)) {
-          await updateZatcaArtifactStatus(artifact.id, { status: "accepted" });
-          summary.selfHealed += 1;
-          stillAtRisk = false;
-        }
-      } catch (error) {
-        logger.warn("ZATCA reporting-SLA cron: status reconcile failed for an artifact", {
-          artifactId: artifact.id,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-
-    if (!stillAtRisk) continue;
-
     const dueAt = artifact.reportingDueAt;
     const breached = Boolean(dueAt && dueAt.getTime() <= Date.now());
     if (breached) summary.breached += 1;

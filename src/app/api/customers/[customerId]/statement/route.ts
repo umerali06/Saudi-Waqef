@@ -4,8 +4,9 @@ import { requireAccountingAccess } from "@/lib/access";
 import { getCustomerById } from "@/lib/data/customers";
 import { listSalesInvoices } from "@/lib/data/sales-invoices";
 import { listSalesCreditNotes } from "@/lib/data/credit-notes";
-import { listInvoicePayments } from "@/lib/data/invoice-payments";
 import { listOpenItemsByCompany, buildAgingByParty } from "@/lib/data/open-items";
+import { roundMoney } from "@/lib/utils/invoice";
+import { outstandingBalance } from "@/lib/utils/settlement";
 
 export const runtime = "nodejs";
 
@@ -36,17 +37,12 @@ export async function GET(_: Request, context: RouteContext) {
     listOpenItemsByCompany(customer.companyId),
   ]);
 
-  const customerInvoices = invoices.filter((inv) => inv.customerId === customerId);
-  const customerCredits = credits.filter((note) => note.customerId === customerId);
-
-  const paymentMap = new Map<string, number>();
-  for (const invoice of customerInvoices) {
-    const payments = await listInvoicePayments(invoice.id);
-    paymentMap.set(
-      invoice.id,
-      payments.reduce((sum, p) => sum + p.amount, 0)
-    );
-  }
+  const customerInvoices = invoices.filter(
+    (inv) => inv.customerId === customerId && !["draft", "canceled"].includes(inv.status)
+  );
+  const customerCredits = credits.filter(
+    (note) => note.customerId === customerId && note.status === "issued"
+  );
 
   const agingMap = buildAgingByParty(
     openItems.filter((item) => item.partyType === "customer")
@@ -54,19 +50,16 @@ export async function GET(_: Request, context: RouteContext) {
   const aging = agingMap.get(customerId)?.aging ?? null;
 
   const statementLines = customerInvoices.map((invoice) => {
-    const paid = paymentMap.get(invoice.id) ?? 0;
-    const credited = invoice.amountCredited ?? 0;
-    const balance = Math.max(invoice.total - paid - credited, 0);
     return {
       invoiceId: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
       invoiceDate: invoice.invoiceDate,
       dueDate: invoice.dueDate,
       status: invoice.status,
-      total: invoice.total,
-      paid,
-      credited,
-      balance,
+      total: roundMoney(invoice.total + invoice.amountDebited),
+      paid: invoice.amountPaid,
+      credited: invoice.amountCredited,
+      balance: outstandingBalance(invoice),
       currency: invoice.currency ?? "SAR",
     };
   });

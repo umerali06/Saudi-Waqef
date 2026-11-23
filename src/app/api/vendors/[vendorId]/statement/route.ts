@@ -4,8 +4,8 @@ import { requireAccountingAccess } from "@/lib/access";
 import { getVendorById } from "@/lib/data/vendors";
 import { listPurchaseBills } from "@/lib/data/purchase-bills";
 import { listVendorCreditNotes } from "@/lib/data/vendor-credit-notes";
-import { listVendorPayments } from "@/lib/data/vendor-payments";
 import { listOpenItemsByCompany, buildAgingByParty } from "@/lib/data/open-items";
+import { outstandingBalance } from "@/lib/utils/settlement";
 
 export const runtime = "nodejs";
 
@@ -30,26 +30,18 @@ export async function GET(_: Request, context: RouteContext) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const [bills, credits, payments, openItems] = await Promise.all([
+  const [bills, credits, openItems] = await Promise.all([
     listPurchaseBills(vendor.companyId),
     listVendorCreditNotes(vendor.companyId),
-    listVendorPayments(vendor.companyId),
     listOpenItemsByCompany(vendor.companyId),
   ]);
 
-  const vendorBills = bills.filter((bill) => bill.vendorId === vendorId);
-  const vendorCredits = credits.filter((note) => note.vendorId === vendorId);
-  const vendorPayments = payments.filter((payment) => payment.vendorId === vendorId);
-
-  const paidMap = new Map<string, number>();
-  vendorPayments.forEach((payment) => {
-    payment.allocations.forEach((allocation) => {
-      paidMap.set(
-        allocation.billId,
-        (paidMap.get(allocation.billId) ?? 0) + allocation.amount
-      );
-    });
-  });
+  const vendorBills = bills.filter(
+    (bill) => bill.vendorId === vendorId && !["draft", "canceled"].includes(bill.status)
+  );
+  const vendorCredits = credits.filter(
+    (note) => note.vendorId === vendorId && note.status === "issued"
+  );
 
   const agingMap = buildAgingByParty(
     openItems.filter((item) => item.partyType === "vendor")
@@ -57,9 +49,9 @@ export async function GET(_: Request, context: RouteContext) {
   const aging = agingMap.get(vendorId)?.aging ?? null;
 
   const statementLines = vendorBills.map((bill) => {
-    const paid = paidMap.get(bill.id) ?? bill.amountPaid ?? 0;
-    const credited = bill.amountCredited ?? 0;
-    const balance = Math.max(bill.total - paid - credited, 0);
+    const paid = bill.amountPaid;
+    const credited = bill.amountCredited;
+    const balance = outstandingBalance(bill);
     return {
       billId: bill.id,
       billNumber: bill.billNumber,

@@ -11,7 +11,7 @@ import { listAttendanceHolidays } from "@/lib/data/attendance-holidays";
 import { attendanceImportSchema } from "@/lib/validators/attendance";
 import { parseCsv, toCsv } from "@/lib/utils/csv";
 import { normalizeSearch } from "@/lib/utils/search";
-import { computeAttendanceMetrics } from "@/lib/utils/attendance";
+import { computeAttendanceMetrics, isRestDay } from "@/lib/utils/attendance";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 
 export const runtime = "nodejs";
@@ -210,6 +210,7 @@ export async function POST(request: Request) {
     const status =
       statusRaw && statusMap[statusRaw] ? statusMap[statusRaw] : undefined;
 
+    const restDay = isRestDay(date, settings.weekendDays, holidays);
     const metrics = computeAttendanceMetrics({
       checkIn,
       checkOut,
@@ -218,10 +219,10 @@ export async function POST(request: Request) {
       graceMinutes: settings.graceMinutes,
       roundingMinutes: settings.roundingMinutes,
       overtimeThresholdMinutes: settings.overtimeThresholdMinutes,
+      isRestDay: restDay,
     });
 
-    const isHoliday = holidays.some((holiday) => holiday.date === date);
-    const effectiveStatus = status ?? (isHoliday ? "holiday" : metrics.status);
+    const effectiveStatus = status ?? (restDay ? "holiday" : metrics.status);
 
     await createAttendanceRecord({
       companyId: parsed.data.companyId,

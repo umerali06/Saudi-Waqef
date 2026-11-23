@@ -90,7 +90,7 @@ export default function CustomersPage() {
   );
 
   const formatCurrency = (value: number, currencyCode?: string) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       style: "currency",
       currency: currencyCode || "SAR",
     }).format(value);

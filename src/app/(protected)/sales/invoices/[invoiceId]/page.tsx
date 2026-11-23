@@ -8,8 +8,8 @@ import { SkeletonBlock } from "@/components/skeleton";
 import { useTranslations } from "@/i18n/provider";
 import { uploadToCloudinary } from "@/lib/cloudinary-client";
 import { addDays } from "@/lib/utils/dates";
-import { calculateLineAmounts } from "@/lib/utils/invoice";
-import { getUnitOptions } from "@/lib/utils/units";
+import { calculateLineAmounts, resolveTaxRate } from "@/lib/utils/invoice";
+import { formatQuantity, getUnitOptions } from "@/lib/utils/units";
 
 type InvoiceLine = {
   id: string;
@@ -107,6 +107,7 @@ type CompanyDefaults = {
 
 type CompanyConfig = {
   taxInclusive: boolean;
+  vatEnabled: boolean;
 };
 
 type Account = {
@@ -211,6 +212,31 @@ const readFileAsDataUrl = (file: File) =>
     reader.readAsDataURL(file);
   });
 
+const mapPostingError = (error?: string) => {
+  switch (error) {
+    case "Invoice is locked":
+      return "invoice.locked";
+    case "Invoice has allocations":
+      return "invoice.hasPayments";
+    case "VAT period is filed":
+      return "vat.periodLocked";
+    case "PERIOD_CLOSED":
+      return "error.periodClosed";
+    case "DUPLICATE_REQUEST":
+      return "error.duplicateRequest";
+    case "Missing receivable account":
+      return "creditNote.missingReceivableAccount";
+    case "Missing sales account":
+      return "creditNote.missingSalesAccount";
+    case "Missing VAT output account":
+      return "creditNote.missingVatOutputAccount";
+    case "Missing discount account":
+      return "creditNote.missingDiscountAccount";
+    default:
+      return "error.saveFailed";
+  }
+};
+
 export default function InvoiceDetailPage() {
   const params = useParams<{ invoiceId: string }>();
   const invoiceId = params.invoiceId;
@@ -243,6 +269,7 @@ export default function InvoiceDetailPage() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("bank");
   const [paymentReference, setPaymentReference] = useState("");
+  const [paymentRequestId, setPaymentRequestId] = useState(() => crypto.randomUUID());
   const [paymentAccountId, setPaymentAccountId] = useState("");
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [noticeKey, setNoticeKey] = useState<string | null>(null);
@@ -257,7 +284,7 @@ export default function InvoiceDetailPage() {
   );
 
   const formatCurrency = (value: number, currencyCode?: string) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       style: "currency",
       currency: currencyCode || invoice?.currency || "SAR",
     }).format(value);
@@ -272,7 +299,7 @@ export default function InvoiceDetailPage() {
       return "-";
     }
     const date = new Date(`${value}T00:00:00Z`);
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US").format(
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US").format(
       date
     );
   };
@@ -341,7 +368,10 @@ export default function InvoiceDetailPage() {
           );
           setTerms(termData.terms ?? []);
           setDefaults(defaultsData.defaults ?? null);
-          setConfig({ taxInclusive: Boolean(configData?.config?.taxInclusive) });
+          setConfig({
+            taxInclusive: Boolean(configData?.config?.taxInclusive),
+            vatEnabled: configData?.config?.vatEnabled !== false,
+          });
           const accountsData: Account[] = accountData.accounts ?? [];
           const posting = accountsData.filter(
             (account) => account.isPosting && account.status === "active"
@@ -509,7 +539,7 @@ export default function InvoiceDetailPage() {
           defaults?.defaultSalesTaxCategoryId ||
           "";
         const taxCategory = taxCategoryId ? taxMap.get(taxCategoryId) : null;
-        const taxRate = taxCategory ? (taxCategory.rate ?? 0) / 100 : 0;
+        const taxRate = resolveTaxRate(taxCategory, invoice?.status !== "draft" || (config?.vatEnabled ?? true));
         const amounts = calculateLineAmounts({
           quantity,
           unitPrice,
@@ -647,13 +677,7 @@ export default function InvoiceDetailPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        if (data?.error === "Invoice is locked") {
-          setErrorKey("invoice.locked");
-        } else if (data?.error === "VAT period is filed") {
-          setErrorKey("vat.periodLocked");
-        } else {
-          setErrorKey("error.saveFailed");
-        }
+        setErrorKey(mapPostingError(data?.error));
         return;
       }
       await loadInvoice();
@@ -678,11 +702,7 @@ export default function InvoiceDetailPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        if (data?.error === "Invoice has payments") {
-          setErrorKey("invoice.hasPayments");
-        } else {
-          setErrorKey("error.saveFailed");
-        }
+        setErrorKey(mapPostingError(data?.error));
         return;
       }
       await loadInvoice();
@@ -707,18 +727,21 @@ export default function InvoiceDetailPage() {
           to: sendTo,
           subject: sendSubject,
           message: sendMessage,
+          locale,
         }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         if (data?.error === "Invoice must be approved") {
           setErrorKey("invoice.mustBeApproved");
+        } else if (data?.error === "EMAIL_FAILED") {
+          setErrorKey("invoice.emailFailed");
         } else {
           setErrorKey("error.saveFailed");
         }
         return;
       }
-      setNoticeKey("invoice.emailQueued");
+      setNoticeKey("invoice.emailSent");
       await loadInvoice();
     });
   };
@@ -747,6 +770,7 @@ export default function InvoiceDetailPage() {
           method: paymentMethod,
           reference: paymentReference || null,
           accountId: paymentAccountId,
+          requestId: paymentRequestId,
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -755,15 +779,12 @@ export default function InvoiceDetailPage() {
           setErrorKey("invoice.amountExceedsBalance");
         } else if (data?.error === "Invalid payment account") {
           setErrorKey("invoice.invalidPaymentAccount");
-        } else if (data?.error === "Invoice is locked") {
-          setErrorKey("invoice.locked");
-        } else if (data?.error === "VAT period is filed") {
-          setErrorKey("vat.periodLocked");
         } else {
-          setErrorKey("error.saveFailed");
+          setErrorKey(mapPostingError(data?.error));
         }
         return;
       }
+      setPaymentRequestId(crypto.randomUUID());
       setPaymentAmount("");
       setPaymentReference("");
       await loadInvoice();
@@ -900,12 +921,17 @@ export default function InvoiceDetailPage() {
           >
             {t("invoice.title")}
           </Link>
-          <Link
-            href={`/sales/invoices/${invoiceId}/print`}
-            className="rounded-2xl border border-border bg-surface px-3 py-2 text-xs font-semibold"
+          <a
+            href={`/api/invoices/${invoiceId}/pdf`}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-secondary"
           >
             {t("invoice.print")}
-          </Link>
+          </a>
+          <a href={`/api/invoices/${invoiceId}/pdf?download=1`} className="btn-secondary">
+            {t("invoice.downloadPdf")}
+          </a>
           {invoice.status === "draft" ? (
             <button
               type="button"
@@ -1015,7 +1041,7 @@ export default function InvoiceDetailPage() {
                       defaults?.defaultSalesTaxCategoryId ||
                       "";
                     const taxCategory = taxCategoryId ? taxMap.get(taxCategoryId) : null;
-                    const taxRate = taxCategory ? (taxCategory.rate ?? 0) / 100 : 0;
+                    const taxRate = resolveTaxRate(taxCategory, invoice?.status !== "draft" || (config?.vatEnabled ?? true));
                     const amounts = calculateLineAmounts({
                       quantity: Number(line.quantity) || 0,
                       unitPrice: Number(line.unitPrice) || 0,
@@ -1210,7 +1236,7 @@ export default function InvoiceDetailPage() {
                           <p className="font-semibold">{line.description}</p>
                         </td>
                         <td className="px-3 py-2">
-                          {line.quantity} {line.unit}
+                          {formatQuantity(line.quantity, line.unit)}
                         </td>
                         <td className="px-3 py-2">{formatCurrency(line.unitPrice)}</td>
                         <td className="px-3 py-2">
@@ -1280,7 +1306,7 @@ export default function InvoiceDetailPage() {
           {invoice.status !== "draft" && invoice.status !== "canceled" ? (
             <div className="app-card p-6 card-modern">
               <h3 className="text-sm font-semibold">{t("invoice.sendTitle")}</h3>
-              <p className="mt-1 text-xs text-muted">{t("invoice.sendSubtitle")}</p>
+              <p className="mt-1 text-xs text-muted">{t("invoice.sendSubtitle")} {t("invoice.sendWithPdf")}</p>
               <form onSubmit={handleSend} className="mt-4 space-y-3">
                 <label className={`text-sm ${alignClass}`}>
                   <span className="mb-1 block text-xs text-muted">{t("invoice.sendTo")}</span>
@@ -1434,12 +1460,14 @@ export default function InvoiceDetailPage() {
         <div className="app-card p-6 card-modern">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold">{t("invoice.creditNotesTitle")}</h2>
-            <Link
-              href={`/sales/credit-notes/new?invoiceId=${invoiceId}`}
-              className="text-xs font-semibold text-primary"
-            >
-              {t("invoice.createCreditNote")}
-            </Link>
+            {invoice.status !== "draft" && invoice.status !== "canceled" ? (
+              <Link
+                href={`/sales/credit-notes/new?invoiceId=${invoiceId}`}
+                className="text-xs font-semibold text-primary"
+              >
+                {t("invoice.createCreditNote")}
+              </Link>
+            ) : null}
           </div>
           {creditNotes.length > 0 ? (
             <div className="mt-4 overflow-x-auto">
@@ -1481,12 +1509,14 @@ export default function InvoiceDetailPage() {
         <div className="app-card p-6 card-modern">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold">{t("invoice.debitNotesTitle")}</h2>
-            <Link
-              href={`/sales/debit-notes/new?invoiceId=${invoiceId}`}
-              className="text-xs font-semibold text-primary"
-            >
-              {t("invoice.createDebitNote")}
-            </Link>
+            {invoice.status !== "draft" && invoice.status !== "canceled" ? (
+              <Link
+                href={`/sales/debit-notes/new?invoiceId=${invoiceId}`}
+                className="text-xs font-semibold text-primary"
+              >
+                {t("invoice.createDebitNote")}
+              </Link>
+            ) : null}
           </div>
           {debitNotes.length > 0 ? (
             <div className="mt-4 overflow-x-auto">

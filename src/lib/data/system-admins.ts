@@ -103,3 +103,19 @@ export async function setSystemAdminMfaVerified(userId: string, verified: boolea
   );
   return await getSystemAdmin(userId);
 }
+
+/** Everyone with platform access: recorded admins plus the addresses in SYSTEM_ADMIN_EMAILS. */
+export async function listPlatformAdmins() {
+  const recorded = await listSystemAdmins();
+  const configured = getSystemAdminEmails();
+  const admins = recorded.map((admin) => ({
+    email: admin.email ?? "",
+    name: admin.name ?? null,
+    configured: configured.includes(normalizeEmail(admin.email ?? "")),
+    signedIn: true,
+  }));
+  configured
+    .filter((email) => !admins.some((admin) => normalizeEmail(admin.email) === email))
+    .forEach((email) => admins.push({ email, name: null, configured: true, signedIn: false }));
+  return admins;
+}

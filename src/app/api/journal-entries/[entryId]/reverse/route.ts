@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { db } from "@/lib/firebase/admin";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
-import { getCompanyConfig } from "@/lib/data/company-config";
-import { findClosedPeriod } from "@/lib/data/accounting-periods";
 import { createJournalEntry, getJournalEntry, updateJournalEntry } from "@/lib/data/journal-entries";
 import { recordAuditEvent } from "@/lib/data/audit-log";
+import { PostingError, postingErrorResponse } from "@/lib/accounting/errors";
+import { periodClosedResponse } from "@/lib/accounting/period-guard";
+import { reverseLines } from "@/lib/utils/journal";
+import { riyadhDate } from "@/lib/utils/riyadh";
 
 export const runtime = "nodejs";
 
@@ -42,40 +45,48 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Entry cannot be reversed" }, { status: 400 });
   }
 
-  const reversalDate = new Date().toISOString().slice(0, 10);
-  const config = await getCompanyConfig(companyId);
-  if (config.periodLockDate && reversalDate <= config.periodLockDate) {
-    return NextResponse.json({ error: "Posting period is locked" }, { status: 403 });
+  if (entry.reversedAt) {
+    return NextResponse.json({ error: "Entry already reversed" }, { status: 400 });
   }
-  const closedPeriod = await findClosedPeriod(companyId, reversalDate);
+
+  const reversalDate = riyadhDate();
+  const closedPeriod = await periodClosedResponse(companyId, reversalDate);
   if (closedPeriod) {
-    return NextResponse.json({ error: "Accounting period is closed" }, { status: 403 });
+    return closedPeriod;
   }
 
-  const reversedLines = entry.lines.map((line) => ({
-    accountId: line.accountId,
-    debit: line.credit,
-    credit: line.debit,
-  }));
-
-  const reversalId = await createJournalEntry({
-    companyId,
-    sourceType: "manual_reversal",
-    sourceId: entryId,
-    date: reversalDate,
-    memo: `Reversal of ${entryId}`,
-    lines: reversedLines,
-    status: "posted",
-    createdBy: user.id,
-    approvedBy: user.id,
-    approvedAt: new Date(),
-    reversalOf: entryId,
-  });
-
-  await updateJournalEntry(entryId, {
-    reversedBy: user.id,
-    reversedAt: new Date(),
-  });
+  let reversalId: string;
+  try {
+    reversalId = await db.runTransaction(async (tx) => {
+      const current = await getJournalEntry(entryId, tx);
+      if (!current || current.status !== "posted") {
+        throw new PostingError("Entry cannot be reversed");
+      }
+      if (current.reversedAt) {
+        throw new PostingError("Entry already reversed");
+      }
+      const id = await createJournalEntry(
+        {
+          companyId,
+          sourceType: "manual_reversal",
+          sourceId: entryId,
+          date: reversalDate,
+          memo: `Reversal of ${entryId}`,
+          lines: reverseLines(current.lines),
+          status: "posted",
+          createdBy: user.id,
+          approvedBy: user.id,
+          approvedAt: new Date(),
+          reversalOf: entryId,
+        },
+        tx
+      );
+      await updateJournalEntry(entryId, { reversedBy: user.id, reversedAt: new Date() }, tx);
+      return id;
+    });
+  } catch (error) {
+    return postingErrorResponse(error);
+  }
 
   await recordAuditEvent({
     companyId,

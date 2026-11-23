@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRegistrationRequestById, updateRegistrationRequestStatus } from "@/lib/data/registration-requests";
-import { sendEmail } from "@/lib/email/sender";
+import { queueEmailWithDispatch } from "@/lib/email/queue";
+import { registrationRejectedMail } from "@/lib/email/registration-mails";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { getCompanyById } from "@/lib/data/companies";
 import { getMembership } from "@/lib/data/memberships";
@@ -38,7 +39,7 @@ export async function POST(
         userId: sessionUser.id,
         companyId: request.companyId,
       });
-      if (membership?.role !== "owner") {
+      if (membership?.role !== "owner" && !systemAdmin) {
         return NextResponse.json({ error: "Only the company owner can reject this request" }, { status: 403 });
       }
     } else if (!systemAdmin) {
@@ -49,20 +50,21 @@ export async function POST(
     await updateRegistrationRequestStatus(id, "rejected");
 
     // Send Email
-    await sendEmail({
+    const baseUrl = (process.env.NEXTAUTH_URL?.trim() || req.nextUrl.origin).replace(/\/+$/, "");
+    const mail = registrationRejectedMail({
+      locale: request.locale ?? "ar",
+      kind: request.kind ?? (request.companyId ? "join" : "new"),
+      name: request.name,
+      companyName: request.companyName,
+      registerUrl: `${baseUrl}/register`,
+    });
+    await queueEmailWithDispatch({
+      companyId: "system",
       to: request.email,
-      subject: "Registration Update - Saudi Waqef",
-      body: `
-        <div style="font-family: sans-serif; padding: 20px;">
-          <h2>Registration Update</h2>
-          <p>Dear ${request.name},</p>
-          <p>Thank you for your interest in Saudi Waqef.</p>
-          <p>After reviewing your request for <strong>${request.companyName}</strong>, we regret to inform you that we are unable to approve your registration at this time.</p>
-          <br/>
-          <p>Best regards,</p>
-          <p>The Saudi Waqef Team</p>
-        </div>
-      `,
+      subject: mail.subject,
+      body: mail.body,
+      sourceType: "registration_rejected",
+      sourceId: id,
     });
 
     return NextResponse.json({ success: true });

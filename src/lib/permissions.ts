@@ -66,7 +66,6 @@ const ROLE_MODULES: Record<Role, AppModule[]> = {
     "notifications",
     "documents",
     "hr",
-    "reports",
     "support",
     "help",
   ],
@@ -84,6 +83,14 @@ export function getAllowedModules(role: Role | null | undefined) {
 export function isModuleAllowed(role: Role | null | undefined, module: AppModule) {
   return getAllowedModules(role).includes(module);
 }
+
+/** Settings pages an accountant works in; the rest of settings stays with admins. */
+const ACCOUNTANT_SETTINGS = [
+  "/settings/journal-entries",
+  "/settings/opening-balances",
+  "/settings/accounting-periods",
+  "/settings/chart-of-accounts",
+];
 
 export function canAccessPath(role: Role | null | undefined, pathname: string) {
   const normalized = pathname.split("?")[0] ?? "/";
@@ -112,6 +119,9 @@ export function canAccessPath(role: Role | null | undefined, pathname: string) {
     return isModuleAllowed(role, "reports");
   }
   if (normalized.startsWith("/settings")) {
+    if (role === "accountant") {
+      return ACCOUNTANT_SETTINGS.some((path) => normalized.startsWith(path));
+    }
     return isModuleAllowed(role, "settings");
   }
   if (normalized.startsWith("/developers")) {

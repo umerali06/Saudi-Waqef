@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { db } from "@/lib/firebase/admin";
 
@@ -23,25 +24,32 @@ export async function registerWebhookEvent(params: {
   payloadRaw?: string;
   payload?: Record<string, unknown> | null;
 }) {
-  const ref = db.collection("integration_webhook_events").doc(params.eventId);
-  const existing = await ref.get();
-  if (existing.exists) {
-    return { created: false };
-  }
-
-  await ref.set({
-    integrationId: params.integrationId,
-    timestamp: params.timestamp,
-    signature: params.signature,
-    payloadRaw: params.payloadRaw ?? null,
-    payload: params.payload ?? null,
-    processedAt: null,
-    replayCount: 0,
-    lastReplayAt: null,
-    lastResult: null,
-    createdAt: Timestamp.now(),
+  // The event id is chosen by the sender: hashing it with the integration keeps
+  // tenants apart and makes any string a valid document id.
+  const id = crypto
+    .createHash("sha256")
+    .update(`${params.integrationId}:${params.eventId}`)
+    .digest("hex");
+  const ref = db.collection("integration_webhook_events").doc(id);
+  const isNew = await db.runTransaction(async (tx) => {
+    const existing = await tx.get(ref);
+    if (existing.exists) return false;
+    tx.set(ref, {
+      integrationId: params.integrationId,
+      eventId: params.eventId,
+      timestamp: params.timestamp,
+      signature: params.signature,
+      payloadRaw: params.payloadRaw ?? null,
+      payload: params.payload ?? null,
+      processedAt: null,
+      replayCount: 0,
+      lastReplayAt: null,
+      lastResult: null,
+      createdAt: Timestamp.now(),
+    });
+    return true;
   });
-  return { created: true };
+  return { created: isNew, id };
 }
 
 export async function getWebhookEventById(eventId: string) {

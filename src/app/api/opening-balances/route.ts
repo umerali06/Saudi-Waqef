@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
-import { listOpeningBalances, saveOpeningBalances } from "@/lib/data/opening-balances";
+import {
+  listOpeningBalances,
+  openingEntryId,
+  saveOpeningBalances,
+} from "@/lib/data/opening-balances";
 import { openingBalanceSchema } from "@/lib/validators/company";
-import { getCompanyConfig } from "@/lib/data/company-config";
-import { findClosedPeriod } from "@/lib/data/accounting-periods";
 import { recordAuditEvent } from "@/lib/data/audit-log";
+import { getJournalEntry } from "@/lib/data/journal-entries";
+import { listChartAccounts } from "@/lib/data/chart-accounts";
+import { periodClosedResponse } from "@/lib/accounting/period-guard";
 
 export const runtime = "nodejs";
 
@@ -30,8 +35,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const balances = await listOpeningBalances(companyId);
-  return NextResponse.json({ balances });
+  const [balances, entry] = await Promise.all([
+    listOpeningBalances(companyId),
+    getJournalEntry(openingEntryId(companyId)),
+  ]);
+  return NextResponse.json({ balances, posted: Boolean(entry) });
 }
 
 export async function PUT(request: Request) {
@@ -58,20 +66,18 @@ export async function PUT(request: Request) {
   const asOfDate =
     parsed.data.asOfDate ??
     new Date().toISOString().slice(0, 10);
-  const config = await getCompanyConfig(parsed.data.companyId);
-  if (config.periodLockDate && asOfDate <= config.periodLockDate) {
-    return NextResponse.json(
-      { error: "Posting period is locked" },
-      { status: 403 }
-    );
+  const accounts = await listChartAccounts(parsed.data.companyId);
+  const accountIds = new Set(accounts.map((account) => account.id));
+  if (parsed.data.entries.some((entry) => !accountIds.has(entry.accountId))) {
+    return NextResponse.json({ error: "Invalid account" }, { status: 400 });
   }
 
-  const closedPeriod = await findClosedPeriod(parsed.data.companyId, asOfDate);
+  const posted = await getJournalEntry(openingEntryId(parsed.data.companyId));
+  const closedPeriod =
+    (await periodClosedResponse(parsed.data.companyId, asOfDate)) ??
+    (posted ? await periodClosedResponse(parsed.data.companyId, posted.date) : null);
   if (closedPeriod) {
-    return NextResponse.json(
-      { error: "Accounting period is closed" },
-      { status: 403 }
-    );
+    return closedPeriod;
   }
 
   const totalDebit = parsed.data.entries.reduce((sum, entry) => sum + entry.debit, 0);
@@ -81,7 +87,12 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Balances must match" }, { status: 400 });
   }
 
-  await saveOpeningBalances(parsed.data.companyId, parsed.data.entries, asOfDate);
+  await saveOpeningBalances(
+    parsed.data.companyId,
+    parsed.data.entries,
+    asOfDate,
+    user.id
+  );
   await recordAuditEvent({
     companyId: parsed.data.companyId,
     userId: user.id,

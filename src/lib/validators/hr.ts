@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidSaudiIban, normalizeIban } from "@/lib/utils/iban";
 
 const optionalString = z.string().optional().nullable();
 const optionalTerminationCategory = z
@@ -56,6 +57,12 @@ const employeeBaseSchema = z.object({
   iqamaNumber: optionalString,
   passportNumber: optionalString,
   nationality: optionalString,
+  iban: z
+    .string()
+    .transform(normalizeIban)
+    .refine((value) => value === "" || isValidSaudiIban(value), "Invalid IBAN")
+    .optional()
+    .nullable(),
   dob: optionalString,
   gender: z.enum(["male", "female"]).optional().nullable(),
   email: z.string().email().optional().nullable(),

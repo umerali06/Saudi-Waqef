@@ -21,6 +21,12 @@ type Overview = {
     invoicesLast30Days: number;
     payrollRunsLast30Days: number;
   };
+  platformAdmins: Array<{
+    email: string;
+    name: string | null;
+    configured: boolean;
+    signedIn: boolean;
+  }>;
   generatedAt: string;
 };
 
@@ -118,6 +124,36 @@ export default function AdminOverviewPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="panel p-5">
+        <h2 className="text-sm font-semibold">{t("admin.platformAdmins.title")}</h2>
+        <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
+          {t("admin.platformAdmins.scope")}
+        </p>
+        <ul className="mt-4 divide-y divide-border text-sm">
+          {(overview?.platformAdmins ?? []).map((admin) => (
+            <li
+              key={admin.email}
+              className="flex flex-wrap items-center justify-between gap-2 py-2"
+            >
+              <span>
+                {admin.name ? <span className="me-2 font-medium">{admin.name}</span> : null}
+                <bdi className="text-muted">{admin.email}</bdi>
+              </span>
+              <span className={`status ${admin.signedIn ? "status-good" : "status-neutral"}`}>
+                {t(
+                  admin.signedIn
+                    ? "admin.platformAdmins.signedIn"
+                    : "admin.platformAdmins.notSignedIn"
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {overview && overview.platformAdmins.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">{t("admin.platformAdmins.none")}</p>
+        ) : null}
       </div>
 
       <p className={`text-xs text-muted ${alignClass}`}>

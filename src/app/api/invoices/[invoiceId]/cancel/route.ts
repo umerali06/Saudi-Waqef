@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
-import { getSalesInvoiceById, updateSalesInvoice } from "@/lib/data/sales-invoices";
-import { listChartAccounts } from "@/lib/data/chart-accounts";
-import { getCompanyDefaults } from "@/lib/data/company-defaults";
-import { createJournalEntry } from "@/lib/data/journal-entries";
-import { deleteOpenItem } from "@/lib/data/open-items";
-import { listItems, applyItemStockDeltas } from "@/lib/data/items";
+import { postingErrorResponse } from "@/lib/accounting/errors";
+import { periodClosedResponse } from "@/lib/accounting/period-guard";
+import { cancelSalesInvoice } from "@/lib/accounting/sales";
+import { getSalesInvoiceById } from "@/lib/data/sales-invoices";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { findFiledVatPeriod } from "@/lib/data/vat-periods";
 import { isZatcaFinalized } from "@/lib/integrations/zatca/finality";
@@ -58,109 +56,21 @@ export async function POST(_: Request, context: RouteContext) {
     return NextResponse.json({ error: "ZATCA_DOCUMENT_FINALIZED" }, { status: 400 });
   }
 
-  const items = await listItems(invoice.companyId);
-  const itemMap = new Map(items.map((item) => [item.id, item]));
-  const stockUpdates: Array<{
-    itemId: string;
-    stockReservedDelta?: number;
-    stockOnHandDelta?: number;
-  }> = [];
-
-  invoice.lines.forEach((line) => {
-    if (!line.itemId) {
-      return;
-    }
-    const item = itemMap.get(line.itemId);
-    if (!item || !item.trackInventory) {
-      return;
-    }
-    if (invoice.status === "draft") {
-      stockUpdates.push({
-        itemId: line.itemId,
-        stockReservedDelta: -line.baseQuantity,
-      });
-    } else {
-      stockUpdates.push({
-        itemId: line.itemId,
-        stockOnHandDelta: line.baseQuantity,
-      });
-    }
-  });
-
-  if (stockUpdates.length > 0) {
-    await applyItemStockDeltas(stockUpdates);
-  }
-
   if (invoice.status === "approved") {
-    const [defaults, accounts] = await Promise.all([
-      getCompanyDefaults(invoice.companyId),
-      listChartAccounts(invoice.companyId),
-    ]);
-    const accountIds = new Set(accounts.map((account) => account.id));
-    const receivableId = defaults.receivableAccountId;
-    const salesAccountId = defaults.salesAccountId;
-    const vatOutputAccountId = defaults.vatOutputAccountId;
-    const discountAccountId = defaults.discountAccountId;
-
-    if (!receivableId || !accountIds.has(receivableId)) {
-      return NextResponse.json(
-        { error: "Missing receivable account" },
-        { status: 400 }
-      );
-    }
-    if (!salesAccountId || !accountIds.has(salesAccountId)) {
-      return NextResponse.json({ error: "Missing sales account" }, { status: 400 });
-    }
-
-    const journalLines = [];
-    const grossSales =
-      discountAccountId && invoice.discountTotal > 0
-        ? invoice.subtotal + invoice.discountTotal
-        : invoice.subtotal;
-
-    journalLines.push({
-      accountId: receivableId,
-      debit: 0,
-      credit: invoice.total,
-    });
-    journalLines.push({
-      accountId: salesAccountId,
-      debit: grossSales,
-      credit: 0,
-    });
-    if (discountAccountId && invoice.discountTotal > 0) {
-      journalLines.push({
-        accountId: discountAccountId,
-        debit: 0,
-        credit: invoice.discountTotal,
-      });
-    }
-    if (invoice.taxTotal > 0 && vatOutputAccountId) {
-      journalLines.push({
-        accountId: vatOutputAccountId,
-        debit: invoice.taxTotal,
-        credit: 0,
-      });
-    }
-
-    await createJournalEntry({
-      companyId: invoice.companyId,
-      sourceType: "sales_invoice_cancel",
-      sourceId: invoice.id,
-      date: invoice.invoiceDate,
-      memo: `Cancel invoice ${invoice.invoiceNumber}`,
-      lines: journalLines,
-    });
-
-    if (invoice.openItemId) {
-      await deleteOpenItem(invoice.openItemId);
+    const closedPeriod = await periodClosedResponse(
+      invoice.companyId,
+      invoice.invoiceDate
+    );
+    if (closedPeriod) {
+      return closedPeriod;
     }
   }
 
-  await updateSalesInvoice(invoiceId, {
-    status: "canceled",
-    balance: 0,
-  });
+  try {
+    await cancelSalesInvoice(invoice.id);
+  } catch (error) {
+    return postingErrorResponse(error);
+  }
 
   await recordAuditEvent({
     companyId: invoice.companyId,

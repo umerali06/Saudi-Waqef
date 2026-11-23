@@ -5,6 +5,7 @@ const {
   listSalesInvoices,
   listPurchaseBills,
   listSalesCreditNotes,
+  listSalesDebitNotes,
   listVendorCreditNotes,
   listExpenses,
   listTaxCategories,
@@ -13,6 +14,7 @@ const {
   listSalesInvoices: vi.fn(),
   listPurchaseBills: vi.fn(),
   listSalesCreditNotes: vi.fn(),
+  listSalesDebitNotes: vi.fn(),
   listVendorCreditNotes: vi.fn(),
   listExpenses: vi.fn(),
   listTaxCategories: vi.fn(),
@@ -22,6 +24,7 @@ const {
 vi.mock("@/lib/data/sales-invoices", () => ({ listSalesInvoices }));
 vi.mock("@/lib/data/purchase-bills", () => ({ listPurchaseBills }));
 vi.mock("@/lib/data/credit-notes", () => ({ listSalesCreditNotes }));
+vi.mock("@/lib/data/debit-notes", () => ({ listSalesDebitNotes }));
 vi.mock("@/lib/data/vendor-credit-notes", () => ({ listVendorCreditNotes }));
 vi.mock("@/lib/data/expenses", () => ({ listExpenses }));
 vi.mock("@/lib/data/tax-categories", () => ({ listTaxCategories }));
@@ -31,6 +34,8 @@ beforeEach(() => {
   listSalesInvoices.mockReset();
   listPurchaseBills.mockReset();
   listSalesCreditNotes.mockReset();
+  listSalesDebitNotes.mockReset();
+  listSalesDebitNotes.mockResolvedValue([]);
   listVendorCreditNotes.mockReset();
   listExpenses.mockReset();
   listTaxCategories.mockReset();
@@ -157,5 +162,29 @@ describe("buildVatSummary", () => {
       taxableAmount: 60,
       taxAmount: 9,
     });
+  });
+
+  it("adds issued debit notes to output VAT", async () => {
+    listTaxCategories.mockResolvedValue([{ id: "tax15", rate: 15, type: "standard" }]);
+    listSalesInvoices.mockResolvedValue([]);
+    listSalesCreditNotes.mockResolvedValue([]);
+    listPurchaseBills.mockResolvedValue([]);
+    listVendorCreditNotes.mockResolvedValue([]);
+    listExpenses.mockResolvedValue([]);
+    const line = { taxRate: 0.15, taxCategoryId: "tax15", netAmount: 200, taxAmount: 30 };
+    listSalesDebitNotes.mockResolvedValue([
+      { id: "d1", status: "issued", issueDate: "2026-01-10", lines: [line] },
+      { id: "d2", status: "draft", issueDate: "2026-01-10", lines: [line] },
+    ]);
+
+    const summary = await buildVatSummary({
+      companyId: "c1",
+      startDate: "2026-01-01",
+      endDate: "2026-01-31",
+    });
+
+    expect(summary.exports).toBe(0);
+    expect(summary.outputVat).toBe(30);
+    expect(summary.sales.netAmount).toBe(200);
   });
 });

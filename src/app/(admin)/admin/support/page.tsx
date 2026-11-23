@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useTranslations } from "@/i18n/provider";
+import { AdminSupportTickets } from "@/components/admin-support-tickets";
 
 export default function AdminSupportPage() {
   const { t, locale } = useTranslations();
@@ -38,6 +39,8 @@ export default function AdminSupportPage() {
         <h1 className="text-2xl font-semibold page-title">{t("admin.support.title")}</h1>
         <p className="text-sm text-muted page-subtitle">{t("admin.support.subtitle")}</p>
       </div>
+
+      <AdminSupportTickets />
 
       <form onSubmit={handleReset} className={`app-card p-6 ${alignClass}`}>
         <div className="grid gap-4 md:grid-cols-3">

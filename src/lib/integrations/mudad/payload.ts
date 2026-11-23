@@ -1,68 +1,79 @@
-const toArray = <T = Record<string, unknown>>(value: unknown): T[] =>
-  Array.isArray(value) ? (value as T[]) : [];
+import type { PayrollRun } from "@/lib/data/payroll-runs";
+import type { PayrollFilingRow } from "@/lib/integrations/payroll-source";
+import { toCsv } from "@/lib/utils/csv";
 
-const asObject = (value: unknown): Record<string, unknown> =>
-  value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+const round2 = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 
-export const buildMudadPayload = (basePayload: Record<string, unknown>) => {
-  const employeesSection = asObject(basePayload.employees);
-  const attendanceSection = asObject(basePayload.attendance);
-  const payrollSection = asObject(basePayload.payroll);
-  const payrollRun = asObject(payrollSection.run);
-  const payrollItems = toArray<Record<string, unknown>>(payrollSection.items);
-  const employeeRecords = toArray<Record<string, unknown>>(employeesSection.records);
+/** The bank that holds the account is encoded in digits 5-6 of a Saudi IBAN. */
+const bankCodeOf = (iban: string) => iban.slice(4, 6);
 
-  const itemsByEmployee = new Map<string, Record<string, unknown>>();
-  payrollItems.forEach((item) => {
-    const employeeId =
-      typeof item.employeeId === "string" && item.employeeId.trim() ? item.employeeId.trim() : "";
-    if (employeeId) {
-      itemsByEmployee.set(employeeId, item);
-    }
-  });
-
-  const workers = employeeRecords.map((employee) => {
-    const employeeId =
-      typeof employee.id === "string" && employee.id.trim() ? employee.id.trim() : "";
-    const payrollItem = employeeId ? itemsByEmployee.get(employeeId) ?? {} : {};
-    return {
-      employeeId,
-      employeeNumber:
-        typeof employee.employeeNumber === "string" ? employee.employeeNumber : null,
-      nameAr: typeof employee.nameAr === "string" ? employee.nameAr : null,
-      nameEn: typeof employee.nameEn === "string" ? employee.nameEn : null,
-      status: typeof employee.status === "string" ? employee.status : "active",
-      netPay: Number(payrollItem.netPay ?? 0),
-      grossPay: Number(payrollItem.grossPay ?? 0),
-      totalDeductions: Number(payrollItem.totalDeductions ?? 0),
-      unpaidLeaveDeduction: Number(payrollItem.unpaidLeaveDeduction ?? 0),
-      absenceDeduction: Number(payrollItem.absenceDeduction ?? 0),
-    };
-  });
+/** Wage Protection System record: what each worker is paid, into which account. */
+export const buildMudadPayload = (params: {
+  establishment: { name: string; crNumber: string | null; molNumber: string | null; payerIban: string | null };
+  run: Pick<PayrollRun, "id" | "periodStart" | "periodEnd">;
+  rows: PayrollFilingRow[];
+}) => {
+  const workers = params.rows.map((row) => ({
+    identityNumber: row.identityNumber,
+    nameAr: row.nameAr,
+    nameEn: row.nameEn,
+    iban: row.iban,
+    bankCode: bankCodeOf(row.iban),
+    basicWage: row.basic,
+    housingAllowance: row.housing,
+    otherEarnings: row.otherEarnings,
+    deductions: row.deductions,
+    netWage: row.net,
+    currency: "SAR",
+  }));
+  const total = (key: "basicWage" | "housingAllowance" | "otherEarnings" | "deductions" | "netWage") =>
+    round2(workers.reduce((sum, row) => sum + row[key], 0));
 
   return {
     source: "saudi-waqef",
     connector: "mudad",
-    companyId: basePayload.companyId ?? null,
-    environment: basePayload.environment ?? null,
-    triggeredAt: basePayload.triggeredAt ?? new Date().toISOString(),
-    payrollRun: {
-      id: typeof payrollRun.id === "string" ? payrollRun.id : null,
-      periodStart: typeof payrollRun.periodStart === "string" ? payrollRun.periodStart : null,
-      periodEnd: typeof payrollRun.periodEnd === "string" ? payrollRun.periodEnd : null,
-    },
-    attendanceSummary: {
-      windowStart:
-        typeof attendanceSection.windowStart === "string" ? attendanceSection.windowStart : null,
-      totalRecords: Number(attendanceSection.totalRecords ?? 0),
-      absences: Number(attendanceSection.absences ?? 0),
-      lateRecords: Number(attendanceSection.lateRecords ?? 0),
-      overtimeMinutes: Number(attendanceSection.overtimeMinutes ?? 0),
-    },
+    establishment: params.establishment,
+    wageMonth: params.run.periodEnd.slice(0, 7),
+    periodStart: params.run.periodStart,
+    periodEnd: params.run.periodEnd,
+    payrollRunId: params.run.id,
     workerCount: workers.length,
+    totals: {
+      basic: total("basicWage"),
+      housing: total("housingAllowance"),
+      otherEarnings: total("otherEarnings"),
+      deductions: total("deductions"),
+      net: total("netWage"),
+    },
     workers,
   };
 };
 
+/** Wage file for upload through the Mudad portal or the employer's bank. */
+export const buildWageFileCsv = (rows: PayrollFilingRow[]) =>
+  toCsv(
+    [
+      "Identity Number",
+      "Employee Name",
+      "Bank Code",
+      "IBAN",
+      "Basic Salary",
+      "Housing Allowance",
+      "Other Earnings",
+      "Deductions",
+      "Net Salary",
+      "Currency",
+    ],
+    rows.map((row) => [
+      row.identityNumber,
+      row.nameEn || row.nameAr,
+      bankCodeOf(row.iban),
+      row.iban,
+      row.basic.toFixed(2),
+      row.housing.toFixed(2),
+      row.otherEarnings.toFixed(2),
+      row.deductions.toFixed(2),
+      row.net.toFixed(2),
+      "SAR",
+    ])
+  );

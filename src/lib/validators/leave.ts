@@ -32,5 +32,6 @@ export const leaveAdjustmentSchema = z.object({
   employeeId: z.string().min(1),
   leaveTypeId: z.string().min(1),
   amount: z.number().min(-365).max(365),
+  year: z.number().int().min(2000).max(2100).optional(),
   reason: z.string().min(2),
 });

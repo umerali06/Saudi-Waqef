@@ -1,8 +1,9 @@
-import { Timestamp } from "firebase-admin/firestore";
+import { Timestamp, type DocumentSnapshot, type Transaction } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase/admin";
 import { normalizeSearch } from "@/lib/utils/search";
-import { buildSequenceNumber } from "@/lib/utils/numbering";
+import { nextDocumentNumber } from "@/lib/data/numbering";
+import { readDoc, writeDoc } from "@/lib/firebase/documents";
 
 export type DebitNoteStatus = "draft" | "issued" | "canceled";
 
@@ -47,52 +48,7 @@ export type DebitNote = {
   createdAt: Date;
 };
 
-const DEFAULT_CONFIG = {
-  debitPrefix: "DR-",
-  debitSuffix: "",
-  debitNextNumber: 1,
-  debitPadding: 0,
-  debitResetYearly: false,
-  debitLastResetYear: null as number | null,
-};
-
-export async function listSalesDebitNotes(companyId: string) {
-  const snapshot = await db
-    .collection("sales_debit_notes")
-    .where("companyId", "==", companyId)
-    .get();
-
-  return snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      companyId: data.companyId,
-      invoiceId: data.invoiceId,
-      invoiceNumber: data.invoiceNumber,
-      customerId: data.customerId,
-      customerName: data.customerName,
-      debitNumber: data.debitNumber,
-      status: data.status,
-      issueDate: data.issueDate,
-      currency: data.currency ?? "SAR",
-      notes: data.notes ?? null,
-      reason: data.reason ?? null,
-      subtotal: data.subtotal ?? 0,
-      discountTotal: data.discountTotal ?? 0,
-      taxTotal: data.taxTotal ?? 0,
-      total: data.total ?? 0,
-      lines: data.lines ?? [],
-      journalEntryId: data.journalEntryId ?? null,
-      createdAt: data.createdAt.toDate(),
-    } as DebitNote;
-  });
-}
-
-export async function getSalesDebitNoteById(debitNoteId: string) {
-  const doc = await db.collection("sales_debit_notes").doc(debitNoteId).get();
-  if (!doc.exists) {
-    return null;
-  }
+function mapDebitNote(doc: DocumentSnapshot) {
   const data = doc.data()!;
   return {
     id: doc.id,
@@ -117,7 +73,22 @@ export async function getSalesDebitNoteById(debitNoteId: string) {
   } as DebitNote;
 }
 
+export async function listSalesDebitNotes(companyId: string) {
+  const snapshot = await db
+    .collection("sales_debit_notes")
+    .where("companyId", "==", companyId)
+    .get();
+
+  return snapshot.docs.map(mapDebitNote);
+}
+
+export async function getSalesDebitNoteById(debitNoteId: string, tx?: Transaction) {
+  const doc = await readDoc(db.collection("sales_debit_notes").doc(debitNoteId), tx);
+  return doc.exists ? mapDebitNote(doc) : null;
+}
+
 export async function createSalesDebitNote(params: {
+  id?: string;
   companyId: string;
   invoiceId: string;
   invoiceNumber: string;
@@ -134,46 +105,22 @@ export async function createSalesDebitNote(params: {
   status?: DebitNoteStatus;
   lines: DebitNoteLine[];
   journalEntryId?: string | null;
-}) {
-  const id = uuidv4();
-  const configRef = db.collection("company_configs").doc(params.companyId);
+}, tx?: Transaction) {
+  const id = params.id ?? uuidv4();
   const noteRef = db.collection("sales_debit_notes").doc(id);
 
-  let debitNumber = "";
-
-  await db.runTransaction(async (tx) => {
-    const configSnap = await tx.get(configRef);
-    const config = configSnap.data() ?? {};
-    const sequence = buildSequenceNumber({
-      prefix:
-        typeof config.debitPrefix === "string"
-          ? config.debitPrefix
-          : DEFAULT_CONFIG.debitPrefix,
-      suffix:
-        typeof config.debitSuffix === "string"
-          ? config.debitSuffix
-          : DEFAULT_CONFIG.debitSuffix,
-      nextNumber:
-        typeof config.debitNextNumber === "number"
-          ? config.debitNextNumber
-          : DEFAULT_CONFIG.debitNextNumber,
-      padding:
-        typeof config.debitPadding === "number"
-          ? config.debitPadding
-          : DEFAULT_CONFIG.debitPadding,
-      resetYearly:
-        typeof config.debitResetYearly === "boolean"
-          ? config.debitResetYearly
-          : DEFAULT_CONFIG.debitResetYearly,
-      lastResetYear:
-        typeof config.debitLastResetYear === "number"
-          ? config.debitLastResetYear
-          : DEFAULT_CONFIG.debitLastResetYear,
+  const create = async (transaction: Transaction) => {
+    const sequence = await nextDocumentNumber(transaction, {
+      companyId: params.companyId,
+      key: "debit",
+      defaultPrefix: "DR-",
+      collection: "sales_debit_notes",
+      field: "debitNumber",
       date: params.issueDate,
     });
-    debitNumber = sequence.number;
+    const debitNumber = sequence.number;
 
-    tx.set(noteRef, {
+    transaction.set(noteRef, {
       companyId: params.companyId,
       invoiceId: params.invoiceId,
       invoiceNumber: params.invoiceNumber,
@@ -196,17 +143,11 @@ export async function createSalesDebitNote(params: {
       createdAt: Timestamp.now(),
     });
 
-    tx.set(
-      configRef,
-      {
-        debitNextNumber: sequence.nextNumber,
-        debitLastResetYear: sequence.resetYear ?? null,
-        updatedAt: Timestamp.now(),
-      },
-      { merge: true }
-    );
-  });
+    sequence.save();
+    return debitNumber;
+  };
 
+  const debitNumber = tx ? await create(tx) : await db.runTransaction(create);
   return { id, debitNumber };
 }
 
@@ -223,13 +164,12 @@ export async function updateSalesDebitNote(
     total: number;
     lines: DebitNoteLine[];
     journalEntryId: string | null;
-  }>
+  }>,
+  tx?: Transaction
 ) {
   const payload: Record<string, unknown> = {
     ...updates,
     updatedAt: Timestamp.now(),
   };
-  await db.collection("sales_debit_notes").doc(debitNoteId).set(payload, {
-    merge: true,
-  });
+  await writeDoc(db.collection("sales_debit_notes").doc(debitNoteId), payload, { merge: true, tx });
 }

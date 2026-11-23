@@ -34,6 +34,9 @@ export default function UsersSettingsPage() {
   const [isPending, startTransition] = useTransition();
 
   const canManageRoles = ["owner", "admin"].includes(activeCompany?.role ?? "");
+  const assignableRoles = ROLE_OPTIONS.filter(
+    (roleKey) => roleKey !== "owner" || activeCompany?.role === "owner"
+  );
   const currentUserId = session?.user?.id ?? null;
 
   const loadMembers = useCallback(() => {
@@ -212,7 +215,7 @@ export default function UsersSettingsPage() {
               value={role}
               onChange={(event) => setRole(event.target.value as Role)}
             >
-              {ROLE_OPTIONS.map((roleKey) => (
+              {assignableRoles.map((roleKey) => (
                 <option key={roleKey} value={roleKey}>
                   {t(`role.${roleKey}`)}
                 </option>
@@ -277,7 +280,7 @@ export default function UsersSettingsPage() {
                         }))
                       }
                     >
-                      {ROLE_OPTIONS.map((roleKey) => (
+                      {(member.role === "owner" ? ROLE_OPTIONS : assignableRoles).map((roleKey) => (
                         <option key={roleKey} value={roleKey}>
                           {t(`role.${roleKey}`)}
                         </option>

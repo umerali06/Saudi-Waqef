@@ -46,7 +46,7 @@ const EMPTY_PLAN = {
 };
 
 export default function BillingPlansPage() {
-  const { activeCompanyId, activeCompany } = useCompany();
+  const { activeCompanyId } = useCompany();
   const { t, locale } = useTranslations();
   const alignClass = locale === "ar" ? "text-right" : "text-left";
   const [plans, setPlans] = useState<BillingPlan[]>([]);
@@ -55,7 +55,15 @@ export default function BillingPlansPage() {
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const isAdmin = ["owner", "admin"].includes(activeCompany?.role ?? "");
+  const [isSystemAdmin, setIsSystemAdmin] = useState<boolean | null>(null);
+
+  // Plans are shared by every company, so only the platform team edits them.
+  useEffect(() => {
+    fetch("/api/admin/me")
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => setIsSystemAdmin(Boolean(data?.isSystemAdmin)))
+      .catch(() => setIsSystemAdmin(false));
+  }, []);
 
   const loadPlans = () => {
     if (!activeCompanyId) {
@@ -203,13 +211,13 @@ export default function BillingPlansPage() {
         <p className="text-sm text-muted page-subtitle">{t("billing.plansSubtitle")}</p>
       </div>
 
-      {!isAdmin ? (
+      {isSystemAdmin === false ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">
-          {t("billing.adminOnly")}
+          {t("billing.plansSystemAdminOnly")}
         </div>
       ) : null}
 
-      {isAdmin ? (
+      {isSystemAdmin ? (
         <form onSubmit={handleSubmit} className="app-card p-6 card-modern">
           <h2 className="text-lg font-semibold">{t("billing.planFormTitle")}</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -427,7 +435,7 @@ export default function BillingPlansPage() {
                       {plan.currency} {plan.priceMonthly.toFixed(2)} / {t("billing.monthly")}
                     </p>
                   </div>
-                  {isAdmin ? (
+                  {isSystemAdmin ? (
                     <div className="flex flex-wrap gap-2 text-xs">
                       <button
                         type="button"

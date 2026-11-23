@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
-import { calculateLineAmounts } from "@/lib/utils/invoice";
+import { calculateLineAmounts, resolveTaxRate } from "@/lib/utils/invoice";
 
 type Vendor = {
   id: string;
@@ -32,6 +32,7 @@ type CompanyDefaults = {
 
 type CompanyConfig = {
   taxInclusive: boolean;
+  vatEnabled: boolean;
 };
 
 type Account = {
@@ -55,6 +56,8 @@ const mapExpenseError = (error?: string) => {
       return "expense.missingPaymentAccount";
     case "VAT period is filed":
       return "vat.periodLocked";
+    case "PERIOD_CLOSED":
+      return "error.periodClosed";
     default:
       return "error.saveFailed";
   }
@@ -129,7 +132,10 @@ export default function NewExpensePage() {
             )
           );
           setDefaults(defaultsData.defaults ?? null);
-          setConfig({ taxInclusive: Boolean(configData?.config?.taxInclusive) });
+          setConfig({
+            taxInclusive: Boolean(configData?.config?.taxInclusive),
+            vatEnabled: configData?.config?.vatEnabled !== false,
+          });
           const postingAccounts = (accountsData.accounts ?? []).filter(
             (account: Account) => account.isPosting
           );
@@ -159,7 +165,7 @@ export default function NewExpensePage() {
   const totals = useMemo(() => {
     const value = Number(amount) || 0;
     const taxCategory = taxCategoryId ? taxMap.get(taxCategoryId) : null;
-    const taxRate = taxCategory ? (taxCategory.rate ?? 0) / 100 : 0;
+    const taxRate = resolveTaxRate(taxCategory, config?.vatEnabled ?? true);
     const amounts = calculateLineAmounts({
       quantity: 1,
       unitPrice: value,

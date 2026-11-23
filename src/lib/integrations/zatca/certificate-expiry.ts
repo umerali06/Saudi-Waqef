@@ -1,4 +1,4 @@
-import { isCertificateExpiringSoon, parseCertificate } from "@talha7k/zatca";
+import { parseCertificate } from "@/lib/integrations/zatca/certificate";
 import { listAllActiveZatcaIntegrations, updateIntegration } from "@/lib/data/integrations";
 import { notifyCompanyRoles } from "@/lib/notifications/service";
 import { logger } from "@/lib/ops/logger";
@@ -10,23 +10,21 @@ const ALERT_TIERS = [1, 7, 14, 30] as const;
  * Scans every active ZATCA integration (cross-tenant -- see
  * listAllActiveZatcaIntegrations's own restriction comment) and alerts the
  * company's owner/admin once per expiry tier (30/14/7/1 days) plus once on
- * actual expiry, using isCertificateExpiringSoon as a cheap first-pass filter
- * before computing the exact day count via parseCertificate.
+ * actual expiry .
  */
 export async function runZatcaCertificateExpiryCheck() {
   const integrations = await listAllActiveZatcaIntegrations();
   const summary = { checked: integrations.length, alerted: 0, expired: 0, errors: 0 };
 
   for (const integration of integrations) {
-    const certificatePem =
-      typeof integration.credentials?.certificatePem === "string"
-        ? integration.credentials.certificatePem
-        : "";
-    if (!certificatePem) continue;
+    // Certificates saved before the token was decoded correctly are not valid
+    // PEM, so the PEM is always rebuilt from the token when there is one.
+    const stored = integration.credentials?.binarySecurityToken ?? integration.credentials?.certificatePem;
+    if (typeof stored !== "string" || !stored.trim()) continue;
 
     try {
-      if (!isCertificateExpiringSoon(certificatePem, 30)) continue;
-      const info = parseCertificate(certificatePem);
+      const info = parseCertificate(stored);
+      if (info.daysUntilExpiry > 30) continue;
       const lastAlertedTier =
         typeof integration.config?.zatcaCertExpiryLastAlertTier === "number"
           ? (integration.config.zatcaCertExpiryLastAlertTier as number)
@@ -58,7 +56,7 @@ export async function runZatcaCertificateExpiryCheck() {
           data: { daysUntilExpiry: String(info.daysUntilExpiry), expiryDate: info.validTo },
         });
         await updateIntegration(integration.id, {
-          config: { ...(integration.config ?? {}), zatcaCertExpiryLastAlertTier: tier },
+          config: { zatcaCertExpiryLastAlertTier: tier },
         });
         summary.alerted += 1;
       }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
-import { requireAccountingAccess, requireCompanyRole } from "@/lib/access";
+import { requireCompanyRole } from "@/lib/access";
 import { accountSchema } from "@/lib/validators/company";
 import {
   createChartAccount,
@@ -24,7 +24,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "companyId is required" }, { status: 400 });
   }
 
-  const membership = await requireAccountingAccess(user.id, companyId);
+  const membership = await requireCompanyRole(user.id, companyId, [
+    "owner",
+    "admin",
+    "accountant",
+    "hr",
+  ]);
   if (!membership) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

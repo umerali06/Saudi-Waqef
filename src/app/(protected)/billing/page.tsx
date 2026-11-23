@@ -89,6 +89,14 @@ export default function BillingPortalPage() {
   const [isPending, startTransition] = useTransition();
 
   const isAdmin = ["owner", "admin"].includes(activeCompany?.role ?? "");
+  const [isSystemAdmin, setIsSystemAdmin] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/me")
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => setIsSystemAdmin(Boolean(data?.isSystemAdmin)))
+      .catch(() => setIsSystemAdmin(false));
+  }, []);
 
   const loadData = useCallback(() => {
     if (!activeCompanyId) {
@@ -323,13 +331,13 @@ export default function BillingPortalPage() {
 
   const formatDate = (value?: string | null) => {
     if (!value) return "--";
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       dateStyle: "medium",
     }).format(new Date(value));
   };
 
   const formatCurrency = (amount: number, currency: string) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       style: "currency",
       currency,
       maximumFractionDigits: 2,
@@ -671,7 +679,7 @@ export default function BillingPortalPage() {
                   <p className="text-xs text-muted">
                     {t("billing.invoiceStatus")}: {t(`billing.invoice.${invoice.status}`)}
                   </p>
-                  {isAdmin ? (
+                  {isSystemAdmin ? (
                     <div className="mt-2 flex flex-wrap gap-2 text-xs">
                       <button
                         type="button"
@@ -698,7 +706,7 @@ export default function BillingPortalPage() {
         </div>
       </div>
 
-      {isAdmin ? (
+      {isSystemAdmin ? (
         <div className="app-card p-6 card-modern">
           <h2 className="text-lg font-semibold">{t("billing.adminTitle")}</h2>
           <p className="text-sm text-muted page-subtitle">{t("billing.adminSubtitle")}</p>

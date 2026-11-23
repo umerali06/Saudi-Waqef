@@ -210,7 +210,7 @@ export default function DocumentBrandingPage() {
               <input
                 type="color"
                 className="h-10 w-20 rounded-lg border border-border bg-surface"
-                value={branding.accentColor || "#0c5f5a"}
+                value={branding.accentColor || "#185fa5"}
                 onChange={(event) =>
                   setBranding((prev) => ({ ...prev, accentColor: event.target.value }))
                 }

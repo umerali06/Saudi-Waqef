@@ -1,8 +1,9 @@
-import { Timestamp } from "firebase-admin/firestore";
+import { Timestamp, type DocumentSnapshot, type Transaction } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase/admin";
 import { normalizeSearch } from "@/lib/utils/search";
-import { buildSequenceNumber } from "@/lib/utils/numbering";
+import { nextDocumentNumber } from "@/lib/data/numbering";
+import { readDoc, writeDoc } from "@/lib/firebase/documents";
 
 export type VendorPaymentAllocation = {
   billId: string;
@@ -25,54 +26,13 @@ export type VendorPayment = {
   totalAmount: number;
   appliedAmount: number;
   unappliedAmount: number;
+  creditOpenItemId?: string | null;
   allocations: VendorPaymentAllocation[];
   journalEntryId?: string | null;
   createdAt: Date;
 };
 
-const DEFAULT_CONFIG = {
-  vendorPaymentPrefix: "VPAY-",
-  vendorPaymentSuffix: "",
-  vendorPaymentNextNumber: 1,
-  vendorPaymentPadding: 0,
-  vendorPaymentResetYearly: false,
-  vendorPaymentLastResetYear: null as number | null,
-};
-
-export async function listVendorPayments(companyId: string) {
-  const snapshot = await db
-    .collection("vendor_payments")
-    .where("companyId", "==", companyId)
-    .get();
-
-  return snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      companyId: data.companyId,
-      paymentNumber: data.paymentNumber,
-      paymentDate: data.paymentDate,
-      vendorId: data.vendorId,
-      vendorName: data.vendorName,
-      method: data.method,
-      accountId: data.accountId,
-      reference: data.reference ?? null,
-      currency: data.currency ?? "SAR",
-      totalAmount: data.totalAmount ?? 0,
-      appliedAmount: data.appliedAmount ?? 0,
-      unappliedAmount: data.unappliedAmount ?? 0,
-      allocations: data.allocations ?? [],
-      journalEntryId: data.journalEntryId ?? null,
-      createdAt: data.createdAt.toDate(),
-    } as VendorPayment;
-  });
-}
-
-export async function getVendorPaymentById(paymentId: string) {
-  const doc = await db.collection("vendor_payments").doc(paymentId).get();
-  if (!doc.exists) {
-    return null;
-  }
+function mapVendorPayment(doc: DocumentSnapshot) {
   const data = doc.data()!;
   return {
     id: doc.id,
@@ -88,13 +48,29 @@ export async function getVendorPaymentById(paymentId: string) {
     totalAmount: data.totalAmount ?? 0,
     appliedAmount: data.appliedAmount ?? 0,
     unappliedAmount: data.unappliedAmount ?? 0,
+    creditOpenItemId: data.creditOpenItemId ?? null,
     allocations: data.allocations ?? [],
     journalEntryId: data.journalEntryId ?? null,
     createdAt: data.createdAt.toDate(),
   } as VendorPayment;
 }
 
+export async function listVendorPayments(companyId: string) {
+  const snapshot = await db
+    .collection("vendor_payments")
+    .where("companyId", "==", companyId)
+    .get();
+
+  return snapshot.docs.map(mapVendorPayment);
+}
+
+export async function getVendorPaymentById(paymentId: string, tx?: Transaction) {
+  const doc = await readDoc(db.collection("vendor_payments").doc(paymentId), tx);
+  return doc.exists ? mapVendorPayment(doc) : null;
+}
+
 export async function createVendorPayment(params: {
+  id?: string;
   companyId: string;
   paymentDate: string;
   vendorId: string;
@@ -108,46 +84,23 @@ export async function createVendorPayment(params: {
   unappliedAmount: number;
   allocations: VendorPaymentAllocation[];
   journalEntryId?: string | null;
-}) {
-  const id = uuidv4();
-  const configRef = db.collection("company_configs").doc(params.companyId);
+  creditOpenItemId?: string | null;
+}, tx?: Transaction) {
+  const id = params.id ?? uuidv4();
   const paymentRef = db.collection("vendor_payments").doc(id);
 
-  let paymentNumber = "";
-
-  await db.runTransaction(async (tx) => {
-    const configSnap = await tx.get(configRef);
-    const config = configSnap.data() ?? {};
-    const sequence = buildSequenceNumber({
-      prefix:
-        typeof config.vendorPaymentPrefix === "string"
-          ? config.vendorPaymentPrefix
-          : DEFAULT_CONFIG.vendorPaymentPrefix,
-      suffix:
-        typeof config.vendorPaymentSuffix === "string"
-          ? config.vendorPaymentSuffix
-          : DEFAULT_CONFIG.vendorPaymentSuffix,
-      nextNumber:
-        typeof config.vendorPaymentNextNumber === "number"
-          ? config.vendorPaymentNextNumber
-          : DEFAULT_CONFIG.vendorPaymentNextNumber,
-      padding:
-        typeof config.vendorPaymentPadding === "number"
-          ? config.vendorPaymentPadding
-          : DEFAULT_CONFIG.vendorPaymentPadding,
-      resetYearly:
-        typeof config.vendorPaymentResetYearly === "boolean"
-          ? config.vendorPaymentResetYearly
-          : DEFAULT_CONFIG.vendorPaymentResetYearly,
-      lastResetYear:
-        typeof config.vendorPaymentLastResetYear === "number"
-          ? config.vendorPaymentLastResetYear
-          : DEFAULT_CONFIG.vendorPaymentLastResetYear,
+  const create = async (transaction: Transaction) => {
+    const sequence = await nextDocumentNumber(transaction, {
+      companyId: params.companyId,
+      key: "vendorPayment",
+      defaultPrefix: "VPAY-",
+      collection: "vendor_payments",
+      field: "paymentNumber",
       date: params.paymentDate,
     });
-    paymentNumber = sequence.number;
+    const paymentNumber = sequence.number;
 
-    tx.set(paymentRef, {
+    transaction.set(paymentRef, {
       companyId: params.companyId,
       paymentNumber,
       paymentNumberNormalized: normalizeSearch(paymentNumber),
@@ -164,19 +117,30 @@ export async function createVendorPayment(params: {
       unappliedAmount: params.unappliedAmount,
       allocations: params.allocations,
       journalEntryId: params.journalEntryId ?? null,
+      creditOpenItemId: params.creditOpenItemId ?? null,
       createdAt: Timestamp.now(),
     });
 
-    tx.set(
-      configRef,
-      {
-        vendorPaymentNextNumber: sequence.nextNumber,
-        vendorPaymentLastResetYear: sequence.resetYear ?? null,
-        updatedAt: Timestamp.now(),
-      },
-      { merge: true }
-    );
-  });
+    sequence.save();
+    return paymentNumber;
+  };
 
+  const paymentNumber = tx ? await create(tx) : await db.runTransaction(create);
   return { id, paymentNumber };
+}
+
+export async function updateVendorPayment(
+  paymentId: string,
+  updates: Partial<{
+    appliedAmount: number;
+    unappliedAmount: number;
+    allocations: VendorPaymentAllocation[];
+  }>,
+  tx?: Transaction
+) {
+  await writeDoc(
+    db.collection("vendor_payments").doc(paymentId),
+    { ...updates, updatedAt: Timestamp.now() },
+    { merge: true, tx }
+  );
 }

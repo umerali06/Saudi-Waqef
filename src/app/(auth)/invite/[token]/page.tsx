@@ -8,6 +8,7 @@ import { PASSWORD_REQUIREMENTS, getPasswordIssues } from "@/lib/security/passwor
 type InviteInfo = {
   email: string;
   role: string;
+  existingUser?: boolean;
 };
 
 export default function InviteAcceptPage() {
@@ -25,7 +26,7 @@ export default function InviteAcceptPage() {
 
   useEffect(() => {
     fetch(`/api/invites/${params.token}`)
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => setInvite(data))
       .catch(() => setErrorKey("error.inviteInvalid"));
   }, [params.token]);
@@ -33,7 +34,7 @@ export default function InviteAcceptPage() {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorKey(null);
-    if (passwordInvalid) {
+    if (!invite?.existingUser && passwordInvalid) {
       setErrorKey("auth.password.error.weak");
       return;
     }
@@ -43,8 +44,7 @@ export default function InviteAcceptPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token: params.token,
-          name,
-          password,
+          ...(invite?.existingUser ? {} : { name, password }),
         }),
       });
 
@@ -61,7 +61,7 @@ export default function InviteAcceptPage() {
     <div className="app-card p-6">
       <div className={`mb-6 ${alignClass}`}>
         <p className="text-xs text-muted">{t("auth.invite.subtitle")}</p>
-        <h1 className="text-2xl font-semibold">{t("auth.invite.title")}</h1>
+        <h1 className="text-[1.7rem] font-semibold leading-tight">{t("auth.invite.title")}</h1>
       </div>
       {invite ? (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -73,57 +73,63 @@ export default function InviteAcceptPage() {
               })}
             </p>
           </div>
-          <label className="block text-sm">
-            <span className={`mb-1 block text-xs text-muted ${alignClass}`}>
-              {t("common.fullName")}
-            </span>
-            <input
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              required
-            />
-          </label>
-          <label className="block text-sm">
-            <span className={`mb-1 block text-xs text-muted ${alignClass}`}>
-              {t("common.password")}
-            </span>
-            <input
-              type="password"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
-          </label>
-          <div className="rounded-xl border border-border bg-surface-muted px-3 py-2 text-xs text-muted">
-            <p className={`mb-2 text-[11px] ${alignClass}`}>
-              {t("auth.password.rulesTitle")}
-            </p>
-            <ul className={`space-y-1 ${alignClass}`}>
-              {PASSWORD_REQUIREMENTS.map((rule) => {
-                const passes = rule.test(password);
-                return (
-                  <li key={rule.key} className={passes ? "text-emerald-600" : "text-muted"}>
-                    {t(
-                      rule.key,
-                      rule.values
-                        ? Object.fromEntries(
-                            Object.entries(rule.values).map(([k, v]) => [k, String(v)]),
-                          )
-                        : undefined,
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+          {invite.existingUser ? (
+            <p className="text-sm text-muted">{t("auth.invite.existingAccount")}</p>
+          ) : (
+            <>
+              <label className="block text-sm">
+                <span className={`mb-1 block text-xs text-muted ${alignClass}`}>
+                  {t("common.fullName")}
+                </span>
+                <input
+                  className="auth-input"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  required
+                />
+              </label>
+              <label className="block text-sm">
+                <span className={`mb-1 block text-xs text-muted ${alignClass}`}>
+                  {t("common.password")}
+                </span>
+                <input
+                  type="password"
+                  className="auth-input"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                />
+              </label>
+              <div className="rounded-xl border border-border bg-surface-muted px-3 py-2 text-xs text-muted">
+                <p className={`mb-2 text-[11px] ${alignClass}`}>
+                  {t("auth.password.rulesTitle")}
+                </p>
+                <ul className={`space-y-1 ${alignClass}`}>
+                  {PASSWORD_REQUIREMENTS.map((rule) => {
+                    const passes = rule.test(password);
+                    return (
+                      <li key={rule.key} className={passes ? "text-emerald-600" : "text-muted"}>
+                        {t(
+                          rule.key,
+                          rule.values
+                            ? Object.fromEntries(
+                                Object.entries(rule.values).map(([k, v]) => [k, String(v)]),
+                              )
+                            : undefined,
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </>
+          )}
           {errorKey ? (
             <p className="text-xs text-red-500">{t(errorKey)}</p>
           ) : null}
           <button
             type="submit"
-            className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast shadow-sm transition hover:brightness-110"
+            className="btn-primary auth-submit"
             disabled={isPending}
           >
             {t("auth.invite.accept")}

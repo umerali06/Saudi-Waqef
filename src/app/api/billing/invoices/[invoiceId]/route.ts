@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth-helpers";
-import { requireCompanyRole } from "@/lib/access";
+import { requireSystemAdmin } from "@/lib/admin/access";
 import { billingInvoiceUpdateSchema } from "@/lib/validators/billing";
 import { getBillingInvoiceById, updateBillingInvoice } from "@/lib/data/billing-invoices";
 import { notifyCompanyRoles } from "@/lib/notifications/service";
@@ -12,23 +11,15 @@ type RouteContext = {
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const user = await getSessionUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requireSystemAdmin();
+  if (access.response) {
+    return access.response;
   }
 
   const body = await request.json().catch(() => null);
   const parsed = billingInvoiceUpdateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
-  }
-
-  const membership = await requireCompanyRole(user.id, parsed.data.companyId, [
-    "owner",
-    "admin",
-  ]);
-  if (!membership) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { invoiceId } = await context.params;
@@ -48,7 +39,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       companyId: parsed.data.companyId,
       roles: ["owner", "admin", "accountant"],
       type: "subscription_payment_success",
-      actorId: user.id,
+      actorId: access.user?.id ?? null,
       data: {
         invoiceNumber: invoice.id,
         amount: `${invoice.amount}`,
@@ -61,7 +52,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       companyId: parsed.data.companyId,
       roles: ["owner", "admin", "accountant"],
       type: "subscription_payment_failed",
-      actorId: user.id,
+      actorId: access.user?.id ?? null,
       data: {
         invoiceNumber: invoice.id,
       },

@@ -105,7 +105,7 @@ export default function DataImportsPage() {
       return "-";
     }
     const date = new Date(value);
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       dateStyle: "medium",
       timeStyle: "short",
     }).format(date);
@@ -151,6 +151,8 @@ export default function DataImportsPage() {
     switch (error.code) {
       case "missing_name":
         return t("items.import.missingName");
+      case "numeric_unit":
+        return t("items.unitNotNumeric");
       case "missing_base_unit":
         return t("items.import.missingBaseUnit");
       case "invalid_type":

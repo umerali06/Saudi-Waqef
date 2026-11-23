@@ -237,7 +237,7 @@ export default function VatReportsPage() {
       return;
     }
     const response = await fetch(
-      `/api/vat/report/export?companyId=${activeCompanyId}&periodId=${selectedPeriodId}&format=${format}`
+      `/api/vat/report/export?companyId=${activeCompanyId}&periodId=${selectedPeriodId}&format=${format}&locale=${locale}`
     );
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));

@@ -1,9 +1,14 @@
 import nodemailer from "nodemailer";
+import { htmlToText, wrapEmailBody } from "@/lib/email/template";
 
 export type EmailMessage = {
   to: string;
   subject: string;
   body: string;
+  /** Shown before the platform name, so customers see which company wrote to them. */
+  fromName?: string | null;
+  replyTo?: string | null;
+  attachments?: Array<{ filename: string; content: Buffer; contentType: string }>;
 };
 
 type EmailConfig = {
@@ -46,14 +51,24 @@ export async function sendEmail(message: EmailMessage) {
     host: config.host,
     port: config.port,
     secure: config.secure,
+    // Mail is sent inside web requests, so an unreachable server must fail quickly.
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
     auth: config.user && config.pass ? { user: config.user, pass: config.pass } : undefined,
   });
 
+  const html = wrapEmailBody(message.body);
   await transporter.sendMail({
-    from: `${config.fromName} <${config.fromAddress}>`,
+    from: {
+      name: message.fromName ? `${message.fromName} (${config.fromName})` : config.fromName,
+      address: config.fromAddress,
+    },
+    ...(message.replyTo ? { replyTo: message.replyTo } : {}),
+    attachments: message.attachments,
     to: message.to,
     subject: message.subject,
-    html: message.body,
-    text: message.body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
+    html,
+    text: htmlToText(html),
   });
 }

@@ -5,22 +5,20 @@ import { debitNoteSchema } from "@/lib/validators/sales";
 import {
   createSalesDebitNote,
   listSalesDebitNotes,
-  updateSalesDebitNote,
 } from "@/lib/data/debit-notes";
-import { getSalesInvoiceById, updateSalesInvoice } from "@/lib/data/sales-invoices";
+import { getSalesInvoiceById } from "@/lib/data/sales-invoices";
 import { listItems } from "@/lib/data/items";
 import { listTaxCategories } from "@/lib/data/tax-categories";
 import { getCompanyDefaults } from "@/lib/data/company-defaults";
 import { getCompanyConfig } from "@/lib/data/company-config";
-import { calculateLineAmounts } from "@/lib/utils/invoice";
+import { calculateLineAmounts, resolveNoteTaxRate, sumLineAmounts } from "@/lib/utils/invoice";
 import { toBaseQuantity } from "@/lib/utils/units";
-import { createJournalEntry } from "@/lib/data/journal-entries";
-import { updateOpenItemBalance } from "@/lib/data/open-items";
-import { applyItemStockDeltas } from "@/lib/data/items";
-import { listChartAccounts } from "@/lib/data/chart-accounts";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { normalizeSearch } from "@/lib/utils/search";
 import { findFiledVatPeriod } from "@/lib/data/vat-periods";
+import { postingErrorResponse } from "@/lib/accounting/errors";
+import { periodClosedResponse } from "@/lib/accounting/period-guard";
+import { issueSalesDebitNote } from "@/lib/accounting/sales";
 
 export const runtime = "nodejs";
 
@@ -119,21 +117,22 @@ export async function POST(request: Request) {
   if (invoice.status === "canceled") {
     return NextResponse.json({ error: "Invoice is canceled" }, { status: 400 });
   }
+  if (invoice.status === "draft") {
+    return NextResponse.json({ error: "Invoice is not approved" }, { status: 400 });
+  }
 
-  const [items, taxCategories, defaults, config, accounts] = await Promise.all([
+  const [items, taxCategories, defaults, config] = await Promise.all([
     listItems(parsed.data.companyId),
     listTaxCategories(parsed.data.companyId),
     getCompanyDefaults(parsed.data.companyId),
     getCompanyConfig(parsed.data.companyId),
-    listChartAccounts(parsed.data.companyId),
   ]);
 
   const itemMap = new Map(items.map((item) => [item.id, item]));
   const taxMap = new Map(taxCategories.map((tax) => [tax.id, tax]));
-  const accountIds = new Set(accounts.map((account) => account.id));
+  const originalLines = new Map(invoice.lines.map((line) => [line.id, line]));
 
   const computedLines = [];
-  const restockMap = new Map<string, number>();
 
   for (const line of parsed.data.lines) {
     const item = line.itemId ? itemMap.get(line.itemId) : null;
@@ -152,7 +151,12 @@ export async function POST(request: Request) {
       defaults.defaultSalesTaxCategoryId ??
       null;
     const taxCategory = taxCategoryId ? taxMap.get(taxCategoryId) : null;
-    const taxRate = taxCategory ? (taxCategory.rate ?? 0) / 100 : 0;
+    const taxRate = resolveNoteTaxRate({
+      original: line.invoiceLineId ? originalLines.get(line.invoiceLineId) : null,
+      taxCategoryId,
+      category: taxCategory,
+      vatEnabled: config.vatEnabled,
+    });
 
     const amounts = calculateLineAmounts({
       quantity: line.quantity,
@@ -186,40 +190,27 @@ export async function POST(request: Request) {
       baseQuantity,
       restock: line.restock ?? item.trackInventory,
     });
-
-    if (item.trackInventory && (line.restock ?? item.trackInventory)) {
-      const current = restockMap.get(item.id) ?? 0;
-      restockMap.set(item.id, current + baseQuantity);
-    }
   }
 
-  const subtotal = computedLines.reduce((sum, line) => sum + line.netAmount, 0);
-  const discountTotal = computedLines.reduce(
-    (sum, line) => sum + line.discountAmount,
-    0
-  );
-  const taxTotal = computedLines.reduce((sum, line) => sum + line.taxAmount, 0);
-  const total = computedLines.reduce((sum, line) => sum + line.totalAmount, 0);
-
-  const { id, debitNumber } = await createSalesDebitNote({
-    companyId: parsed.data.companyId,
-    invoiceId: invoice.id,
-    invoiceNumber: invoice.invoiceNumber,
-    customerId: invoice.customerId,
-    customerName: invoice.customerName,
-    issueDate: parsed.data.issueDate,
-    currency: parsed.data.currency ?? invoice.currency,
-    notes: parsed.data.notes ?? null,
-    reason: parsed.data.reason ?? null,
-    subtotal,
-    discountTotal,
-    taxTotal,
-    total,
-    status: parsed.data.status ?? "issued",
-    lines: computedLines,
-  });
-
-  if ((parsed.data.status ?? "issued") === "draft") {
+  const { subtotal, discountTotal, taxTotal, total } = sumLineAmounts(computedLines);
+  if (parsed.data.status === "draft") {
+    const { id, debitNumber } = await createSalesDebitNote({
+      companyId: parsed.data.companyId,
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      customerId: invoice.customerId,
+      customerName: invoice.customerName,
+      issueDate: parsed.data.issueDate,
+      currency: parsed.data.currency ?? invoice.currency,
+      notes: parsed.data.notes ?? null,
+      reason: parsed.data.reason ?? null,
+      subtotal,
+      discountTotal,
+      taxTotal,
+      total,
+      status: "draft",
+      lines: computedLines,
+    });
     await recordAuditEvent({
       companyId: parsed.data.companyId,
       userId: user.id,
@@ -232,82 +223,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ debitNoteId: id, debitNumber });
   }
 
-  const receivableId = defaults.receivableAccountId;
-  const salesAccountId = defaults.salesAccountId;
-  const vatOutputAccountId = defaults.vatOutputAccountId;
-  const discountAccountId = defaults.discountAccountId;
-
-  if (!receivableId || !accountIds.has(receivableId)) {
-    return NextResponse.json({ error: "Missing receivable account" }, { status: 400 });
-  }
-  if (!salesAccountId || !accountIds.has(salesAccountId)) {
-    return NextResponse.json({ error: "Missing sales account" }, { status: 400 });
-  }
-  if (taxTotal > 0 && (!vatOutputAccountId || !accountIds.has(vatOutputAccountId))) {
-    return NextResponse.json({ error: "Missing VAT output account" }, { status: 400 });
-  }
-  if (discountTotal > 0 && (!discountAccountId || !accountIds.has(discountAccountId))) {
-    return NextResponse.json({ error: "Missing discount account" }, { status: 400 });
+  const closedPeriod = await periodClosedResponse(
+    parsed.data.companyId,
+    parsed.data.issueDate
+  );
+  if (closedPeriod) {
+    return closedPeriod;
   }
 
-  const journalLines = [];
-  const grossSales =
-    discountAccountId && discountTotal > 0 ? subtotal + discountTotal : subtotal;
-
-  journalLines.push({
-    accountId: receivableId,
-    debit: total,
-    credit: 0,
-  });
-  journalLines.push({
-    accountId: salesAccountId,
-    debit: 0,
-    credit: grossSales,
-  });
-  if (discountAccountId && discountTotal > 0) {
-    journalLines.push({
-      accountId: discountAccountId,
-      debit: discountTotal,
-      credit: 0,
+  let issued: Awaited<ReturnType<typeof issueSalesDebitNote>>;
+  try {
+    issued = await issueSalesDebitNote({
+      companyId: parsed.data.companyId,
+      create: {
+        invoiceId: invoice.id,
+        companyId: parsed.data.companyId,
+        issueDate: parsed.data.issueDate,
+        currency: parsed.data.currency ?? invoice.currency,
+        notes: parsed.data.notes ?? null,
+        reason: parsed.data.reason ?? null,
+        lines: computedLines,
+      },
     });
-  }
-  if (taxTotal > 0 && vatOutputAccountId) {
-    journalLines.push({
-      accountId: vatOutputAccountId,
-      debit: 0,
-      credit: taxTotal,
-    });
-  }
-
-  const journalEntryId = await createJournalEntry({
-    companyId: invoice.companyId,
-    sourceType: "sales_debit_note",
-    sourceId: id,
-    date: parsed.data.issueDate,
-    memo: `Debit note ${debitNumber}`,
-    lines: journalLines,
-  });
-
-  await updateSalesDebitNote(id, { journalEntryId, status: "issued" });
-
-  if (restockMap.size > 0) {
-    const updates = Array.from(restockMap.entries()).map(([itemId, qty]) => ({
-      itemId,
-      stockOnHandDelta: -qty,
-    }));
-    await applyItemStockDeltas(updates);
-  }
-
-  const balance = invoice.balance + total;
-  const status = invoice.amountPaid > 0 ? "partially_paid" : "approved";
-
-  await updateSalesInvoice(invoice.id, {
-    balance,
-    status,
-  });
-
-  if (invoice.openItemId) {
-    await updateOpenItemBalance(invoice.openItemId, balance);
+  } catch (error) {
+    return postingErrorResponse(error);
   }
 
   await recordAuditEvent({
@@ -316,10 +255,10 @@ export async function POST(request: Request) {
     userEmail: user.email ?? undefined,
     action: "debit-note.issue",
     entity: "sales_debit_note",
-    entityId: id,
-    metadata: { debitNumber, total },
+    entityId: issued.id,
+    metadata: { debitNumber: issued.debitNumber, total: issued.total },
   });
 
-  return NextResponse.json({ debitNoteId: id, debitNumber });
+  return NextResponse.json({ debitNoteId: issued.id, debitNumber: issued.debitNumber });
 }
 

@@ -7,9 +7,11 @@ import { createMembership, getMembership } from "@/lib/data/memberships";
 
 export const runtime = "nodejs";
 
+const tokenSchema = acceptInviteSchema.pick({ token: true });
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
-  const parsed = acceptInviteSchema.safeParse(body);
+  const parsed = tokenSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid invite acceptance payload" },
@@ -26,11 +28,19 @@ export async function POST(request: Request) {
   const userId = existingUser?.id ?? uuidv4();
 
   if (!existingUser) {
+    // Only a new account needs a name and password; existing users keep their own.
+    const account = acceptInviteSchema.safeParse(body);
+    if (!account.success) {
+      return NextResponse.json(
+        { error: "Invalid invite acceptance payload" },
+        { status: 400 }
+      );
+    }
     await createUser({
       id: userId,
       email: invite.email,
-      name: parsed.data.name,
-      password: parsed.data.password,
+      name: account.data.name,
+      password: account.data.password,
       status: "active",
     });
   }

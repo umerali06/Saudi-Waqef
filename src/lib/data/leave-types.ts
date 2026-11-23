@@ -41,6 +41,14 @@ export async function listLeaveTypes(companyId: string) {
   return types.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+export async function getLeaveType(typeId: string) {
+  const doc = await db.collection("leave_types").doc(typeId).get();
+  if (!doc.exists) {
+    return null;
+  }
+  return { id: doc.id, companyId: doc.data()!.companyId as string };
+}
+
 export async function createLeaveType(params: {
   companyId: string;
   name: string;

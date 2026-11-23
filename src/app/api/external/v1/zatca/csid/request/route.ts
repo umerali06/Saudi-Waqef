@@ -24,9 +24,9 @@ export async function POST(request: Request) {
     }
 
     const integration = await getZatcaIntegrationForCompany({ integrationId, companyId });
-    if (integration.environment !== "sandbox") {
+    if (integration.environment === "production") {
       return NextResponse.json(
-        { error: "Use a sandbox integration for testing. Production onboarding must be run separately." },
+        { error: "Use a sandbox or simulation integration here. Production onboarding is done from the ZATCA settings page." },
         { status: 400 }
       );
     }

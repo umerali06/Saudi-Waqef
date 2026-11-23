@@ -10,6 +10,7 @@ import { getUserById } from "@/lib/data/users";
 import { queueEmailWithDispatch } from "@/lib/email/queue";
 import type { NotificationType } from "@/lib/notifications/types";
 import { renderTemplate } from "@/lib/notifications/templates";
+import { renderEmail } from "@/lib/email/template";
 
 export async function notifyCompanyRoles(params: {
   companyId: string;
@@ -52,10 +53,8 @@ export async function notifyUser(params: {
   ]);
 
   const locale: Locale = company?.defaultLanguage ?? "ar";
-  const template = renderTemplate(params.type, locale, {
-    companyName: company?.name ?? "",
-    ...params.data,
-  });
+  const data: Record<string, string> = { companyName: company?.name ?? "", ...params.data };
+  const template = renderTemplate(params.type, locale, data);
 
   const channels = resolveChannelPreferences(prefs, params.type);
 
@@ -75,7 +74,12 @@ export async function notifyUser(params: {
       companyId: params.companyId,
       to: user.email,
       subject: template.subject,
-      body: template.body,
+      body: renderEmail({
+        locale,
+        companyName: company?.name,
+        heading: template.title,
+        paragraphs: [template.body],
+      }),
       sourceType: "notification",
       sourceId: params.type,
       meta: {

@@ -11,7 +11,9 @@ type FormatterConfig = {
 
 export function useLocaleFormatters(config?: FormatterConfig) {
   const { locale } = useTranslations();
-  const localeTag = locale === "ar" ? "ar-SA" : "en-US";
+  // Books, VAT returns and ZATCA documents are kept in the Gregorian calendar
+  // with Latin digits; plain "ar-SA" would switch to Hijri and Arabic-Indic.
+  const localeTag = locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-GB";
 
   const currency = config?.currency ?? "SAR";
 

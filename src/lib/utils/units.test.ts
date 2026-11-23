@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { getUnitOptions, toBaseQuantity, toDisplayQuantity } from "@/lib/utils/units";
+import {
+  getUnitOptions,
+  toBaseQuantity,
+  toDisplayQuantity,
+  formatQuantity,
+  isNumericUnit,
+  printableUnit,
+} from "@/lib/utils/units";
 
 describe("units utils", () => {
   it("returns base and pack options", () => {
@@ -24,3 +31,15 @@ describe("units utils", () => {
     expect(toDisplayQuantity(8, "pcs", { baseUnit: "pcs" })).toBe(8);
   });
 });
+
+describe("printable units", () => {
+  it("drops units made only of digits", () => {
+    expect(isNumericUnit("1")).toBe(true);
+    expect(isNumericUnit("٢")).toBe(true);
+    expect(isNumericUnit("m2")).toBe(false);
+    expect(printableUnit(" حبة ")).toBe("حبة");
+    expect(formatQuantity(2, "1")).toBe("2");
+    expect(formatQuantity(2, "box")).toBe("2 box");
+  });
+});
+

@@ -1,3 +1,4 @@
+import { roundMoney } from "@/lib/utils/invoice";
 import { listCashBankAccounts } from "@/lib/data/cash-bank-accounts";
 import { listChartAccounts } from "@/lib/data/chart-accounts";
 import { listJournalEntries } from "@/lib/data/journal-entries";
@@ -125,7 +126,10 @@ export async function buildExternalTrialBalance(params: {
 
   return {
     rows,
-    totals: totalsSummary,
+    // Summing decimals leaves binary noise (2035.9899999999998).
+    totals: Object.fromEntries(
+      Object.entries(totalsSummary).map(([key, value]) => [key, roundMoney(value)])
+    ) as typeof totalsSummary,
     range: { startDate: params.startDate ?? null, endDate: params.endDate ?? null },
     compareRange:
       params.compareStartDate && params.compareEndDate

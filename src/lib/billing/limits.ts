@@ -24,27 +24,26 @@ export async function checkUserLimit(companyId: string) {
   return { ok: true };
 }
 
-export async function checkCompanyLimit(userId: string) {
+/** Companies the user owns against the most generous plan among them; null is unlimited. */
+export async function getCompanyUsage(userId: string) {
   const memberships = await listMembershipsByUser(userId);
   const owned = memberships.filter((entry) => entry.role === "owner");
-  if (owned.length === 0) {
-    return { ok: true };
-  }
 
-  let maxCompanies: number | null = null;
+  let max: number | null = null;
   for (const membership of owned) {
     const { plan } = await getSubscriptionWithPlan(membership.companyId);
     if (!plan || !plan.maxCompanies) {
       continue;
     }
-    if (maxCompanies === null || plan.maxCompanies > maxCompanies) {
-      maxCompanies = plan.maxCompanies;
+    if (max === null || plan.maxCompanies > max) {
+      max = plan.maxCompanies;
     }
   }
 
-  if (maxCompanies && owned.length >= maxCompanies) {
-    return { ok: false, reason: "Plan company limit reached" };
-  }
+  return { owned: owned.length, max, canCreate: max === null || owned.length < max };
+}
 
-  return { ok: true };
+export async function checkCompanyLimit(userId: string) {
+  const usage = await getCompanyUsage(userId);
+  return usage.canCreate ? { ok: true } : { ok: false, reason: "Plan company limit reached" };
 }

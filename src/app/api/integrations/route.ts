@@ -7,6 +7,7 @@ import {
   listIntegrations,
 } from "@/lib/data/integrations";
 import { recordAuditEvent } from "@/lib/data/audit-log";
+import { withoutServerManagedConfig } from "@/lib/integrations/zatca/environment";
 
 export const runtime = "nodejs";
 
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
     connector: parsed.data.connector,
     status: parsed.data.status,
     environment: parsed.data.environment,
-    config: parsed.data.config ?? {},
+    config: withoutServerManagedConfig(parsed.data.config ?? {}),
     credentials: parsed.data.credentials ?? {},
   });
 

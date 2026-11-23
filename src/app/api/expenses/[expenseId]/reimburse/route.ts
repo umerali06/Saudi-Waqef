@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { db } from "@/lib/firebase/admin";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
 import { expenseReimbursementSchema } from "@/lib/validators/expenses";
@@ -7,6 +8,10 @@ import { listChartAccounts } from "@/lib/data/chart-accounts";
 import { getCompanyDefaults } from "@/lib/data/company-defaults";
 import { createJournalEntry } from "@/lib/data/journal-entries";
 import { recordAuditEvent } from "@/lib/data/audit-log";
+import { createCashTransaction } from "@/lib/data/cash-transactions";
+import { PostingError, postingErrorResponse } from "@/lib/accounting/errors";
+import { periodClosedResponse } from "@/lib/accounting/period-guard";
+import { roundMoney } from "@/lib/utils/invoice";
 
 export const runtime = "nodejs";
 
@@ -70,26 +75,70 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Invalid payment account" }, { status: 400 });
   }
 
-  const journalEntryId = await createJournalEntry({
-    companyId: expense.companyId,
-    sourceType: "expense_reimbursement",
-    sourceId: expense.id,
-    date: parsed.data.paymentDate,
-    memo: `Expense reimbursement ${expense.expenseNumber}`,
-    lines: [
-      { accountId: payableAccountId, debit: expense.amount, credit: 0 },
-      { accountId: parsed.data.paymentAccountId, debit: 0, credit: expense.amount },
-    ],
-  });
+  const closedPeriod = await periodClosedResponse(
+    expense.companyId,
+    parsed.data.paymentDate
+  );
+  if (closedPeriod) {
+    return closedPeriod;
+  }
 
-  await updateExpense(expenseId, {
-    reimbursementStatus: "paid",
-    reimbursedAt: parsed.data.paymentDate,
-    reimbursementEntryId: journalEntryId,
-    reimbursementMethod: parsed.data.paymentMethod,
-    reimbursementAccountId: parsed.data.paymentAccountId,
-    reimbursementReference: parsed.data.reference ?? null,
-  });
+  let journalEntryId: string;
+  try {
+    journalEntryId = await db.runTransaction(async (tx) => {
+      const current = await getExpenseById(expenseId, tx);
+      if (!current || current.status !== "approved") {
+        throw new PostingError("Expense is not approved");
+      }
+      if (current.reimbursementStatus === "paid") {
+        throw new PostingError("Reimbursement already paid");
+      }
+      const amount = roundMoney(current.amount);
+      const entryId = await createJournalEntry(
+        {
+          companyId: current.companyId,
+          sourceType: "expense_reimbursement",
+          sourceId: current.id,
+          date: parsed.data.paymentDate,
+          memo: `Expense reimbursement ${current.expenseNumber}`,
+          lines: [
+            { accountId: payableAccountId, debit: amount, credit: 0 },
+            { accountId: parsed.data.paymentAccountId, debit: 0, credit: amount },
+          ],
+        },
+        tx
+      );
+      await createCashTransaction(
+        {
+          companyId: current.companyId,
+          accountId: parsed.data.paymentAccountId,
+          date: parsed.data.paymentDate,
+          amount,
+          direction: "out",
+          reference: parsed.data.reference ?? current.expenseNumber,
+          description: `Expense reimbursement ${current.expenseNumber}`,
+          sourceType: "expense_reimbursement",
+          sourceId: current.id,
+        },
+        tx
+      );
+      await updateExpense(
+        expenseId,
+        {
+          reimbursementStatus: "paid",
+          reimbursedAt: parsed.data.paymentDate,
+          reimbursementEntryId: entryId,
+          reimbursementMethod: parsed.data.paymentMethod,
+          reimbursementAccountId: parsed.data.paymentAccountId,
+          reimbursementReference: parsed.data.reference ?? null,
+        },
+        tx
+      );
+      return entryId;
+    });
+  } catch (error) {
+    return postingErrorResponse(error);
+  }
 
   await recordAuditEvent({
     companyId: expense.companyId,

@@ -4,9 +4,17 @@ import Link from "next/link";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
 
+const LEDGER_TOOLS = [
+  { href: "/settings/journal-entries", labelKey: "settings.journalEntries.link" },
+  { href: "/settings/chart-of-accounts", labelKey: "settings.chartOfAccounts.link" },
+  { href: "/settings/opening-balances", labelKey: "settings.openingBalances.link" },
+  { href: "/settings/accounting-periods", labelKey: "settings.accountingPeriods.link" },
+];
+
 export default function ReportsPage() {
   const { activeCompany } = useCompany();
   const { t } = useTranslations();
+  const canPost = ["owner", "admin", "accountant"].includes(activeCompany?.role ?? "");
   return (
     <section className="space-y-4 page-shell">
       <h1 className="text-2xl font-semibold page-title">{t("reports.title")}</h1>
@@ -80,6 +88,22 @@ export default function ReportsPage() {
           </p>
         </Link>
       </div>
+      {canPost ? (
+        <>
+          <h2 className="text-lg font-semibold">{t("reports.ledgerToolsTitle")}</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {LEDGER_TOOLS.map((tool) => (
+              <Link
+                key={tool.href}
+                href={tool.href}
+                className="app-card p-6 text-sm transition hover:-translate-y-0.5 hover:shadow-md card-modern"
+              >
+                {t(tool.labelKey)}
+              </Link>
+            ))}
+          </div>
+        </>
+      ) : null}
     </section>
   );
 }

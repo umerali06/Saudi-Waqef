@@ -9,7 +9,7 @@ import { recordAuditEvent } from "@/lib/data/audit-log";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const user = await getSessionUser();
+  const user = await getSessionUser({ ignoreImpersonation: true });
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

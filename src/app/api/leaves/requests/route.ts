@@ -5,7 +5,9 @@ import { listLeaveTypes } from "@/lib/data/leave-types";
 import { createLeaveRequest, listLeaveRequests } from "@/lib/data/leave-requests";
 import { listEmployees, getEmployeeByUserId } from "@/lib/data/employees";
 import { leaveRequestSchema } from "@/lib/validators/leave";
-import { calculateLeaveDays } from "@/lib/utils/leave";
+import { listLeaveAdjustments } from "@/lib/data/leave-adjustments";
+import { listAttendanceHolidays } from "@/lib/data/attendance-holidays";
+import { calculateLeaveDays, hasLeaveBalance, leaveRangesOverlap } from "@/lib/utils/leave";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 
 export const runtime = "nodejs";
@@ -81,9 +83,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid date range" }, { status: 400 });
   }
 
-  const [types, employees] = await Promise.all([
+  const [types, employees, existingRequests, adjustments, holidays] = await Promise.all([
     listLeaveTypes(parsed.data.companyId),
     listEmployees(parsed.data.companyId),
+    listLeaveRequests(parsed.data.companyId),
+    listLeaveAdjustments(parsed.data.companyId),
+    listAttendanceHolidays(parsed.data.companyId),
   ]);
 
   const leaveType = types.find((type) => type.id === parsed.data.leaveTypeId);
@@ -96,15 +101,44 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid employee" }, { status: 400 });
   }
 
-  const days = calculateLeaveDays(parsed.data.startDate, parsed.data.endDate);
+  const days = calculateLeaveDays(
+    parsed.data.startDate,
+    parsed.data.endDate,
+    holidays
+  );
   if (days <= 0) {
     return NextResponse.json({ error: "Invalid leave duration" }, { status: 400 });
+  }
+
+  const overlapping = existingRequests.some(
+    (entry) =>
+      entry.employeeId === parsed.data.employeeId &&
+      (entry.status === "pending" || entry.status === "approved") &&
+      leaveRangesOverlap(entry, parsed.data)
+  );
+  if (overlapping) {
+    return NextResponse.json({ error: "Overlapping leave request" }, { status: 409 });
+  }
+
+  const autoApproved = !leaveType.requiresApproval;
+  if (
+    autoApproved &&
+    !hasLeaveBalance({
+      request: { ...parsed.data, days },
+      leaveType,
+      requests: existingRequests,
+      adjustments,
+      holidays,
+    })
+  ) {
+    return NextResponse.json({ error: "Insufficient leave balance" }, { status: 400 });
   }
 
   const requestId = await createLeaveRequest({
     ...parsed.data,
     days,
-    status: "pending",
+    status: autoApproved ? "approved" : "pending",
+    decidedAt: autoApproved ? new Date() : null,
   });
 
   await recordAuditEvent({
@@ -114,8 +148,8 @@ export async function POST(request: Request) {
     action: "leave.request.create",
     entity: "leave_request",
     entityId: requestId,
-    metadata: { employeeId: parsed.data.employeeId, days },
+    metadata: { employeeId: parsed.data.employeeId, days, autoApproved },
   });
 
-  return NextResponse.json({ requestId });
+  return NextResponse.json({ requestId, status: autoApproved ? "approved" : "pending" });
 }

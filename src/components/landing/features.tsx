@@ -68,8 +68,8 @@ export function Features() {
     <section id="features" dir={isRtl ? "rtl" : "ltr"} className="py-24 bg-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-base font-semibold text-primary tracking-wide uppercase">{t("landing.features.badge")}</h2>
-          <p className="mt-2 text-3xl font-extrabold text-slate-900 tracking-tight sm:text-4xl">
+          <h2 className="text-sm font-semibold text-primary">{t("landing.features.badge")}</h2>
+          <p className="mt-2 text-3xl font-bold text-slate-900 tracking-tight sm:text-4xl">
             {t("landing.features.title")}
           </p>
           <p className="mt-4 text-xl text-slate-600">
@@ -77,17 +77,17 @@ export function Features() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="relative group rounded-2xl border border-slate-100 bg-white p-8 shadow-sm transition-all hover:shadow-md hover:border-primary/20 hover:-translate-y-1"
+              className="group border-t-2 border-border pt-6 transition-colors hover:border-primary"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/5 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+              <div className="text-primary">
                 {feature.icon}
               </div>
-              <h3 className="mt-6 text-xl font-bold text-slate-900">{feature.title}</h3>
-              <p className="mt-4 text-base text-slate-600 leading-relaxed">
+              <h3 className="mt-4 text-lg font-semibold text-slate-900">{feature.title}</h3>
+              <p className="mt-2 text-base text-slate-600 leading-relaxed">
                 {feature.description}
               </p>
             </div>

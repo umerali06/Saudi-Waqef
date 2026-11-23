@@ -5,8 +5,12 @@ import { listChartAccounts } from "@/lib/data/chart-accounts";
 import { listJournalEntries } from "@/lib/data/journal-entries";
 import { toCsv } from "@/lib/utils/csv";
 import { createReportExport } from "@/lib/data/report-exports";
+import { generalLedgerModel } from "@/lib/pdf/financial-reports";
+import { loadReportContext, renderReport } from "@/lib/pdf/report";
+import { pdfResponse } from "@/lib/pdf/respond";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const isDateInRange = (date: string, startDate?: string | null, endDate?: string | null) => {
   if (startDate && date < startDate) {
@@ -16,76 +20,6 @@ const isDateInRange = (date: string, startDate?: string | null, endDate?: string
     return false;
   }
   return true;
-};
-
-const renderPdf = (
-  title: string,
-  accountLabel: string,
-  startDate: string | null,
-  endDate: string | null,
-  openingBalance: number,
-  closingBalance: number,
-  lines: { date: string; memo: string; source: string; debit: number; credit: number; balance: number }[]
-) => {
-  const escapeText = (value: string) =>
-    value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
-
-  const headerLines = [
-    title,
-    `Account: ${accountLabel}`,
-    `From: ${startDate ?? "-"}`,
-    `To: ${endDate ?? "-"}`,
-    `Opening balance: ${openingBalance.toFixed(2)}`,
-    `Closing balance: ${closingBalance.toFixed(2)}`,
-    "",
-    "Date | Memo | Source | Debit | Credit | Balance",
-  ];
-
-  const detailLines = lines.map(
-    (line) =>
-      `${line.date} | ${line.memo || "-"} | ${line.source} | ${line.debit.toFixed(
-        2
-      )} | ${line.credit.toFixed(2)} | ${line.balance.toFixed(2)}`
-  );
-
-  const contentLines: string[] = [];
-  let y = 760;
-  [...headerLines, ...detailLines].forEach((line) => {
-    contentLines.push(`BT /F1 9 Tf 40 ${y} Td (${escapeText(line)}) Tj ET`);
-    y -= 14;
-  });
-
-  const stream = contentLines.join("\n");
-  const streamLength = Buffer.byteLength(stream, "utf8");
-
-  const objects = [
-    "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n",
-    "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n",
-    "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >> endobj\n",
-    `4 0 obj << /Length ${streamLength} >> stream\n${stream}\nendstream endobj\n`,
-    "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\n",
-  ];
-
-  let offset = 0;
-  const header = "%PDF-1.4\n";
-  offset += header.length;
-  const offsets = [0];
-  const body = objects
-    .map((obj) => {
-      offsets.push(offset);
-      offset += obj.length;
-      return obj;
-    })
-    .join("");
-
-  const xrefStart = header.length + body.length;
-  let xref = "xref\n0 6\n0000000000 65535 f \n";
-  offsets.slice(1).forEach((objOffset) => {
-    xref += `${String(objOffset).padStart(10, "0")} 00000 n \n`;
-  });
-  const trailer = `trailer << /Size 6 /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
-
-  return Buffer.from(header + body + xref + trailer, "utf8");
 };
 
 export async function GET(request: Request) {
@@ -187,28 +121,18 @@ export async function GET(request: Request) {
   });
 
   if (format === "pdf") {
-    const buffer = renderPdf(
-      "General Ledger",
-      `${account.code} - ${account.name}`,
-      startDate,
-      endDate,
-      openingBalance,
-      runningBalance,
-      ledgerLines.map((line) => ({
-        date: line.date,
-        memo: line.memo,
-        source: line.source,
-        debit: line.debit,
-        credit: line.credit,
-        balance: line.balance ?? 0,
-      }))
+    const context = await loadReportContext(request, companyId);
+    const pdf = await renderReport(
+      generalLedgerModel(context, {
+        accountLabel: `${account.code} - ${account.name}`,
+        startDate,
+        endDate,
+        openingBalance,
+        closingBalance: runningBalance,
+        lines: ledgerLines,
+      })
     );
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="general-ledger-${account.code}.pdf"`,
-      },
-    });
+    return pdfResponse(pdf, `general-ledger-${account.code}.pdf`, request);
   }
 
   const headers = ["Date", "Memo", "Source", "Debit", "Credit", "Balance"];

@@ -83,6 +83,7 @@ export default function CashFlowPage() {
       format,
     });
     startTransition(async () => {
+      params.set("locale", locale);
       const response = await fetch(`/api/reports/cash-flow/export?${params}`);
       if (!response.ok) {
         setErrorKey("reports.exportFailed");

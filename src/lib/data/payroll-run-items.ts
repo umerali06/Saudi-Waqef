@@ -17,6 +17,7 @@ export type PayrollRunItem = {
   unpaidLeaveDeduction: number;
   absenceDeduction: number;
   gosiDeduction: number;
+  gosiEmployerContribution: number;
   incomeTaxDeduction: number;
   statutoryDeduction: number;
   adjustmentsTotal: number;
@@ -58,6 +59,7 @@ export async function listPayrollRunItems(runId: string) {
       unpaidLeaveDeduction: data.unpaidLeaveDeduction ?? 0,
       absenceDeduction: data.absenceDeduction ?? 0,
       gosiDeduction: data.gosiDeduction ?? 0,
+      gosiEmployerContribution: data.gosiEmployerContribution ?? 0,
       incomeTaxDeduction: data.incomeTaxDeduction ?? 0,
       statutoryDeduction: data.statutoryDeduction ?? 0,
       adjustmentsTotal: data.adjustmentsTotal ?? 0,
@@ -78,6 +80,24 @@ export async function listPayrollRunItems(runId: string) {
   });
 
   return items.sort((a, b) => a.employeeId.localeCompare(b.employeeId));
+}
+
+export async function listPayrollRunItemsByEmployee(employeeId: string) {
+  const snapshot = await db
+    .collection("payroll_run_items")
+    .where("employeeId", "==", employeeId)
+    .get();
+
+  return snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      companyId: data.companyId as string,
+      runId: data.runId as string,
+      currency: (data.currency ?? "SAR") as string,
+      netPay: (data.netPay ?? 0) as number,
+    };
+  });
 }
 
 export async function getPayrollRunItem(itemId: string) {
@@ -101,6 +121,7 @@ export async function getPayrollRunItem(itemId: string) {
     unpaidLeaveDeduction: data.unpaidLeaveDeduction ?? 0,
     absenceDeduction: data.absenceDeduction ?? 0,
     gosiDeduction: data.gosiDeduction ?? 0,
+    gosiEmployerContribution: data.gosiEmployerContribution ?? 0,
     incomeTaxDeduction: data.incomeTaxDeduction ?? 0,
     statutoryDeduction: data.statutoryDeduction ?? 0,
     adjustmentsTotal: data.adjustmentsTotal ?? 0,

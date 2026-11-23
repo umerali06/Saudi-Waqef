@@ -1,59 +1,47 @@
-const toArray = <T = Record<string, unknown>>(value: unknown): T[] =>
-  Array.isArray(value) ? (value as T[]) : [];
+import type { PayrollRun } from "@/lib/data/payroll-runs";
+import type { PayrollFilingRow } from "@/lib/integrations/payroll-source";
 
-const asObject = (value: unknown): Record<string, unknown> =>
-  value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+const round2 = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 
-export const buildGosiPayload = (basePayload: Record<string, unknown>) => {
-  const employeesSection = asObject(basePayload.employees);
-  const payrollSection = asObject(basePayload.payroll);
-  const payrollRun = asObject(payrollSection.run);
-  const payrollItems = toArray<Record<string, unknown>>(payrollSection.items);
-  const employeeRecords = toArray<Record<string, unknown>>(employeesSection.records);
-
-  const itemsByEmployee = new Map<string, Record<string, unknown>>();
-  payrollItems.forEach((item) => {
-    const employeeId =
-      typeof item.employeeId === "string" && item.employeeId.trim() ? item.employeeId.trim() : "";
-    if (employeeId) {
-      itemsByEmployee.set(employeeId, item);
-    }
-  });
-
-  const contributionPeriod =
-    typeof payrollRun.periodEnd === "string" && payrollRun.periodEnd.length >= 7
-      ? payrollRun.periodEnd.slice(0, 7)
-      : new Date().toISOString().slice(0, 7);
-
-  const employees = employeeRecords.map((employee) => {
-    const employeeId =
-      typeof employee.id === "string" && employee.id.trim() ? employee.id.trim() : "";
-    const payrollItem = employeeId ? itemsByEmployee.get(employeeId) ?? {} : {};
-    return {
-      employeeId,
-      employeeNumber:
-        typeof employee.employeeNumber === "string" ? employee.employeeNumber : null,
-      nameAr: typeof employee.nameAr === "string" ? employee.nameAr : null,
-      nameEn: typeof employee.nameEn === "string" ? employee.nameEn : null,
-      hireDate: typeof employee.hireDate === "string" ? employee.hireDate : null,
-      status: typeof employee.status === "string" ? employee.status : "active",
-      grossPay: Number(payrollItem.grossPay ?? 0),
-      gosiDeduction: Number(payrollItem.gosiDeduction ?? 0),
-    };
-  });
+/** Monthly contribution schedule: one row per contributor, plus the totals GOSI invoices. */
+export const buildGosiPayload = (params: {
+  establishment: { name: string; crNumber: string | null; gosiNumber: string | null };
+  run: Pick<PayrollRun, "id" | "periodStart" | "periodEnd">;
+  rows: PayrollFilingRow[];
+}) => {
+  const contributors = params.rows.map((row) => ({
+    identityNumber: row.identityNumber,
+    identityType: row.isSaudi ? "national_id" : "iqama",
+    nameAr: row.nameAr,
+    nameEn: row.nameEn,
+    nationality: row.nationality,
+    birthDate: row.birthDate,
+    joiningDate: row.hireDate,
+    leavingDate: row.terminationDate,
+    contributionType: row.isSaudi ? "annuities_and_saned" : "occupational_hazards",
+    basicWage: row.basic,
+    housingAllowance: row.housing,
+    contributoryWage: round2(row.basic + row.housing),
+    employeeContribution: row.gosiEmployee,
+    employerContribution: row.gosiEmployer,
+    totalContribution: round2(row.gosiEmployee + row.gosiEmployer),
+  }));
+  const total = (key: "employeeContribution" | "employerContribution" | "totalContribution") =>
+    round2(contributors.reduce((sum, row) => sum + row[key], 0));
 
   return {
     source: "saudi-waqef",
     connector: "gosi",
-    companyId: basePayload.companyId ?? null,
-    environment: basePayload.environment ?? null,
-    triggeredAt: basePayload.triggeredAt ?? new Date().toISOString(),
-    contributionPeriod,
-    payrollRunId: typeof payrollRun.id === "string" ? payrollRun.id : null,
-    employeeCount: employees.length,
-    employees,
+    establishment: params.establishment,
+    contributionMonth: params.run.periodEnd.slice(0, 7),
+    payrollRunId: params.run.id,
+    contributorCount: contributors.length,
+    saudiCount: contributors.filter((row) => row.identityType === "national_id").length,
+    totals: {
+      employee: total("employeeContribution"),
+      employer: total("employerContribution"),
+      payable: total("totalContribution"),
+    },
+    contributors,
   };
 };
-

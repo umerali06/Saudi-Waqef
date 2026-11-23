@@ -19,6 +19,6 @@ export async function PATCH(_: Request, context: RouteContext) {
   if (!notification || notification.userId !== user.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  await markNotificationRead(notificationId);
+  await markNotificationRead(notification);
   return NextResponse.json({ ok: true });
 }

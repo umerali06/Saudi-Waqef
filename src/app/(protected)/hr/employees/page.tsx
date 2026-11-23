@@ -50,6 +50,8 @@ const mapEmployeeError = (error?: string) => {
       return "hr.employees.invalidManager";
     case "Invalid user":
       return "hr.employees.invalidUser";
+    case "User already linked":
+      return "hr.employees.userAlreadyLinked";
     case "Duplicate employee":
       return "hr.employees.duplicate";
     case "Invalid payload":
@@ -79,6 +81,7 @@ export default function EmployeesPage() {
   const [iqamaNumber, setIqamaNumber] = useState("");
   const [passportNumber, setPassportNumber] = useState("");
   const [nationality, setNationality] = useState("");
+  const [iban, setIban] = useState("");
   const [dob, setDob] = useState("");
   const [gender, setGender] = useState("");
   const [email, setEmail] = useState("");
@@ -279,6 +282,7 @@ export default function EmployeesPage() {
           iqamaNumber: iqamaNumber.trim() || null,
           passportNumber: passportNumber.trim() || null,
           nationality: nationality.trim() || null,
+          iban: iban.trim() || null,
           dob: dob || null,
           gender: gender || null,
           email: email.trim() || null,
@@ -465,6 +469,18 @@ export default function EmployeesPage() {
               className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
               value={nationality}
               onChange={(event) => setNationality(event.target.value)}
+            />
+          </label>
+          <label className={`text-sm ${alignClass}`}>
+            <span className="mb-1 block text-xs text-muted">{t("hr.employees.iban")}</span>
+            <input
+              dir="ltr"
+              placeholder="SA"
+              pattern="\s*[Ss][Aa](\s*\d){22}\s*"
+              title={t("hr.employees.ibanHint")}
+              className="w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm"
+              value={iban}
+              onChange={(event) => setIban(event.target.value)}
             />
           </label>
           <label className={`text-sm ${alignClass}`}>

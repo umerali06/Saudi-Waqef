@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ZatcaError } from "@talha7k/zatca";
+import { ZatcaError } from "@/lib/integrations/zatca/errors";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
 import { getIntegrationById } from "@/lib/data/integrations";

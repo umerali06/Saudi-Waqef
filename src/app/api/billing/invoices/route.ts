@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
+import { requireSystemAdmin } from "@/lib/admin/access";
 import { listBillingInvoices, createBillingInvoice } from "@/lib/data/billing-invoices";
 import { billingInvoiceCreateSchema } from "@/lib/validators/billing";
 
@@ -28,23 +29,15 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const user = await getSessionUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requireSystemAdmin();
+  if (access.response) {
+    return access.response;
   }
 
   const body = await request.json().catch(() => null);
   const parsed = billingInvoiceCreateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
-  }
-
-  const membership = await requireCompanyRole(user.id, parsed.data.companyId, [
-    "owner",
-    "admin",
-  ]);
-  if (!membership) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const invoiceId = await createBillingInvoice({

@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { SkeletonBlock } from "@/components/skeleton";
 import { useTranslations } from "@/i18n/provider";
 import { calculateLineAmounts } from "@/lib/utils/invoice";
-import { getUnitOptions } from "@/lib/utils/units";
+import { formatQuantity, getUnitOptions } from "@/lib/utils/units";
 
 type DebitNoteStatus = "draft" | "issued" | "canceled";
 
@@ -124,6 +124,8 @@ const mapDebitNoteError = (error?: string) => {
       return "debitNote.missingDiscountAccount";
     case "VAT period is filed":
       return "vat.periodLocked";
+    case "PERIOD_CLOSED":
+      return "error.periodClosed";
     default:
       return "error.saveFailed";
   }
@@ -156,7 +158,7 @@ export default function DebitNoteDetailPage() {
   );
 
   const formatCurrency = (value: number, currency?: string) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       style: "currency",
       currency: currency || note?.currency || "SAR",
     }).format(value);
@@ -166,7 +168,7 @@ export default function DebitNoteDetailPage() {
       return "-";
     }
     const date = new Date(`${value}T00:00:00Z`);
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US").format(date);
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US").format(date);
   };
 
   const loadNote = useCallback(async () => {
@@ -417,7 +419,8 @@ export default function DebitNoteDetailPage() {
         method: "POST",
       });
       if (!response.ok) {
-        setErrorKey("error.saveFailed");
+        const data = await response.json().catch(() => ({}));
+        setErrorKey(data?.error === "EMAIL_FAILED" ? "invoice.emailFailed" : "error.saveFailed");
         return;
       }
       setNoticeKey("debitNote.sent");
@@ -508,6 +511,15 @@ export default function DebitNoteDetailPage() {
             {t("debitNote.title")}
           </Link>
           {!isDraft ? (
+            <>
+              <a
+              href={`/api/debit-notes/${debitNoteId}/pdf`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-secondary"
+            >
+              {t("invoice.print")}
+            </a>
             <button
               type="button"
               onClick={handleSend}
@@ -516,6 +528,7 @@ export default function DebitNoteDetailPage() {
             >
               {t("debitNote.send")}
             </button>
+            </>
           ) : null}
           {isDraft ? (
             <>
@@ -760,7 +773,7 @@ export default function DebitNoteDetailPage() {
                   <tr key={line.id}>
                     <td className="px-3 py-2">{line.description}</td>
                     <td className="px-3 py-2">
-                      {line.quantity} {line.unit}
+                      {formatQuantity(line.quantity, line.unit)}
                     </td>
                     <td className="px-3 py-2">{formatCurrency(line.unitPrice)}</td>
                     <td className="px-3 py-2">{formatCurrency(line.totalAmount)}</td>

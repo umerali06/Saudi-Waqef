@@ -8,7 +8,7 @@ import { listItems } from "@/lib/data/items";
 import { listTaxCategories } from "@/lib/data/tax-categories";
 import { getCompanyDefaults } from "@/lib/data/company-defaults";
 import { getCompanyConfig } from "@/lib/data/company-config";
-import { calculateLineAmounts } from "@/lib/utils/invoice";
+import { calculateLineAmounts, resolveTaxRate, sumLineAmounts } from "@/lib/utils/invoice";
 import { toBaseQuantity } from "@/lib/utils/units";
 import { normalizeSearch } from "@/lib/utils/search";
 import { applyItemStockDeltas } from "@/lib/data/items";
@@ -188,7 +188,7 @@ export async function POST(request: Request) {
       defaults.defaultSalesTaxCategoryId ??
       null;
     const taxCategory = taxCategoryId ? taxMap.get(taxCategoryId) : null;
-    const taxRate = taxCategory ? (taxCategory.rate ?? 0) / 100 : 0;
+    const taxRate = resolveTaxRate(taxCategory, config.vatEnabled);
 
     const amounts = calculateLineAmounts({
       quantity: line.quantity,
@@ -231,13 +231,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const subtotal = computedLines.reduce((sum, line) => sum + line.netAmount, 0);
-  const discountTotal = computedLines.reduce(
-    (sum, line) => sum + line.discountAmount,
-    0
-  );
-  const taxTotal = computedLines.reduce((sum, line) => sum + line.taxAmount, 0);
-  const total = computedLines.reduce((sum, line) => sum + line.totalAmount, 0);
+  const { subtotal, discountTotal, taxTotal, total } = sumLineAmounts(computedLines);
 
   const { id, invoiceNumber } = await createSalesInvoice({
     companyId: parsed.data.companyId,

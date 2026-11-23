@@ -7,7 +7,8 @@ import { listLeaveTypes } from "@/lib/data/leave-types";
 import { listLeaveAdjustments } from "@/lib/data/leave-adjustments";
 import { getEmployeeByUserId } from "@/lib/data/employees";
 import { getEmployeeById } from "@/lib/data/employees";
-import { isDateInYear } from "@/lib/utils/leave";
+import { listAttendanceHolidays } from "@/lib/data/attendance-holidays";
+import { hasLeaveBalance, leaveRangesOverlap } from "@/lib/utils/leave";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { notifyUser } from "@/lib/notifications/service";
 
@@ -40,12 +41,16 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (requestRecord.status !== "pending") {
+  // Approved leave stays cancellable by HR; everything else is decided once.
+  const isPrivileged = hasRequiredRole(membership.role, ["owner", "admin", "hr"]);
+  const cancelsApproved =
+    parsed.data.status === "cancelled" && requestRecord.status === "approved" && isPrivileged;
+  if (requestRecord.status !== "pending" && !cancelsApproved) {
     return NextResponse.json({ error: "Request already processed" }, { status: 400 });
   }
 
   if (parsed.data.status === "cancelled") {
-    if (!hasRequiredRole(membership.role, ["owner", "admin", "hr"])) {
+    if (!isPrivileged) {
       const employee = await getEmployeeByUserId(parsed.data.companyId, user.id);
       if (!employee || employee.id !== requestRecord.employeeId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -78,34 +83,35 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   if (parsed.data.status === "approved") {
-    const [types, adjustments, requests] = await Promise.all([
+    const [types, adjustments, requests, holidays] = await Promise.all([
       listLeaveTypes(parsed.data.companyId),
       listLeaveAdjustments(parsed.data.companyId),
       listLeaveRequests(parsed.data.companyId),
+      listAttendanceHolidays(parsed.data.companyId),
     ]);
     const leaveType = types.find((type) => type.id === requestRecord.leaveTypeId);
     if (!leaveType) {
       return NextResponse.json({ error: "Invalid leave type" }, { status: 400 });
     }
-    const year = new Date().getFullYear();
-    const used = requests
-      .filter(
-        (entry) =>
-          entry.employeeId === requestRecord.employeeId &&
-          entry.leaveTypeId === requestRecord.leaveTypeId &&
-          entry.status === "approved" &&
-          isDateInYear(entry.startDate, year)
-      )
-      .reduce((sum, entry) => sum + entry.days, 0);
-    const adjustmentTotal = adjustments
-      .filter(
-        (adj) =>
-          adj.employeeId === requestRecord.employeeId &&
-          adj.leaveTypeId === requestRecord.leaveTypeId
-      )
-      .reduce((sum, adj) => sum + adj.amount, 0);
-    const available = leaveType.defaultAllowance + adjustmentTotal - used;
-    if (leaveType.isPaid && available < requestRecord.days) {
+    const overlapsApproved = requests.some(
+      (entry) =>
+        entry.id !== requestRecord.id &&
+        entry.employeeId === requestRecord.employeeId &&
+        entry.status === "approved" &&
+        leaveRangesOverlap(entry, requestRecord)
+    );
+    if (overlapsApproved) {
+      return NextResponse.json({ error: "Overlapping leave request" }, { status: 409 });
+    }
+    if (
+      !hasLeaveBalance({
+        request: requestRecord,
+        leaveType,
+        requests,
+        adjustments,
+        holidays,
+      })
+    ) {
       return NextResponse.json(
         { error: "Insufficient leave balance" },
         { status: 400 }

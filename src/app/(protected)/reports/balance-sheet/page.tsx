@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
 import { useLocaleFormatters } from "@/i18n/formatters";
+import { CURRENT_EARNINGS_ID } from "@/lib/utils/financial-statements";
 
 type BalanceSheetAccount = {
   accountId: string;
@@ -78,6 +79,7 @@ export default function BalanceSheetPage() {
       format,
     });
     startTransition(async () => {
+      params.set("locale", locale);
       const response = await fetch(`/api/reports/balance-sheet/export?${params}`);
       if (!response.ok) {
         setErrorKey("reports.exportFailed");
@@ -123,12 +125,18 @@ export default function BalanceSheetPage() {
                 return (
                   <tr key={account.accountId}>
                     <td className="px-4 py-2">
-                      <Link
-                        href={link}
-                        className="text-xs font-semibold text-primary underline decoration-dotted"
-                      >
-                        {account.code} - {account.name}
-                      </Link>
+                      {account.accountId === CURRENT_EARNINGS_ID ? (
+                        <span className="text-xs font-semibold">
+                          {t("reports.balanceSheet.currentEarnings")}
+                        </span>
+                      ) : (
+                        <Link
+                          href={link}
+                          className="text-xs font-semibold text-primary underline decoration-dotted"
+                        >
+                          {account.code} - {account.name}
+                        </Link>
+                      )}
                     </td>
                     <td className="px-4 py-2">{formatAmount(account.amount)}</td>
                   </tr>

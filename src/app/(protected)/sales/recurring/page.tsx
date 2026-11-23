@@ -50,6 +50,12 @@ type LineForm = {
   taxCategoryId: string;
 };
 
+type RecurringFailure = {
+  recurringId: string;
+  customerName: string;
+  reason: "CUSTOMER_UNAVAILABLE" | "ITEM_UNAVAILABLE" | "INSUFFICIENT_STOCK";
+};
+
 export default function RecurringInvoicesPage() {
   const { activeCompanyId } = useCompany();
   const { t, locale } = useTranslations();
@@ -79,6 +85,7 @@ export default function RecurringInvoicesPage() {
   ]);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [noticeKey, setNoticeKey] = useState<string | null>(null);
+  const [failures, setFailures] = useState<RecurringFailure[]>([]);
   const [isPending, startTransition] = useTransition();
 
   const itemMap = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
@@ -89,7 +96,7 @@ export default function RecurringInvoicesPage() {
         return "-";
       }
       const date = new Date(`${value}T00:00:00Z`);
-      return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US").format(date);
+      return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US").format(date);
     },
     [locale]
   );
@@ -283,12 +290,25 @@ export default function RecurringInvoicesPage() {
   const handleRun = () => {
     if (!activeCompanyId) return;
     setLoading(true);
+    setErrorKey(null);
+    setNoticeKey(null);
+    setFailures([]);
     fetch("/api/recurring-invoices/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ companyId: activeCompanyId }),
     })
-      .then(() => loadReference())
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setErrorKey("error.saveFailed");
+          return;
+        }
+        setNoticeKey("invoice.recurringRun");
+        setFailures(data.failed ?? []);
+        loadReference();
+      })
+      .catch(() => setErrorKey("error.saveFailed"))
       .finally(() => setLoading(false));
   };
 
@@ -335,6 +355,19 @@ export default function RecurringInvoicesPage() {
       {errorKey ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
           {t(errorKey)}
+        </div>
+      ) : null}
+
+      {failures.length > 0 ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <p className="font-semibold">{t("sales.recurringFailed")}</p>
+          <ul className="mt-2 space-y-1">
+            {failures.map((failure) => (
+              <li key={failure.recurringId}>
+                {failure.customerName}: {t(`sales.recurringFailure.${failure.reason}`)}
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
 

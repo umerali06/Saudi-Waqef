@@ -7,6 +7,7 @@ import { useCompany } from "@/components/company-provider";
 import { useTranslations } from "@/i18n/provider";
 import { uploadToCloudinary } from "@/lib/cloudinary-client";
 import { trackEvent } from "@/lib/telemetry/client";
+import { changedFields } from "@/lib/utils/changed-fields";
 
 type CompanyProfile = {
   name: string;
@@ -65,6 +66,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState<CompanyProfile>(EMPTY_PROFILE);
   const [config, setConfig] = useState<CompanyConfig>(EMPTY_CONFIG);
+  const [savedConfig, setSavedConfig] = useState<CompanyConfig | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -98,7 +100,7 @@ export default function OnboardingPage() {
           });
         }
         if (configData?.config) {
-          setConfig({
+          const nextConfig: CompanyConfig = {
             vatEnabled: Boolean(configData.config.vatEnabled),
             vatRate: Number(configData.config.vatRate ?? 15),
             vatFilingFrequency:
@@ -110,7 +112,9 @@ export default function OnboardingPage() {
             billNextNumber: Number(configData.config.billNextNumber ?? 1),
             creditPrefix: configData.config.creditPrefix ?? "CR-",
             creditNextNumber: Number(configData.config.creditNextNumber ?? 1),
-          });
+          };
+          setConfig(nextConfig);
+          setSavedConfig(nextConfig);
         }
         if (brandingData?.branding) {
           setLogoUrl(brandingData.branding.logoUrl ?? null);
@@ -170,12 +174,18 @@ export default function OnboardingPage() {
       const response = await fetch(`/api/companies/${activeCompanyId}/config`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
+        body: JSON.stringify(savedConfig ? changedFields(savedConfig, config) : config),
       });
       if (!response.ok) {
-        setErrorKey("error.saveFailed");
+        const data = await response.json().catch(() => ({}));
+        setErrorKey(
+          data?.error === "NEXT_NUMBER_TOO_LOW"
+            ? "numbering.nextTooLow"
+            : "error.saveFailed"
+        );
         return false;
       }
+      setSavedConfig(config);
     }
     return true;
   };

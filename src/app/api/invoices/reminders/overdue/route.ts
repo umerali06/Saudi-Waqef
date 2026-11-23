@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
-import { listSalesInvoices } from "@/lib/data/sales-invoices";
+import { listSalesInvoices, updateSalesInvoice } from "@/lib/data/sales-invoices";
 import { getCustomerById } from "@/lib/data/customers";
 import { listContacts } from "@/lib/data/contacts";
-import { queueEmailWithDispatch } from "@/lib/email/queue";
+import { getCompanyById } from "@/lib/data/companies";
+import { renderDocumentEmail } from "@/lib/email/documents";
+import { sendDocumentEmail } from "@/lib/email/queue";
+import { translator } from "@/lib/pdf/report";
 import { notifyCompanyRoles } from "@/lib/notifications/service";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 type RequestBody = {
   companyId?: string;
@@ -38,11 +42,25 @@ export async function POST(request: Request) {
   const invoices = await listSalesInvoices(companyId);
   const today = new Date().toISOString().slice(0, 10);
   const overdue = invoices.filter(
-    (inv) => inv.balance > 0 && inv.dueDate < today && inv.status !== "canceled"
+    (inv) =>
+      inv.balance > 0 &&
+      inv.dueDate < today &&
+      !["draft", "canceled"].includes(inv.status)
   );
 
+  // One reminder per invoice per day, however often the button is pressed.
+  const due = overdue.filter((inv) => inv.lastReminderAt?.slice(0, 10) !== today);
+  let sentCount = 0;
+  let failed = 0;
   if (!body?.dryRun) {
-    for (const invoice of overdue) {
+    const company = await getCompanyById(companyId);
+    const locale = company?.defaultLanguage ?? "ar";
+    const t = translator(locale);
+    const seller = {
+      name: company?.legalName || company?.name || "",
+      vatNumber: company?.vatNumber ?? null,
+    };
+    for (const invoice of due) {
       const customer = await getCustomerById(invoice.customerId);
       let recipientEmail = customer?.email ?? null;
       if (!recipientEmail && customer) {
@@ -56,17 +74,39 @@ export async function POST(request: Request) {
         recipientEmail = primary?.email ?? fallback?.email ?? null;
       }
       if (recipientEmail) {
-        const subject = `Invoice ${invoice.invoiceNumber} overdue`;
-        const bodyHtml = `<p>Invoice ${invoice.invoiceNumber} is overdue.</p><p>Amount: ${invoice.balance} ${invoice.currency}</p>`;
-        await queueEmailWithDispatch({
+        const sent = await sendDocumentEmail({
           companyId,
           to: recipientEmail,
-          subject,
-          body: bodyHtml,
-          sourceType: "invoice_overdue",
+          subject: `${t("invoice.overdueSubject")} ${invoice.invoiceNumber} - ${seller.name}`,
+          body: renderDocumentEmail({
+            kind: "invoice",
+            locale,
+            message: t("invoice.overdueMessage"),
+            number: invoice.invoiceNumber,
+            issueDate: invoice.invoiceDate,
+            dueDate: invoice.dueDate,
+            total: invoice.total,
+            balance: invoice.balance,
+            currency: invoice.currency || "SAR",
+            seller,
+          }),
+          sourceType: "sales_invoice",
           sourceId: invoice.id,
+          meta: {
+            reminder: true,
+            invoiceNumber: invoice.invoiceNumber,
+            fromName: seller.name,
+            replyTo: user.email ?? null,
+          },
         });
+        if (!sent.ok) {
+          // Left unmarked, so the next run tries again.
+          failed += 1;
+          continue;
+        }
+        sentCount += 1;
       }
+      await updateSalesInvoice(invoice.id, { lastReminderAt: new Date().toISOString() });
       await notifyCompanyRoles({
         companyId,
         roles: ["owner", "admin", "accountant"],
@@ -85,6 +125,8 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     count: overdue.length,
+    sent: sentCount,
+    failed,
     invoices: overdue.map((inv) => ({
       id: inv.id,
       invoiceNumber: inv.invoiceNumber,

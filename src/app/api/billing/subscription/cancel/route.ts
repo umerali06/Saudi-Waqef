@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth-helpers";
 import { requireCompanyRole } from "@/lib/access";
 import { subscriptionCancelSchema } from "@/lib/validators/billing";
 import { updateSubscription, getSubscription } from "@/lib/data/subscriptions";
+import { reportPlatformEvent } from "@/lib/notifications/platform-events";
 
 export const runtime = "nodejs";
 
@@ -43,6 +44,19 @@ export async function POST(request: Request) {
       canceledAt: new Date(),
     });
   }
+
+  await reportPlatformEvent({
+    kind: "subscription_cancel",
+    severity: "high",
+    title: { ar: "إلغاء اشتراك", en: "Subscription canceled" },
+    message: {
+      ar: `المستخدم: ${user.email ?? ""}`,
+      en: `User: ${user.email ?? ""}`,
+    },
+    path: "/admin/tenants",
+    entityId: parsed.data.companyId,
+    companyId: parsed.data.companyId,
+  });
 
   return NextResponse.json({ ok: true });
 }

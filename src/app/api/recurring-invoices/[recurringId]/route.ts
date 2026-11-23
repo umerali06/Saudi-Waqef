@@ -104,7 +104,13 @@ export async function PATCH(request: Request, context: RouteContext) {
         })),
       }
     : undefined;
-  const updates = template ? { ...rest, template } : rest;
+  const updates = {
+    ...rest,
+    ...(template ? { template } : {}),
+    ...(rest.nextRunDate && rest.nextRunDate !== recurring.nextRunDate
+      ? { anchorDay: Number(rest.nextRunDate.slice(8, 10)) }
+      : {}),
+  };
   await updateRecurringInvoice(recurringId, updates);
   return NextResponse.json({ ok: true });
 }

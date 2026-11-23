@@ -1,8 +1,9 @@
-import { Timestamp } from "firebase-admin/firestore";
+import { Timestamp, type DocumentSnapshot, type Transaction } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase/admin";
 import { normalizeSearch } from "@/lib/utils/search";
-import { buildSequenceNumber } from "@/lib/utils/numbering";
+import { nextDocumentNumber } from "@/lib/data/numbering";
+import { readDoc, writeDoc } from "@/lib/firebase/documents";
 
 export type VendorCreditNoteStatus = "draft" | "issued" | "canceled";
 
@@ -42,57 +43,15 @@ export type VendorCreditNote = {
   discountTotal: number;
   taxTotal: number;
   total: number;
+  /** Part of the note that was already settled and is still owed back. */
+  unappliedAmount: number;
+  creditOpenItemId?: string | null;
   lines: VendorCreditNoteLine[];
   journalEntryId?: string | null;
   createdAt: Date;
 };
 
-const DEFAULT_CONFIG = {
-  vendorCreditPrefix: "VCR-",
-  vendorCreditSuffix: "",
-  vendorCreditNextNumber: 1,
-  vendorCreditPadding: 0,
-  vendorCreditResetYearly: false,
-  vendorCreditLastResetYear: null as number | null,
-};
-
-export async function listVendorCreditNotes(companyId: string) {
-  const snapshot = await db
-    .collection("vendor_credit_notes")
-    .where("companyId", "==", companyId)
-    .get();
-
-  return snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      companyId: data.companyId,
-      billId: data.billId,
-      billNumber: data.billNumber,
-      vendorId: data.vendorId,
-      vendorName: data.vendorName,
-      creditNumber: data.creditNumber,
-      status: data.status,
-      issueDate: data.issueDate,
-      currency: data.currency ?? "SAR",
-      notes: data.notes ?? null,
-      reason: data.reason ?? null,
-      subtotal: data.subtotal ?? 0,
-      discountTotal: data.discountTotal ?? 0,
-      taxTotal: data.taxTotal ?? 0,
-      total: data.total ?? 0,
-      lines: data.lines ?? [],
-      journalEntryId: data.journalEntryId ?? null,
-      createdAt: data.createdAt.toDate(),
-    } as VendorCreditNote;
-  });
-}
-
-export async function getVendorCreditNoteById(creditNoteId: string) {
-  const doc = await db.collection("vendor_credit_notes").doc(creditNoteId).get();
-  if (!doc.exists) {
-    return null;
-  }
+function mapVendorCreditNote(doc: DocumentSnapshot) {
   const data = doc.data()!;
   return {
     id: doc.id,
@@ -111,13 +70,30 @@ export async function getVendorCreditNoteById(creditNoteId: string) {
     discountTotal: data.discountTotal ?? 0,
     taxTotal: data.taxTotal ?? 0,
     total: data.total ?? 0,
+    unappliedAmount: data.unappliedAmount ?? 0,
+    creditOpenItemId: data.creditOpenItemId ?? null,
     lines: data.lines ?? [],
     journalEntryId: data.journalEntryId ?? null,
     createdAt: data.createdAt.toDate(),
   } as VendorCreditNote;
 }
 
+export async function listVendorCreditNotes(companyId: string) {
+  const snapshot = await db
+    .collection("vendor_credit_notes")
+    .where("companyId", "==", companyId)
+    .get();
+
+  return snapshot.docs.map(mapVendorCreditNote);
+}
+
+export async function getVendorCreditNoteById(creditNoteId: string, tx?: Transaction) {
+  const doc = await readDoc(db.collection("vendor_credit_notes").doc(creditNoteId), tx);
+  return doc.exists ? mapVendorCreditNote(doc) : null;
+}
+
 export async function createVendorCreditNote(params: {
+  id?: string;
   companyId: string;
   billId: string;
   billNumber: string;
@@ -134,46 +110,24 @@ export async function createVendorCreditNote(params: {
   status?: VendorCreditNoteStatus;
   lines: VendorCreditNoteLine[];
   journalEntryId?: string | null;
-}) {
-  const id = uuidv4();
-  const configRef = db.collection("company_configs").doc(params.companyId);
+  unappliedAmount?: number;
+  creditOpenItemId?: string | null;
+}, tx?: Transaction) {
+  const id = params.id ?? uuidv4();
   const noteRef = db.collection("vendor_credit_notes").doc(id);
 
-  let creditNumber = "";
-
-  await db.runTransaction(async (tx) => {
-    const configSnap = await tx.get(configRef);
-    const config = configSnap.data() ?? {};
-    const sequence = buildSequenceNumber({
-      prefix:
-        typeof config.vendorCreditPrefix === "string"
-          ? config.vendorCreditPrefix
-          : DEFAULT_CONFIG.vendorCreditPrefix,
-      suffix:
-        typeof config.vendorCreditSuffix === "string"
-          ? config.vendorCreditSuffix
-          : DEFAULT_CONFIG.vendorCreditSuffix,
-      nextNumber:
-        typeof config.vendorCreditNextNumber === "number"
-          ? config.vendorCreditNextNumber
-          : DEFAULT_CONFIG.vendorCreditNextNumber,
-      padding:
-        typeof config.vendorCreditPadding === "number"
-          ? config.vendorCreditPadding
-          : DEFAULT_CONFIG.vendorCreditPadding,
-      resetYearly:
-        typeof config.vendorCreditResetYearly === "boolean"
-          ? config.vendorCreditResetYearly
-          : DEFAULT_CONFIG.vendorCreditResetYearly,
-      lastResetYear:
-        typeof config.vendorCreditLastResetYear === "number"
-          ? config.vendorCreditLastResetYear
-          : DEFAULT_CONFIG.vendorCreditLastResetYear,
+  const create = async (transaction: Transaction) => {
+    const sequence = await nextDocumentNumber(transaction, {
+      companyId: params.companyId,
+      key: "vendorCredit",
+      defaultPrefix: "VCR-",
+      collection: "vendor_credit_notes",
+      field: "creditNumber",
       date: params.issueDate,
     });
-    creditNumber = sequence.number;
+    const creditNumber = sequence.number;
 
-    tx.set(noteRef, {
+    transaction.set(noteRef, {
       companyId: params.companyId,
       billId: params.billId,
       billNumber: params.billNumber,
@@ -193,20 +147,16 @@ export async function createVendorCreditNote(params: {
       total: params.total,
       lines: params.lines,
       journalEntryId: params.journalEntryId ?? null,
+      unappliedAmount: params.unappliedAmount ?? 0,
+      creditOpenItemId: params.creditOpenItemId ?? null,
       createdAt: Timestamp.now(),
     });
 
-    tx.set(
-      configRef,
-      {
-        vendorCreditNextNumber: sequence.nextNumber,
-        vendorCreditLastResetYear: sequence.resetYear ?? null,
-        updatedAt: Timestamp.now(),
-      },
-      { merge: true }
-    );
-  });
+    sequence.save();
+    return creditNumber;
+  };
 
+  const creditNumber = tx ? await create(tx) : await db.runTransaction(create);
   return { id, creditNumber };
 }
 
@@ -223,13 +173,14 @@ export async function updateVendorCreditNote(
     total: number;
     lines: VendorCreditNoteLine[];
     journalEntryId: string | null;
-  }>
+    unappliedAmount: number;
+    creditOpenItemId: string | null;
+  }>,
+  tx?: Transaction
 ) {
   const payload: Record<string, unknown> = {
     ...updates,
     updatedAt: Timestamp.now(),
   };
-  await db.collection("vendor_credit_notes").doc(creditNoteId).set(payload, {
-    merge: true,
-  });
+  await writeDoc(db.collection("vendor_credit_notes").doc(creditNoteId), payload, { merge: true, tx });
 }

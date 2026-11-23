@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
 import { NavLink } from "@/components/nav-link";
+import { NavIcon } from "@/components/nav-icons";
+import { NotificationsProvider, useNotifications } from "@/components/notifications-provider";
+import { disablePush } from "@/lib/notifications/client";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useTranslations } from "@/i18n/provider";
 
@@ -85,10 +89,24 @@ const Icon = {
   ),
 };
 
+const ADMIN_PAGES = [
+  "access-requests", "health", "tenants", "alerts", "jobs", "dr", "migrations",
+  "knowledge-base", "kpis", "audit", "support",
+].map((page) => `/admin/${page}`);
+
 export function AdminShell({ children }: { children: React.ReactNode }) {
+  return (
+    <NotificationsProvider companyId={null}>
+      <AdminFrame>{children}</AdminFrame>
+    </NotificationsProvider>
+  );
+}
+
+function AdminFrame({ children }: { children: React.ReactNode }) {
+  const { unreadCount } = useNotifications();
   const { data } = useSession();
-  const { t, locale } = useTranslations();
-  const alignClass = locale === "ar" ? "text-right" : "text-left";
+  const { t } = useTranslations();
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [pendingRegistrationsCount, setPendingRegistrationsCount] = useState(0);
 
   useEffect(() => {
@@ -100,82 +118,97 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     };
 
     fetchPending();
-    const interval = setInterval(fetchPending, 10000);
+    const interval = setInterval(fetchPending, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [unreadCount]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="flex min-h-screen app-shell">
-        <aside className="w-72 app-sidebar px-4 py-6 lg:mx-4 lg:my-4 lg:rounded-3xl lg:h-[calc(100vh-2rem)]">
-          <div className="mb-8 rounded-2xl px-4 py-4 text-primary-contrast shadow-sm brand-card">
-            <p className="text-xs uppercase tracking-[0.2em] text-primary-contrast opacity-70">
-              {t("admin.title")}
-            </p>
-            <p className="mt-2 text-sm font-semibold">{t("admin.subtitle")}</p>
-          </div>
-          <div className="mb-8 space-y-1 nav-group">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted nav-heading">
-              {t("nav.section")}
-            </p>
-            <NavLink href="/admin" label={t("admin.nav.overview")} icon={Icon.overview} />
-            <NavLink
-              href="/admin/registrations"
-              label={t("admin.nav.registrations")}
-              icon={Icon.registrations}
-              badgeCount={pendingRegistrationsCount}
-            />
-            <NavLink href="/admin/health" label={t("admin.nav.health")} icon={Icon.health} />
-            <NavLink href="/admin/tenants" label={t("admin.nav.tenants")} icon={Icon.tenants} />
-            <NavLink href="/admin/alerts" label={t("admin.nav.alerts")} icon={Icon.alerts} />
-            <NavLink href="/admin/jobs" label={t("admin.nav.jobs")} icon={Icon.jobs} />
-            <NavLink href="/admin/dr" label={t("admin.nav.dr")} icon={Icon.dr} />
-            <NavLink
-              href="/admin/migrations"
-              label={t("admin.nav.migrations")}
-              icon={Icon.migrations}
-            />
-            <NavLink
-              href="/admin/knowledge-base"
-              label={t("admin.nav.knowledgeBase")}
-              icon={Icon.knowledge}
-            />
-            <NavLink href="/admin/kpis" label={t("admin.nav.kpis")} icon={Icon.kpis} />
-            <NavLink href="/admin/audit" label={t("admin.nav.audit")} icon={Icon.audit} />
-            <NavLink href="/admin/support" label={t("admin.nav.support")} icon={Icon.support} />
-          </div>
-          <div className="app-panel px-3 py-3 text-xs text-muted">
-            {t("admin.footer")}
-          </div>
-        </aside>
-
-        <div className="flex flex-1 flex-col">
-          <header className="mx-4 mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl px-6 py-4 app-header">
-            <LanguageSwitcher />
-            <div className={`flex items-center gap-4 text-sm ${alignClass}`}>
-              <div className="topbar-user">
-                <div className="topbar-avatar">
-                  {(data?.user?.name ?? t("common.user")).slice(0, 1).toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-semibold">
-                    {data?.user?.name ?? t("common.user")}
-                  </p>
-                  <p className="text-xs text-muted">{data?.user?.email ?? ""}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => signOut({ callbackUrl: "/login" })}
-                className="cursor-pointer rounded-2xl border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
-              >
-                {t("nav.signOut")}
-              </button>
-            </div>
-          </header>
-
-          <main className="flex-1 px-6 py-10 app-main">{children}</main>
+    <div className="app-frame flex h-dvh overflow-hidden bg-background text-foreground">
+      {isMobileNavOpen ? (
+        <button
+          type="button"
+          aria-label={t("common.close")}
+          className="scrim fixed inset-0 z-30 bg-black/40 lg:hidden"
+          onClick={() => setIsMobileNavOpen(false)}
+        />
+      ) : null}
+      <aside
+        className={`app-sidebar fixed inset-y-0 start-0 z-40 flex w-64 shrink-0 flex-col transition-transform lg:static lg:translate-x-0 ${
+          isMobileNavOpen ? "translate-x-0" : "-translate-x-full rtl:translate-x-full lg:rtl:translate-x-0"
+        }`}
+      >
+        <div className="flex h-16 flex-col justify-center px-5">
+          <span className="truncate text-[15px] font-semibold text-white">{t("admin.title")}</span>
+          <span className="truncate text-xs text-[#7f93a8]">{t("app.name")}</span>
         </div>
+        <nav
+          className="flex-1 space-y-0.5 overflow-y-auto px-3 pb-6 pt-2"
+          aria-label={t("nav.section")}
+          onClick={() => setIsMobileNavOpen(false)}
+        >
+          <NavLink href="/admin" label={t("admin.nav.overview")} icon={Icon.overview} excludes={ADMIN_PAGES} />
+          <NavLink
+            href="/admin/access-requests"
+            label={t("admin.nav.registrations")}
+            icon={Icon.registrations}
+            badgeCount={pendingRegistrationsCount}
+          />
+          <NavLink href="/admin/notifications" label={t("nav.notifications")} icon="bell" badgeCount={unreadCount} />
+          <NavLink href="/admin/health" label={t("admin.nav.health")} icon={Icon.health} />
+          <NavLink href="/admin/tenants" label={t("admin.nav.tenants")} icon={Icon.tenants} />
+          <NavLink href="/admin/alerts" label={t("admin.nav.alerts")} icon={Icon.alerts} />
+          <NavLink href="/admin/jobs" label={t("admin.nav.jobs")} icon={Icon.jobs} />
+          <NavLink href="/admin/dr" label={t("admin.nav.dr")} icon={Icon.dr} />
+          <NavLink href="/admin/migrations" label={t("admin.nav.migrations")} icon={Icon.migrations} />
+          <NavLink href="/admin/knowledge-base" label={t("admin.nav.knowledgeBase")} icon={Icon.knowledge} />
+          <NavLink href="/admin/kpis" label={t("admin.nav.kpis")} icon={Icon.kpis} />
+          <NavLink href="/admin/audit" label={t("admin.nav.audit")} icon={Icon.audit} />
+          <NavLink href="/admin/support" label={t("admin.nav.support")} icon={Icon.support} />
+        </nav>
+      </aside>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="app-header flex h-16 shrink-0 items-center gap-3 px-4 sm:px-6">
+          <button
+            type="button"
+            className="icon-button lg:hidden"
+            onClick={() => setIsMobileNavOpen(true)}
+            aria-label={t("nav.section")}
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+          <div className="ms-auto flex min-w-0 items-center gap-3">
+            <LanguageSwitcher compact />
+            <Link href="/admin/notifications" className="icon-button relative" aria-label={t("nav.notifications")}>
+              <NavIcon name="bell" className="h-5 w-5" />
+              {unreadCount > 0 ? (
+                <span className="absolute -end-0.5 -top-0.5 min-w-4 rounded-full bg-[#d0453b] px-1 text-center text-[10px] font-semibold leading-4 text-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              ) : null}
+            </Link>
+            <span className="hidden min-w-0 text-start leading-tight sm:block">
+              <span className="block truncate text-sm font-medium">{data?.user?.name ?? t("common.user")}</span>
+              <span className="block truncate text-xs text-muted" dir="ltr">{data?.user?.email ?? ""}</span>
+            </span>
+            <button
+              type="button"
+              onClick={async () => {
+                await disablePush().catch(() => undefined);
+                await fetch("/api/admin/impersonate/end", { method: "POST" }).catch(() => undefined);
+                await signOut({ callbackUrl: "/login" });
+              }}
+              className="btn-secondary"
+            >
+              {t("nav.signOut")}
+            </button>
+          </div>
+        </header>
+        <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
+          {children}
+        </main>
       </div>
     </div>
   );

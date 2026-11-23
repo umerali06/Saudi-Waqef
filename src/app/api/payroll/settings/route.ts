@@ -55,7 +55,8 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  await updatePayrollSettings(body.companyId, parsed.data);
+  const { companyId, ...updates } = parsed.data;
+  await updatePayrollSettings(companyId ?? body.companyId, updates);
   await recordAuditEvent({
     companyId: body.companyId,
     userId: user.id,
@@ -63,7 +64,7 @@ export async function PUT(request: Request) {
     action: "payroll.settings.update",
     entity: "payroll_settings",
     entityId: body.companyId,
-    metadata: { fields: Object.keys(parsed.data) },
+    metadata: { fields: Object.keys(updates) },
   });
 
   return NextResponse.json({ ok: true });

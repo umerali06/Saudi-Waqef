@@ -108,6 +108,10 @@ const mapDebitNoteError = (error?: string) => {
       return "debitNote.missingDiscountAccount";
     case "VAT period is filed":
       return "vat.periodLocked";
+    case "Invoice is not approved":
+      return "error.documentNotApproved";
+    case "PERIOD_CLOSED":
+      return "error.periodClosed";
     default:
       return "error.saveFailed";
   }
@@ -140,7 +144,7 @@ export default function NewDebitNotePage() {
   );
 
   const formatCurrency = (value: number, currency?: string) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       style: "currency",
       currency: currency || invoice?.currency || "SAR",
     }).format(value);
@@ -160,7 +164,7 @@ export default function NewDebitNotePage() {
       .then((res) => res.json())
       .then((data) => {
         const rows: InvoiceSummary[] = data.invoices ?? [];
-        setInvoices(rows.filter((row) => row.status !== "canceled"));
+        setInvoices(rows.filter((row) => !["draft", "canceled"].includes(row.status)));
       })
       .catch(() => setInvoices([]));
   }, [activeCompanyId]);

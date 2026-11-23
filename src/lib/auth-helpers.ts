@@ -38,7 +38,8 @@ export async function getSessionUser(options?: { ignoreImpersonation?: boolean }
   }
 
   const impersonation = await getActiveImpersonation(impersonationId);
-  if (!impersonation) {
+  // The cookie only counts for the admin who started the impersonation.
+  if (!impersonation || impersonation.adminUserId !== baseUser.id) {
     return baseUser;
   }
 

@@ -44,6 +44,7 @@ export async function GET(_: Request, context: RouteContext) {
   const summary = calculateEndOfServiceBenefit({
     employee,
     contract,
+    contracts,
     payrollSettings: settings,
   });
 

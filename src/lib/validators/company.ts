@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { findExemption } from "@/lib/integrations/zatca/exemptions";
 
 const vatRegex = /^3\d{13}3$/;
 
@@ -160,11 +161,18 @@ export const companyDefaultsSchema = z.object({
   defaultPurchasePaymentTermId: z.string().optional().nullable(),
 });
 
+const exemptionReasonSchema = z
+  .string()
+  .refine((code) => Boolean(findExemption(code)))
+  .optional()
+  .nullable();
+
 export const taxCategorySchema = z.object({
   companyId: z.string().min(1),
   name: z.string().min(2),
   rate: z.number().min(0).max(100),
   type: z.enum(["standard", "zero", "exempt"]),
+  exemptionReasonCode: exemptionReasonSchema,
   status: z.enum(["active", "inactive"]).optional(),
 });
 
@@ -172,6 +180,7 @@ export const taxCategoryUpdateSchema = z.object({
   name: z.string().min(2).optional(),
   rate: z.number().min(0).max(100).optional(),
   type: z.enum(["standard", "zero", "exempt"]).optional(),
+  exemptionReasonCode: exemptionReasonSchema,
   status: z.enum(["active", "inactive"]).optional(),
 });
 

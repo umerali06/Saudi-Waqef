@@ -6,6 +6,6 @@ import { getZatcaArtifactByInvoiceId } from "@/lib/data/zatca-artifacts";
  * corrections are issued as credit/debit notes instead.
  */
 export async function isZatcaFinalized(companyId: string, documentId: string) {
-  const artifact = await getZatcaArtifactByInvoiceId(companyId, documentId);
+  const artifact = await getZatcaArtifactByInvoiceId(companyId, documentId, "production");
   return artifact?.status === "accepted" || artifact?.status === "warning";
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAccountingAccess, requireCompanyRole } from "@/lib/access";
-import { itemBulkStatusSchema, itemSchema } from "@/lib/validators/items";
+import { itemErrorCode, itemBulkStatusSchema, itemSchema } from "@/lib/validators/items";
 import { bulkUpdateItems, createItem, listItems } from "@/lib/data/items";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { normalizeSearch } from "@/lib/utils/search";
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = itemSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    return NextResponse.json({ error: itemErrorCode(parsed.error) }, { status: 400 });
   }
 
   const membership = await requireCompanyRole(user.id, parsed.data.companyId, [

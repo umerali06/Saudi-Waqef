@@ -3,232 +3,257 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useTranslations } from "@/i18n/provider";
+import {
+  JOIN_ROLES,
+  registrationErrorFields,
+  registrationSchema,
+} from "@/lib/validators/registration";
+
+type Kind = "new" | "join";
+
+const EMPTY_FORM = {
+  name: "",
+  email: "",
+  phone: "",
+  companyName: "",
+  crNumber: "",
+  vatNumber: "",
+  requestedRole: "employee" as (typeof JOIN_ROLES)[number],
+};
+
+const INPUT_CLASS = "w-full border px-3.5 py-2.5 text-sm";
 
 export default function RegisterPage() {
   const { t, locale } = useTranslations();
-  const alignClass = locale === "ar" ? "text-right" : "text-left";
-
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    companyName: "",
-    phone: "",
-    requestedRole: "accountant",
-  });
-
-  const [isPending, startTransition] = useTransition();
+  const [kind, setKind] = useState<Kind>("new");
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [invalidFields, setInvalidFields] = useState<string[]>([]);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  function mapRegisterError(message?: string) {
-    switch (message) {
-      case "Missing required fields":
-        return t("auth.register.errors.missingFields");
-      case "Invalid requested role":
-        return t("auth.register.errors.invalidRole");
-      case "Invalid company name":
-        return t("auth.register.errors.invalidCompanyName");
-      case "Internal Server Error":
-        return t("auth.register.errors.server");
-      default:
-        return t("auth.register.errors.generic");
-    }
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    startTransition(async () => {
-      try {
-        const res = await fetch("/api/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        });
-
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
-
-        if (!res.ok) {
-          setError(mapRegisterError(data?.error));
-          return;
-        }
-
-        setSubmitted(true);
-      } catch {
-        setError(t("auth.register.errors.network"));
-      }
-    });
+  const update = (field: keyof typeof EMPTY_FORM, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setInvalidFields((prev) => prev.filter((entry) => entry !== field));
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const switchKind = (next: Kind) => {
+    setKind(next);
+    setInvalidFields([]);
+    setErrorKey(null);
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorKey(null);
+    const { name, email, companyName, phone, crNumber, vatNumber, requestedRole } = form;
+    const payload =
+      kind === "new"
+        ? { kind, locale, name, email, companyName, phone, crNumber, vatNumber }
+        : { kind, locale, name, email, companyName, requestedRole };
+    const parsed = registrationSchema.safeParse(payload);
+    if (!parsed.success) {
+      setInvalidFields(registrationErrorFields(parsed.error));
+      return;
+    }
+
+    startTransition(async () => {
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).catch(() => null);
+      if (!response) {
+        setErrorKey("auth.register.errors.network");
+        return;
+      }
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as { fields?: string[] } | null;
+        if (data?.fields?.length) {
+          setInvalidFields(data.fields);
+          return;
+        }
+        setErrorKey(
+          response.status === 429
+            ? "auth.register.errors.rateLimited"
+            : "auth.register.errors.server"
+        );
+        return;
+      }
+      setSubmitted(true);
+    });
   };
 
   if (submitted) {
     return (
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-            <svg
-              className="h-6 w-6 text-green-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-slate-900">
-            {t("auth.register.success.title")}
-          </h2>
-          <p className="mt-2 text-sm text-slate-600">
-            {t("auth.register.success.message")}
-          </p>
-          <div className="mt-6">
-            <Link
-              href="/login"
-              className="font-medium text-primary hover:text-primary/90"
-            >
-              {t("auth.register.loginLink")}
-            </Link>
-          </div>
-        </div>
+      <div role="status">
+        <h1 className="text-[1.7rem] font-semibold leading-tight">{t("auth.register.success.title")}</h1>
+        <p className="mt-3 text-sm leading-6">
+          {t(
+            kind === "new"
+              ? "auth.register.success.newReview"
+              : "auth.register.success.joinReview",
+            { company: form.companyName.trim() }
+          )}
+        </p>
+        <p className="mt-3 text-sm leading-6 text-muted">
+          {t("auth.register.success.next", { email: form.email.trim() })}
+        </p>
+        <Link href="/login" className="btn-secondary mt-6">
+          {t("auth.register.success.toLogin")}
+        </Link>
       </div>
     );
   }
 
-  return (
-    <div className="w-full max-w-sm space-y-8">
-      <div className={`text-center ${alignClass}`}>
-        <h1 className="text-2xl font-semibold">{t("auth.register.title")}</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          {t("auth.register.subtitle")}
-        </p>
+  const renderField = (options: {
+    field: Exclude<keyof typeof EMPTY_FORM, "requestedRole">;
+    label: string;
+    optional?: boolean;
+    hint?: string;
+    type?: string;
+    ltr?: boolean;
+    inputMode?: "numeric" | "tel" | "email";
+    autoComplete?: string;
+  }) => {
+    const { field, label, optional, hint } = options;
+    const invalid = invalidFields.includes(field);
+    return (
+      <div key={field}>
+        <label htmlFor={field} className="mb-1.5 block text-sm font-medium">
+          {label}
+          {optional ? (
+            <span className="ms-1 font-normal text-muted">{t("auth.register.optional")}</span>
+          ) : null}
+        </label>
+        <input
+          id={field}
+          type={options.type ?? "text"}
+          dir={options.ltr ? "ltr" : undefined}
+          inputMode={options.inputMode}
+          autoComplete={options.autoComplete}
+          className={INPUT_CLASS}
+          value={form[field]}
+          onChange={(event) => update(field, event.target.value)}
+          required={!optional}
+          aria-invalid={invalid}
+          aria-describedby={invalid || hint ? `${field}-note` : undefined}
+        />
+        {invalid ? (
+          <p id={`${field}-note`} role="alert" className="mt-1.5 text-xs text-[#8f2a23]">
+            {t(`auth.register.invalid.${field}`)}
+          </p>
+        ) : hint ? (
+          <p id={`${field}-note`} className="mt-1.5 text-xs text-muted">
+            {hint}
+          </p>
+        ) : null}
       </div>
+    );
+  };
 
-      <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-        <div className="space-y-4 rounded-md shadow-sm">
+  return (
+    <>
+      <h1 className="text-[1.7rem] font-semibold leading-tight">{t("auth.register.title")}</h1>
+      <div className="segmented mt-5 w-full" role="group" aria-label={t("auth.register.title")}>
+        {(["new", "join"] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            className="flex-1"
+            aria-pressed={kind === option}
+            onClick={() => switchKind(option)}
+          >
+            {t(`auth.register.kind.${option}`)}
+          </button>
+        ))}
+      </div>
+      <p className="mt-3 text-sm leading-6 text-muted">{t(`auth.register.kindHint.${kind}`)}</p>
+
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
+        {renderField({ field: "name", label: t("auth.register.name"), autoComplete: "name" })}
+        {renderField({
+          field: "email",
+          label: t(kind === "new" ? "auth.register.workEmail" : "auth.register.email"),
+          type: "email",
+          ltr: true,
+          inputMode: "email",
+          autoComplete: "email",
+        })}
+        {kind === "new"
+          ? renderField({
+              field: "phone",
+              label: t("auth.register.mobile"),
+              hint: t("auth.register.mobileHint"),
+              type: "tel",
+              ltr: true,
+              inputMode: "tel",
+              autoComplete: "tel",
+            })
+          : null}
+        {renderField({
+          field: "companyName",
+          label: t("auth.register.company"),
+          hint: t(`auth.register.companyHint.${kind}`),
+          autoComplete: "organization",
+        })}
+        {kind === "new" ? (
+          <>
+            {renderField({
+              field: "crNumber",
+              label: t("auth.register.crNumber"),
+              optional: true,
+              ltr: true,
+              inputMode: "numeric",
+            })}
+            {renderField({
+              field: "vatNumber",
+              label: t("auth.register.vatNumber"),
+              optional: true,
+              ltr: true,
+              inputMode: "numeric",
+            })}
+          </>
+        ) : (
           <div>
-            <label htmlFor="name" className="sr-only">
-              {t("auth.register.name")}
-            </label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              required
-              className={`relative block w-full rounded-md border-0 py-1.5 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6 px-3 ${alignClass}`}
-              placeholder={t("auth.register.name")}
-              value={formData.name}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <label htmlFor="email" className="sr-only">
-              {t("auth.register.email")}
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              className={`relative block w-full rounded-md border-0 py-1.5 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6 px-3 ${alignClass}`}
-              placeholder={t("auth.register.email")}
-              value={formData.email}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <label htmlFor="companyName" className="sr-only">
-              {t("auth.register.company")}
-            </label>
-            <input
-              id="companyName"
-              name="companyName"
-              type="text"
-              autoComplete="organization"
-              required
-              className={`relative block w-full rounded-md border-0 py-1.5 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6 px-3 ${alignClass}`}
-              placeholder={t("auth.register.company")}
-              value={formData.companyName}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <label htmlFor="phone" className="sr-only">
-              {t("auth.register.phone")}
-            </label>
-            <input
-              id="phone"
-              name="phone"
-              type="tel"
-              className={`relative block w-full rounded-md border-0 py-1.5 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6 px-3 ${alignClass}`}
-              placeholder={t("auth.register.phone")}
-              value={formData.phone}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <label htmlFor="requestedRole" className="sr-only">
+            <label htmlFor="requestedRole" className="mb-1.5 block text-sm font-medium">
               {t("auth.register.role")}
             </label>
             <select
               id="requestedRole"
-              name="requestedRole"
-              required
-              className={`relative block w-full rounded-md border-0 py-1.5 text-slate-900 ring-1 ring-inset ring-slate-300 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6 px-3 ${alignClass}`}
-              value={formData.requestedRole}
-              onChange={handleChange}
+              className={INPUT_CLASS}
+              value={form.requestedRole}
+              onChange={(event) => update("requestedRole", event.target.value)}
             >
-              <option value="admin">{t("auth.register.role.admin")}</option>
-              <option value="accountant">{t("auth.register.role.accountant")}</option>
-              <option value="hr">{t("auth.register.role.hr")}</option>
-              <option value="employee">{t("role.employee")}</option>
-              <option value="viewer">{t("role.viewer")}</option>
+              {JOIN_ROLES.map((role) => (
+                <option key={role} value={role}>
+                  {t(`role.${role}`)}
+                </option>
+              ))}
             </select>
-          </div>
-        </div>
-
-        {error && (
-          <div className="rounded-md bg-red-50 p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
-                  {error}
-                </h3>
-              </div>
-            </div>
           </div>
         )}
 
-        <div>
-          <button
-            type="submit"
-            disabled={isPending}
-            className="group relative flex w-full justify-center rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isPending ? t("common.loadingInvite") : t("auth.register.submit")}
-          </button>
-        </div>
-        
-        <div className="text-sm text-center">
-          <Link href="/login" className="font-medium text-primary hover:text-primary/90">
-            {t("auth.register.loginLink")}
-          </Link>
-        </div>
+        {errorKey ? (
+          <p role="alert" className="rounded-lg bg-[#fbe6e4] px-3.5 py-2.5 text-sm text-[#8f2a23]">
+            {t(errorKey)}
+          </p>
+        ) : null}
+
+        <button
+          type="submit"
+          className="btn-primary auth-submit"
+          disabled={isPending}
+        >
+          {isPending ? t("common.loading") : t("auth.register.submit")}
+        </button>
       </form>
-    </div>
+
+      <p className="mt-8 text-sm text-muted">
+        <Link className="font-medium text-primary hover:underline" href="/login">
+          {t("auth.register.loginLink")}
+        </Link>
+      </p>
+    </>
   );
 }

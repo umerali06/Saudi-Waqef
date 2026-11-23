@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { Locale } from "@/i18n/messages";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { queueEmailWithDispatch } from "@/lib/email/queue";
+import { renderEmail } from "@/lib/email/template";
 import { renderTemplate } from "@/lib/notifications/templates";
 import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
 import { requireAdminAccess } from "@/lib/access";
@@ -42,7 +43,11 @@ export async function POST(request: Request) {
     companyId: parsed.data.companyId,
     to: parsed.data.email,
     subject: rendered.subject,
-    body: rendered.body,
+    body: renderEmail({
+      locale: parsed.data.locale,
+      heading: rendered.title,
+      paragraphs: [rendered.body],
+    }),
     sourceType: "notification_test",
     sourceId: parsed.data.type,
   });

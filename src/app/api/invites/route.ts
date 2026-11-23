@@ -7,6 +7,8 @@ import { requireAdminAccess } from "@/lib/access";
 import { checkUserLimit } from "@/lib/billing/limits";
 import { getCompanyById } from "@/lib/data/companies";
 import { queueEmailWithDispatch } from "@/lib/email/queue";
+import { roleLabel } from "@/lib/email/registration-mails";
+import { renderEmail } from "@/lib/email/template";
 
 export const runtime = "nodejs";
 
@@ -27,6 +29,10 @@ export async function POST(request: Request) {
 
   const membership = await requireAdminAccess(user.id, parsed.data.companyId);
   if (!membership) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (parsed.data.role === "owner" && membership.role !== "owner") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -53,16 +59,39 @@ export async function POST(request: Request) {
 
   const company = await getCompanyById(parsed.data.companyId);
   const locale = company?.defaultLanguage ?? "ar";
-  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const baseUrl = (process.env.NEXTAUTH_URL?.trim() || new URL(request.url).origin).replace(
+    /\/+$/,
+    ""
+  );
   const inviteUrl = `${baseUrl}/invite/${token}`;
   const subject =
     locale === "ar"
       ? `دعوة للانضمام إلى ${company?.name ?? "Saudi Waqef"}`
       : `You're invited to join ${company?.name ?? "Saudi Waqef"}`;
-  const emailBody =
+  const companyName = company?.name ?? "Saudi Waqef";
+  const emailBody = renderEmail(
     locale === "ar"
-      ? `<p>تمت دعوتك للانضمام إلى ${company?.name ?? "Saudi Waqef"}.</p><p><a href="${inviteUrl}">قبول الدعوة</a></p>`
-      : `<p>You have been invited to join ${company?.name ?? "Saudi Waqef"}.</p><p><a href="${inviteUrl}">Accept invite</a></p>`;
+      ? {
+          locale,
+          companyName,
+          heading: subject,
+          paragraphs: [
+            `دُعيت للانضمام إلى «${companyName}» على سعودي واقف بدور ${roleLabel(parsed.data.role, "ar")}.`,
+            "الدعوة صالحة لمدة 7 أيام.",
+          ],
+          action: { label: "قبول الدعوة", url: inviteUrl },
+        }
+      : {
+          locale,
+          companyName,
+          heading: subject,
+          paragraphs: [
+            `You have been invited to join "${companyName}" on Saudi Waqef as ${roleLabel(parsed.data.role, "en")}.`,
+            "The invite is valid for 7 days.",
+          ],
+          action: { label: "Accept invite", url: inviteUrl },
+        }
+  );
 
   await queueEmailWithDispatch({
     companyId: parsed.data.companyId,

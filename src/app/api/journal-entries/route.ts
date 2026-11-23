@@ -4,9 +4,8 @@ import { requireAccountingAccess, requireCompanyRole } from "@/lib/access";
 import { listChartAccounts } from "@/lib/data/chart-accounts";
 import { createJournalEntry, listJournalEntries } from "@/lib/data/journal-entries";
 import { manualJournalEntrySchema } from "@/lib/validators/journal-entries";
-import { getCompanyConfig } from "@/lib/data/company-config";
-import { findClosedPeriod } from "@/lib/data/accounting-periods";
 import { recordAuditEvent } from "@/lib/data/audit-log";
+import { periodClosedResponse } from "@/lib/accounting/period-guard";
 
 export const runtime = "nodejs";
 
@@ -93,16 +92,13 @@ export async function POST(request: Request) {
 
   const status = parsed.data.status ?? "draft";
   if (status === "posted") {
-    const config = await getCompanyConfig(parsed.data.companyId);
-    if (config.periodLockDate && parsed.data.date <= config.periodLockDate) {
-      return NextResponse.json({ error: "Posting period is locked" }, { status: 403 });
-    }
-    const closedPeriod = await findClosedPeriod(
+    const closedPeriod = await periodClosedResponse(
       parsed.data.companyId,
-      parsed.data.date
+      parsed.data.date,
+      { isAdjusting: parsed.data.isAdjusting }
     );
-    if (closedPeriod && !parsed.data.isAdjusting) {
-      return NextResponse.json({ error: "Accounting period is closed" }, { status: 403 });
+    if (closedPeriod) {
+      return closedPeriod;
     }
   }
 

@@ -1,6 +1,7 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase/admin";
+import type { ZatcaEnvironment } from "@/lib/integrations/zatca/environment";
 import { decryptString, encryptString } from "@/lib/security/crypto";
 
 const readCredentials = (data: Record<string, unknown>) => {
@@ -12,7 +13,7 @@ const readCredentials = (data: Record<string, unknown>) => {
 
 export type IntegrationConnector = "zatca" | "gosi" | "mudad" | "custom";
 export type IntegrationStatus = "inactive" | "active" | "error";
-export type IntegrationEnvironment = "sandbox" | "production";
+export type IntegrationEnvironment = ZatcaEnvironment;
 
 export type IntegrationRecord = {
   id: string;
@@ -102,6 +103,11 @@ export async function createIntegration(params: {
   return id;
 }
 
+/**
+ * Merges the given fields. `config` is merged key by key, so callers pass only
+ * the keys they change: writing back a whole config read earlier would roll the
+ * ZATCA hash chain back to the moment it was read.
+ */
 export async function updateIntegration(
   integrationId: string,
   updates: Partial<{
@@ -114,10 +120,10 @@ export async function updateIntegration(
     lastError: string | null;
   }>
 ) {
-  const payload: Record<string, unknown> = {
-    ...updates,
-    updatedAt: Timestamp.now(),
-  };
+  const payload: Record<string, unknown> = { updatedAt: Timestamp.now() };
+  for (const [key, value] of Object.entries(updates)) {
+    if (value !== undefined) payload[key] = value;
+  }
   if (updates.credentials) {
     payload.credentialsEnc = encryptString(JSON.stringify(updates.credentials));
     delete payload.credentials;
@@ -126,7 +132,18 @@ export async function updateIntegration(
   if (updates.lastSyncAt instanceof Date) {
     payload.lastSyncAt = Timestamp.fromDate(updates.lastSyncAt);
   }
-  await db.collection("integrations").doc(integrationId).set(payload, { merge: true });
+  // mapping/headers/payloadTemplate are edited as a whole; a deep merge would
+  // resurrect keys the user removed, so they are replaced.
+  const ref = db.collection("integrations").doc(integrationId);
+  if (updates.config) {
+    delete payload.config;
+    for (const [key, value] of Object.entries(updates.config)) {
+      if (value !== undefined) payload[`config.${key}`] = value;
+    }
+    await ref.update(payload);
+    return;
+  }
+  await ref.set(payload, { merge: true });
 }
 
 /**
@@ -144,19 +161,14 @@ export async function updateIntegrationZatcaChainInTransaction(params: {
   const integrationRef = db.collection("integrations").doc(params.integrationId);
 
   await db.runTransaction(async (tx) => {
-    const [lockSnap, integrationSnap] = await Promise.all([tx.get(lockRef), tx.get(integrationRef)]);
+    const lockSnap = await tx.get(lockRef);
     if (!lockSnap.exists || lockSnap.data()?.runId !== params.expectedLockRunId) {
       throw new Error(`ZATCA_LOCK_LOST: submission lock for integration ${params.integrationId} was lost mid-run.`);
     }
-    const currentConfig = (integrationSnap.data()?.config ?? {}) as Record<string, unknown>;
-    tx.set(
-      integrationRef,
-      {
-        config: { ...currentConfig, zatcaHashChain: params.chain },
-        updatedAt: Timestamp.now(),
-      },
-      { merge: true }
-    );
+    tx.update(integrationRef, {
+      "config.zatcaHashChain": params.chain,
+      updatedAt: Timestamp.now(),
+    });
   });
 }
 

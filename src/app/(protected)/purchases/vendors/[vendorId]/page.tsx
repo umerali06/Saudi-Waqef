@@ -172,7 +172,7 @@ export default function VendorDetailPage() {
   );
 
   const formatCurrency = (value: number, currencyCode?: string) =>
-    new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    new Intl.NumberFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       style: "currency",
       currency: currencyCode || "SAR",
     }).format(value);
@@ -182,7 +182,7 @@ export default function VendorDetailPage() {
       return "";
     }
     const date = value.includes("T") ? new Date(value) : new Date(`${value}T00:00:00Z`);
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       dateStyle: "medium",
       timeStyle: "short",
     }).format(date);
@@ -440,7 +440,10 @@ export default function VendorDetailPage() {
           setErrorKey("vendors.statementEmailMissing");
           return;
         }
-        setErrorKey("error.saveFailed");
+        setErrorKey(
+          data?.error === "EMAIL_FAILED" ? "statement.emailFailed" : "error.saveFailed"
+        );
+        loadStatementHistory();
       })
       .finally(() => setSendingStatement(false));
   };
@@ -468,7 +471,10 @@ export default function VendorDetailPage() {
           setErrorKey("vendors.statementResendInvalid");
           return;
         }
-        setErrorKey("error.saveFailed");
+        setErrorKey(
+          data?.error === "EMAIL_FAILED" ? "statement.emailFailed" : "error.saveFailed"
+        );
+        loadStatementHistory();
       })
       .finally(() => setResendingId(null));
   };
@@ -891,25 +897,20 @@ export default function VendorDetailPage() {
             >
               {t("vendors.statementExportCsv")}
             </a>
-            <Link
-              href={`/purchases/vendors/${vendorId}/statement/print`}
-              className="rounded-2xl border border-border px-3 py-2"
-            >
-              {t("vendors.statementExportPdf")}
-            </Link>
-            <button
-              type="button"
-              onClick={() =>
-                window.open(
-                  `/purchases/vendors/${vendorId}/statement/print?print=1`,
-                  "_blank",
-                  "noopener,noreferrer"
-                )
-              }
-              className="rounded-2xl border border-border px-3 py-2"
+            <a
+              href={`/api/vendors/${vendorId}/statement/pdf?locale=${locale}`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-secondary"
             >
               {t("vendors.statementQuickPrint")}
-            </button>
+            </a>
+            <a
+              href={`/api/vendors/${vendorId}/statement/pdf?locale=${locale}&download=1`}
+              className="btn-secondary"
+            >
+              {t("invoice.downloadPdf")}
+            </a>
             <button
               type="button"
               onClick={handleSendStatement}

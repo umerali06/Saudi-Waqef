@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth-helpers";
-import { requireAdminAccess } from "@/lib/access";
+import { requireAdminAccess, requireCompanyMembership } from "@/lib/access";
 import {
   getMembership,
   listMembershipsByCompany,
@@ -97,12 +97,16 @@ export async function DELETE(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const membership = await requireAdminAccess(user.id, parsed.data.companyId);
+  const { userId } = await context.params;
+  // Anyone may leave a company; removing somebody else takes an admin.
+  const membership =
+    userId === user.id
+      ? await requireCompanyMembership(user.id, parsed.data.companyId)
+      : await requireAdminAccess(user.id, parsed.data.companyId);
   if (!membership) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { userId } = await context.params;
   const targetMembership = await getMembership({
     userId,
     companyId: parsed.data.companyId,

@@ -1,19 +1,31 @@
 import { NextResponse } from "next/server";
+import { v4 as uuidv4 } from "uuid";
+import { db } from "@/lib/firebase/admin";
 import { getSessionUser } from "@/lib/auth-helpers";
 import { requireAccountingAccess, requireCompanyRole } from "@/lib/access";
 import { vendorPaymentSchema } from "@/lib/validators/payments";
-import { createVendorPayment, listVendorPayments } from "@/lib/data/vendor-payments";
+import {
+  createVendorPayment,
+  getVendorPaymentById,
+  listVendorPayments,
+} from "@/lib/data/vendor-payments";
 import { getVendorById } from "@/lib/data/vendors";
-import { getPurchaseBillById, updatePurchaseBill } from "@/lib/data/purchase-bills";
-import { createBillPayment } from "@/lib/data/bill-payments";
-import { listChartAccounts } from "@/lib/data/chart-accounts";
-import { getCompanyDefaults } from "@/lib/data/company-defaults";
-import { updateOpenItemBalance, createOpenItem } from "@/lib/data/open-items";
-import { createJournalEntry } from "@/lib/data/journal-entries";
+import type { PurchaseBill } from "@/lib/data/purchase-bills";
 import { createCashTransaction } from "@/lib/data/cash-transactions";
-import { normalizeSearch } from "@/lib/utils/search";
+import { createJournalEntry } from "@/lib/data/journal-entries";
+import { createOpenItem } from "@/lib/data/open-items";
+import { postingErrorResponse } from "@/lib/accounting/errors";
+import { periodClosedResponse } from "@/lib/accounting/period-guard";
+import {
+  assertSameRequest,
+  loadSettlementAccount,
+  payBill,
+  readPayableBills,
+} from "@/lib/accounting/payments";
 import { recordAuditEvent } from "@/lib/data/audit-log";
+import { normalizeSearch } from "@/lib/utils/search";
 import { notifyCompanyRoles } from "@/lib/notifications/service";
+import { roundMoney } from "@/lib/utils/invoice";
 
 export const runtime = "nodejs";
 
@@ -111,164 +123,160 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Vendor is inactive" }, { status: 400 });
   }
 
-  const [defaults, accounts] = await Promise.all([
-    getCompanyDefaults(parsed.data.companyId),
-    listChartAccounts(parsed.data.companyId),
-  ]);
-
-  const accountIds = new Set(accounts.map((account) => account.id));
-  if (!accountIds.has(parsed.data.accountId)) {
-    return NextResponse.json({ error: "Invalid payment account" }, { status: 400 });
+  const closedPeriod = await periodClosedResponse(
+    parsed.data.companyId,
+    parsed.data.paymentDate
+  );
+  if (closedPeriod) {
+    return closedPeriod;
   }
 
-  const payableId = defaults.payableAccountId;
-  if (!payableId || !accountIds.has(payableId)) {
-    return NextResponse.json({ error: "Missing payable account" }, { status: 400 });
-  }
-
-  const allocations = [] as Array<{
-    billId: string;
-    billNumber: string;
-    amount: number;
-    openItemId?: string | null;
-  }>;
-  let appliedAmount = 0;
-
-  for (const allocation of parsed.data.allocations) {
-    const bill = await getPurchaseBillById(allocation.billId);
-    if (!bill || bill.companyId !== parsed.data.companyId) {
-      return NextResponse.json({ error: "Invalid bill" }, { status: 400 });
-    }
-    if (["draft", "canceled"].includes(bill.status)) {
-      return NextResponse.json({ error: "Bill is locked" }, { status: 400 });
-    }
-    if (allocation.amount > bill.balance) {
-      return NextResponse.json({ error: "Amount exceeds balance" }, { status: 400 });
-    }
-
-    appliedAmount += allocation.amount;
-    allocations.push({
-      billId: bill.id,
-      billNumber: bill.billNumber,
-      amount: allocation.amount,
-      openItemId: bill.openItemId ?? null,
-    });
-  }
-
-  if (appliedAmount > parsed.data.totalAmount) {
+  const totalAmount = roundMoney(parsed.data.totalAmount);
+  const appliedAmount = roundMoney(
+    parsed.data.allocations.reduce((sum, allocation) => sum + allocation.amount, 0)
+  );
+  if (appliedAmount > totalAmount) {
     return NextResponse.json({ error: "Applied exceeds total" }, { status: 400 });
   }
+  const unappliedAmount = roundMoney(totalAmount - appliedAmount);
+  const currency = parsed.data.currency ?? vendor.currency ?? "SAR";
 
-  const unappliedAmount = Math.max(parsed.data.totalAmount - appliedAmount, 0);
-
-  const journalEntryId = await createJournalEntry({
-    companyId: parsed.data.companyId,
-    sourceType: "vendor_payment",
-    sourceId: null,
-    date: parsed.data.paymentDate,
-    memo: `Payment to ${vendor.name}`,
-    lines: [
-      {
-        accountId: payableId,
-        debit: parsed.data.totalAmount,
-        credit: 0,
-      },
-      {
-        accountId: parsed.data.accountId,
-        debit: 0,
-        credit: parsed.data.totalAmount,
-      },
-    ],
-  });
-
-  const { id, paymentNumber } = await createVendorPayment({
-    companyId: parsed.data.companyId,
-    paymentDate: parsed.data.paymentDate,
-    vendorId: vendor.id,
-    vendorName: vendor.name,
-    method: parsed.data.method,
-    accountId: parsed.data.accountId,
-    reference: parsed.data.reference ?? null,
-    currency: parsed.data.currency ?? vendor.currency ?? "SAR",
-    totalAmount: parsed.data.totalAmount,
-    appliedAmount,
-    unappliedAmount,
-    allocations,
-    journalEntryId,
-  });
-
-  for (const allocation of allocations) {
-    const bill = await getPurchaseBillById(allocation.billId);
-    if (!bill) {
-      continue;
-    }
-    const wasPaid = bill.status === "paid";
-    const amountPaid = bill.amountPaid + allocation.amount;
-    const balance = Math.max(bill.total - amountPaid - bill.amountCredited, 0);
-    const status = balance <= 0 ? "paid" : "partially_paid";
-
-    await updatePurchaseBill(bill.id, {
-      amountPaid,
-      balance,
-      status,
-    });
-
-    await createBillPayment({
-      companyId: bill.companyId,
-      billId: bill.id,
-      paymentDate: parsed.data.paymentDate,
-      amount: allocation.amount,
-      method: parsed.data.method,
-      reference: parsed.data.reference ?? null,
-      accountId: parsed.data.accountId,
-      journalEntryId,
-    });
-
-    if (bill.openItemId) {
-      await updateOpenItemBalance(bill.openItemId, balance);
-    }
-
-    if (status === "paid" && !wasPaid) {
-      await notifyCompanyRoles({
-        companyId: bill.companyId,
-        roles: ["owner", "admin", "accountant"],
-        type: "bill_paid",
-        actorId: user.id,
-        data: {
-          billNumber: bill.billNumber,
-          amount: `${bill.total}`,
-          currency: bill.currency ?? "SAR",
-        },
+  const id = parsed.data.requestId ?? uuidv4();
+  let paymentNumber: string;
+  let paidDocuments: PurchaseBill[] = [];
+  try {
+    const ledgerAccountId = await loadSettlementAccount(
+      parsed.data.companyId,
+      "payable",
+      parsed.data.accountId
+    );
+    const result = await db.runTransaction(async (tx) => {
+      const existing = await getVendorPaymentById(id, tx);
+      if (existing) {
+        assertSameRequest(
+          { companyId: existing.companyId, amount: existing.totalAmount },
+          { companyId: parsed.data.companyId, amount: totalAmount }
+        );
+        return { paymentNumber: existing.paymentNumber, paid: [], duplicate: true };
+      }
+      const targets = await readPayableBills(tx, {
+        companyId: parsed.data.companyId,
+        vendorId: vendor.id,
+        allocations: parsed.data.allocations,
       });
+      const journalEntryId = uuidv4();
+      const creditOpenItemId = unappliedAmount > 0 ? uuidv4() : null;
+      const created = await createVendorPayment(
+        {
+          id,
+          companyId: parsed.data.companyId,
+          paymentDate: parsed.data.paymentDate,
+          vendorId: vendor.id,
+          vendorName: vendor.name,
+          method: parsed.data.method,
+          accountId: parsed.data.accountId,
+          reference: parsed.data.reference ?? null,
+          currency,
+          totalAmount,
+          appliedAmount,
+          unappliedAmount,
+          allocations: targets.map((target) => ({
+            billId: target.bill.id,
+            billNumber: target.bill.billNumber,
+            amount: target.amount,
+            openItemId: target.bill.openItemId ?? null,
+          })),
+          journalEntryId,
+          creditOpenItemId,
+        },
+        tx
+      );
+      await createJournalEntry(
+        {
+          id: journalEntryId,
+          companyId: parsed.data.companyId,
+          sourceType: "vendor_payment",
+          sourceId: id,
+          date: parsed.data.paymentDate,
+          memo: `Payment to ${vendor.name}`,
+          lines: [
+            { accountId: ledgerAccountId, debit: totalAmount, credit: 0 },
+            { accountId: parsed.data.accountId, debit: 0, credit: totalAmount },
+          ],
+        },
+        tx
+      );
+      const paid: PurchaseBill[] = [];
+      for (const target of targets) {
+        const { status } = await payBill(tx, target.bill, {
+          amount: target.amount,
+          paymentDate: parsed.data.paymentDate,
+          method: parsed.data.method,
+          reference: parsed.data.reference ?? null,
+          accountId: parsed.data.accountId,
+          journalEntryId,
+        });
+        if (status === "paid") {
+          paid.push(target.bill);
+        }
+      }
+      if (creditOpenItemId) {
+        await createOpenItem(
+          {
+            id: creditOpenItemId,
+            companyId: parsed.data.companyId,
+            partyType: "vendor",
+            partyId: vendor.id,
+            docType: "vendor_payment_credit",
+            docNumber: created.paymentNumber,
+            sourceId: id,
+            issueDate: parsed.data.paymentDate,
+            dueDate: parsed.data.paymentDate,
+            amount: -unappliedAmount,
+            balance: -unappliedAmount,
+            currency,
+          },
+          tx
+        );
+      }
+      await createCashTransaction(
+        {
+          companyId: parsed.data.companyId,
+          accountId: parsed.data.accountId,
+          date: parsed.data.paymentDate,
+          amount: totalAmount,
+          direction: "out",
+          reference: parsed.data.reference ?? created.paymentNumber,
+          description: `Vendor payment ${created.paymentNumber}`,
+          sourceType: "vendor_payment",
+          sourceId: id,
+        },
+        tx
+      );
+      return { paymentNumber: created.paymentNumber, paid, duplicate: false };
+    });
+    paymentNumber = result.paymentNumber;
+    paidDocuments = result.paid;
+    if (result.duplicate) {
+      return NextResponse.json({ paymentId: id, paymentNumber });
     }
+  } catch (error) {
+    return postingErrorResponse(error);
   }
 
-  if (unappliedAmount > 0) {
-    await createOpenItem({
-      companyId: parsed.data.companyId,
-      partyType: "vendor",
-      partyId: vendor.id,
-      docType: "vendor_payment_credit",
-      docNumber: paymentNumber,
-      issueDate: parsed.data.paymentDate,
-      dueDate: parsed.data.paymentDate,
-      amount: -unappliedAmount,
-      balance: -unappliedAmount,
-      currency: parsed.data.currency ?? vendor.currency ?? "SAR",
+  for (const bill of paidDocuments) {
+    await notifyCompanyRoles({
+      companyId: bill.companyId,
+      roles: ["owner", "admin", "accountant"],
+      type: "bill_paid",
+      actorId: user.id,
+      data: {
+        billNumber: bill.billNumber,
+        amount: `${bill.total}`,
+        currency: bill.currency ?? "SAR",
+      },
     });
   }
-
-  await createCashTransaction({
-    companyId: parsed.data.companyId,
-    accountId: parsed.data.accountId,
-    date: parsed.data.paymentDate,
-    amount: parsed.data.totalAmount,
-    direction: "out",
-    reference: parsed.data.reference ?? paymentNumber,
-    description: `Vendor payment ${paymentNumber}`,
-    sourceType: "vendor_payment",
-    sourceId: id,
-  });
 
   await recordAuditEvent({
     companyId: parsed.data.companyId,
@@ -277,7 +285,7 @@ export async function POST(request: Request) {
     action: "vendorPayment.create",
     entity: "vendor_payment",
     entityId: id,
-    metadata: { paymentNumber, total: parsed.data.totalAmount },
+    metadata: { paymentNumber, total: totalAmount },
   });
 
   return NextResponse.json({ paymentId: id, paymentNumber });

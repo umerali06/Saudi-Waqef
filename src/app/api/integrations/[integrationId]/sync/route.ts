@@ -9,14 +9,8 @@ import {
 } from "@/lib/data/integration-jobs";
 import { createIntegrationLog } from "@/lib/data/integration-logs";
 import { recordAuditEvent } from "@/lib/data/audit-log";
-import { buildRequestPayload, executeIntegrationRequest } from "@/lib/integrations/runtime";
+import { executeIntegrationRequest } from "@/lib/integrations/runtime";
 import { validateIntegrationReadiness } from "@/lib/integrations/validation";
-import {
-  createZatcaArtifact,
-  getZatcaArtifactByUuid,
-  updateZatcaArtifactStatus,
-} from "@/lib/data/zatca-artifacts";
-import { normalizeZatcaResults } from "@/lib/integrations/zatca/response-normalization";
 import { normalizeGosiResults } from "@/lib/integrations/gosi/response-normalization";
 import { normalizeMudadResults } from "@/lib/integrations/mudad/response-normalization";
 
@@ -78,6 +72,7 @@ export async function POST(_: Request, context: RouteContext) {
   let ok = false;
   let message = "Sync failed.";
   let details: Record<string, unknown> | undefined;
+  let results: unknown[] | undefined;
 
   try {
     const result = await executeIntegrationRequest({
@@ -100,7 +95,7 @@ export async function POST(_: Request, context: RouteContext) {
     };
     await updateIntegration(integrationId, {
       status: result.ok ? "active" : "error",
-      lastSyncAt: result.ok ? new Date() : null,
+      ...(result.ok ? { lastSyncAt: new Date() } : {}),
       lastError: result.ok ? null : message,
     });
     await updateIntegrationJob(jobId, {
@@ -109,91 +104,10 @@ export async function POST(_: Request, context: RouteContext) {
       finishedAt: new Date(),
     });
 
-    if (result.ok && integration.connector === "zatca") {
-      const parsedRows = normalizeZatcaResults(
-        result.bodyJson
-      );
-      const byUuid = new Map(parsedRows.map((row) => [row.uuid, row]));
-      const counts = parsedRows.reduce(
-        (acc, row) => {
-          acc[row.status] += 1;
-          return acc;
-        },
-        { accepted: 0, rejected: 0, submitted: 0 }
-      );
-      const payload = (await buildRequestPayload(integration)) as {
-        invoices?: Array<Record<string, unknown>>;
-      };
-      const invoices = Array.isArray(payload.invoices) ? payload.invoices : [];
-      for (const invoice of invoices) {
-        const uuid =
-          typeof invoice.uuid === "string" && invoice.uuid.trim() ? invoice.uuid.trim() : "";
-        const sourceInvoiceId =
-          typeof invoice.sourceInvoiceId === "string" && invoice.sourceInvoiceId.trim()
-            ? invoice.sourceInvoiceId.trim()
-            : "";
-        if (!uuid || !sourceInvoiceId) {
-          continue;
-        }
-
-        const existingArtifact = await getZatcaArtifactByUuid(integration.companyId, uuid);
-        const providerResult = byUuid.get(uuid);
-        const artifactStatus = providerResult?.status ?? "submitted";
-        const providerReference = providerResult?.providerReference ?? jobId;
-        const providerMessage = providerResult?.message ?? null;
-        const providerRaw = providerResult?.raw ?? null;
-
-        if (existingArtifact) {
-          await updateZatcaArtifactStatus(existingArtifact.id, {
-            status: artifactStatus,
-            providerReference,
-            lastSubmittedAt: new Date(),
-            lastResponse: {
-              phase: "sync_submission",
-              requestUrl: result.requestUrl,
-              status: result.status,
-              providerMessage,
-              providerRaw,
-            },
-          });
-          continue;
-        }
-
-        const hash = typeof invoice.hash === "string" ? invoice.hash : "";
-        const qr = typeof invoice.qr === "string" ? invoice.qr : "";
-        if (!hash || !qr) {
-          continue;
-        }
-
-        const artifactId = await createZatcaArtifact({
-          companyId: integration.companyId,
-          invoiceId: sourceInvoiceId,
-          uuid,
-          hash,
-          qr,
-          payload: invoice,
-          status: artifactStatus,
-          environment: integration.environment,
-          documentType: invoice.profileId === "reporting:1.0" ? "simplified" : "standard",
-          operation: invoice.profileId === "reporting:1.0" ? "reporting" : "clearance",
-        });
-        await updateZatcaArtifactStatus(artifactId, {
-          providerReference,
-          lastSubmittedAt: new Date(),
-          lastResponse: {
-            phase: "sync_submission",
-            requestUrl: result.requestUrl,
-            status: result.status,
-            providerMessage,
-            providerRaw,
-          },
-        });
-      }
-
-      details = {
-        ...(details ?? {}),
-        artifactStatusSummary: counts,
-      };
+    // ZATCA documents are signed, filed and recorded one by one by the ZATCA
+    // service; here only the per-document outcome is passed on.
+    if (integration.connector === "zatca") {
+      results = (result.bodyJson as { results?: unknown[] } | null)?.results ?? [];
     }
 
     if (result.ok && integration.connector === "gosi") {
@@ -263,5 +177,5 @@ export async function POST(_: Request, context: RouteContext) {
     metadata: { jobId, ok, ...(details ?? {}) },
   });
 
-  return NextResponse.json({ jobId, ok, message, details }, { status: ok ? 200 : 400 });
+  return NextResponse.json({ jobId, ok, message, details, results }, { status: ok ? 200 : 400 });
 }

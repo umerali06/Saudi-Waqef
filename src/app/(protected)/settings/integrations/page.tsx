@@ -12,7 +12,7 @@ type Integration = {
   name: string;
   connector: "zatca" | "gosi" | "mudad" | "custom";
   status: "inactive" | "active" | "error";
-  environment: "sandbox" | "production";
+  environment: "sandbox" | "simulation" | "production";
   config?: Record<string, unknown>;
   credentialsSet: boolean;
   lastSyncAt?: string | null;
@@ -232,7 +232,7 @@ export default function IntegrationsPage() {
       return "-";
     }
     const date = new Date(value);
-    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       dateStyle: "medium",
       timeStyle: "short",
     }).format(date);

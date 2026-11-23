@@ -9,6 +9,7 @@ export type PayrollRunTotals = {
   totalDeductions: number;
   netPay: number;
   employeeCount: number;
+  gosiEmployer?: number;
 };
 
 export type PayrollRun = {
@@ -49,6 +50,7 @@ export async function listPayrollRuns(companyId: string) {
         totalDeductions: data.totals?.totalDeductions ?? 0,
         netPay: data.totals?.netPay ?? 0,
         employeeCount: data.totals?.employeeCount ?? 0,
+        gosiEmployer: data.totals?.gosiEmployer ?? 0,
       },
       createdBy: data.createdBy ?? null,
       approvedBy: data.approvedBy ?? null,
@@ -83,6 +85,7 @@ export async function getPayrollRun(runId: string) {
       totalDeductions: data.totals?.totalDeductions ?? 0,
       netPay: data.totals?.netPay ?? 0,
       employeeCount: data.totals?.employeeCount ?? 0,
+      gosiEmployer: data.totals?.gosiEmployer ?? 0,
     },
     createdBy: data.createdBy ?? null,
     approvedBy: data.approvedBy ?? null,
@@ -118,27 +121,66 @@ export async function createPayrollRun(params: {
   return id;
 }
 
-export async function updatePayrollRun(
+export type PayrollRunUpdates = Partial<{
+  status: PayrollRunStatus;
+  totals: PayrollRunTotals;
+  approvedBy: string | null;
+  approvedAt: Date | null;
+  paidAt: Date | null;
+  paymentMethod: string | null;
+  paymentAccountId: string | null;
+  journalEntryId: string | null;
+  paymentJournalEntryId: string | null;
+}>;
+
+function toRunPayload(updates: PayrollRunUpdates) {
+  const payload: Record<string, unknown> = {
+    ...updates,
+    updatedAt: Timestamp.now(),
+  };
+  if (updates.approvedAt !== undefined) {
+    payload.approvedAt = updates.approvedAt ? Timestamp.fromDate(updates.approvedAt) : null;
+  }
+  if (updates.paidAt !== undefined) {
+    payload.paidAt = updates.paidAt ? Timestamp.fromDate(updates.paidAt) : null;
+  }
+  return payload;
+}
+
+export async function updatePayrollRun(runId: string, updates: PayrollRunUpdates) {
+  await db.collection("payroll_runs").doc(runId).set(toRunPayload(updates), { merge: true });
+}
+
+/**
+ * Moves a run to the next status only if it is still in the expected one, so that two
+ * concurrent requests can never both post a journal entry for it.
+ */
+export async function claimPayrollRunStatus(
   runId: string,
-  updates: Partial<{
-    status: PayrollRunStatus;
-    totals: PayrollRunTotals;
-    approvedBy: string | null;
-    approvedAt: Date | null;
-    paidAt: Date | null;
-    paymentMethod: string | null;
-    paymentAccountId: string | null;
-    journalEntryId: string | null;
-    paymentJournalEntryId: string | null;
-  }>
+  from: PayrollRunStatus,
+  updates: PayrollRunUpdates & { status: PayrollRunStatus }
 ) {
-  await db.collection("payroll_runs").doc(runId).set(
-    {
-      ...updates,
-      approvedAt: updates.approvedAt ? Timestamp.fromDate(updates.approvedAt) : undefined,
-      paidAt: updates.paidAt ? Timestamp.fromDate(updates.paidAt) : undefined,
-      updatedAt: Timestamp.now(),
-    },
-    { merge: true }
-  );
+  const ref = db.collection("payroll_runs").doc(runId);
+  return db.runTransaction(async (transaction) => {
+    const doc = await transaction.get(ref);
+    if (!doc.exists || (doc.data()!.status ?? "draft") !== from) {
+      return false;
+    }
+    transaction.set(ref, toRunPayload(updates), { merge: true });
+    return true;
+  });
+}
+
+export async function deletePayrollRun(runId: string) {
+  const [items, adjustments] = await Promise.all([
+    db.collection("payroll_run_items").where("runId", "==", runId).get(),
+    db.collection("payroll_adjustments").where("runId", "==", runId).get(),
+  ]);
+  const refs = [...items.docs, ...adjustments.docs].map((doc) => doc.ref);
+  refs.push(db.collection("payroll_runs").doc(runId));
+  for (let i = 0; i < refs.length; i += 400) {
+    const batch = db.batch();
+    refs.slice(i, i + 400).forEach((ref) => batch.delete(ref));
+    await batch.commit();
+  }
 }

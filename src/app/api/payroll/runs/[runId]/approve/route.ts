@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth-helpers";
+import { periodClosedResponse } from "@/lib/accounting/period-guard";
 import { hasRequiredRole, requireCompanyRole } from "@/lib/access";
-import { getPayrollRun, updatePayrollRun } from "@/lib/data/payroll-runs";
+import { claimPayrollRunStatus, getPayrollRun, updatePayrollRun } from "@/lib/data/payroll-runs";
 import { getPayrollSettings } from "@/lib/data/payroll-settings";
 import { getCompanyConfig } from "@/lib/data/company-config";
-import { createJournalEntry } from "@/lib/data/journal-entries";
+import { createJournalEntry, listJournalEntries } from "@/lib/data/journal-entries";
+import { buildPayrollJournalLines, isBalancedJournal } from "@/lib/utils/payroll-run";
 import { recordAuditEvent } from "@/lib/data/audit-log";
 import { notifyCompanyRoles } from "@/lib/notifications/service";
 
@@ -45,6 +47,9 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Payroll run locked" }, { status: 400 });
   }
 
+  const closed = await periodClosedResponse(companyId, run.periodEnd);
+  if (closed) return closed;
+
   const config = await getCompanyConfig(companyId);
   const threshold = typeof config.payrollApprovalThreshold === "number"
     ? config.payrollApprovalThreshold
@@ -67,45 +72,62 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Missing deduction account" }, { status: 400 });
   }
 
-  const lines = [
-    {
-      accountId: settings.salaryExpenseAccountId,
-      debit: run.totals.grossPay,
-      credit: 0,
+  const lines = buildPayrollJournalLines({
+    netPay: run.totals.netPay,
+    totalDeductions: run.totals.totalDeductions,
+    gosiEmployer: run.totals.gosiEmployer ?? 0,
+    accounts: {
+      salaryExpenseAccountId: settings.salaryExpenseAccountId,
+      payrollPayableAccountId: settings.payrollPayableAccountId,
+      salaryDeductionsAccountId: settings.salaryDeductionsAccountId,
+      gosiExpenseAccountId: settings.gosiExpenseAccountId,
+      gosiPayableAccountId: settings.gosiPayableAccountId,
     },
-    {
-      accountId: settings.payrollPayableAccountId,
-      debit: 0,
-      credit: run.totals.netPay,
-    },
-  ];
-  if (run.totals.totalDeductions > 0 && settings.salaryDeductionsAccountId) {
-    lines.push({
-      accountId: settings.salaryDeductionsAccountId,
-      debit: 0,
-      credit: run.totals.totalDeductions,
-    });
+  });
+  if (lines.length === 0 || !isBalancedJournal(lines)) {
+    return NextResponse.json({ error: "Unbalanced payroll journal" }, { status: 400 });
   }
 
-  const journalEntryId = await createJournalEntry({
-    companyId,
-    sourceType: "payroll_run",
-    sourceId: runId,
-    date: run.periodEnd,
-    memo: `Payroll run ${run.periodStart} - ${run.periodEnd}`,
-    lines,
-    status: "posted",
-    createdBy: user.id,
-    approvedBy: user.id,
-    approvedAt: new Date(),
-  });
-
-  await updatePayrollRun(runId, {
+  const claimed = await claimPayrollRunStatus(runId, "draft", {
     status: "approved",
     approvedBy: user.id,
     approvedAt: new Date(),
-    journalEntryId,
   });
+  if (!claimed) {
+    return NextResponse.json({ error: "Payroll run locked" }, { status: 400 });
+  }
+
+  try {
+    // Reuse an entry already posted for this run instead of posting it a second time.
+    const totalDebit = lines.reduce((sum, line) => sum + line.debit, 0);
+    const posted = (await listJournalEntries(companyId)).find(
+      (entry) =>
+        entry.sourceType === "payroll_run" &&
+        entry.sourceId === runId &&
+        entry.status === "posted" &&
+        !entry.reversedBy &&
+        Math.abs(entry.totalDebit - totalDebit) < 0.01 &&
+        Math.abs(entry.totalDebit - entry.totalCredit) < 0.01
+    );
+    const journalEntryId =
+      posted?.id ??
+      (await createJournalEntry({
+        companyId,
+        sourceType: "payroll_run",
+        sourceId: runId,
+        date: run.periodEnd,
+        memo: `Payroll run ${run.periodStart} - ${run.periodEnd}`,
+        lines,
+        status: "posted",
+        createdBy: user.id,
+        approvedBy: user.id,
+        approvedAt: new Date(),
+      }));
+    await updatePayrollRun(runId, { journalEntryId });
+  } catch (error) {
+    await updatePayrollRun(runId, { status: "draft", approvedBy: null, approvedAt: null });
+    throw error;
+  }
 
   await recordAuditEvent({
     companyId,

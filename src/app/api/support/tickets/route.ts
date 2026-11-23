@@ -7,6 +7,10 @@ import {
 } from "@/lib/data/support-tickets";
 import { supportTicketSchema } from "@/lib/validators/support";
 import { recordAuditEvent } from "@/lib/data/audit-log";
+import { getCompanyById } from "@/lib/data/companies";
+import { renderBilingualEmail } from "@/lib/email/template";
+import { createSystemAlert } from "@/lib/data/system-alerts";
+import { notifySystemAdmins } from "@/lib/notifications/system-admins";
 import { createTelemetryEvent } from "@/lib/data/telemetry";
 
 export const runtime = "nodejs";
@@ -62,6 +66,53 @@ export async function POST(request: Request) {
     message: parsed.data.message,
     locale: parsed.data.locale ?? null,
   });
+
+  try {
+    const company = await getCompanyById(parsed.data.companyId);
+    const baseUrl = (process.env.NEXTAUTH_URL?.trim() || new URL(request.url).origin).replace(
+      /\/+$/,
+      ""
+    );
+    await notifySystemAdmins({
+      type: "support_ticket",
+      title: "طلب دعم جديد | New support ticket",
+      body: `${company?.name ?? ""}: ${parsed.data.subject}`,
+      subject: `Support ticket: ${parsed.data.subject}`,
+      html: renderBilingualEmail({
+        first: "ar",
+        ar: {
+          heading: `طلب دعم جديد: ${parsed.data.subject}`,
+          details: [
+            ["الشركة", company?.name ?? ""],
+            ["المرسل", user.email ?? ""],
+          ],
+          paragraphs: [parsed.data.message],
+          action: { label: "فتح الطلب", url: `${baseUrl}/admin/support` },
+        },
+        en: {
+          heading: `New support ticket: ${parsed.data.subject}`,
+          details: [
+            ["Company", company?.name ?? ""],
+            ["From", user.email ?? ""],
+          ],
+          paragraphs: [`${parsed.data.category} / ${parsed.data.priority}`],
+        },
+      }),
+      sourceType: "support_ticket",
+      sourceId: ticketId,
+      data: { url: "/admin/support", ticketId },
+    });
+    await createSystemAlert({
+      title: "طلب دعم جديد | New support ticket",
+      message: parsed.data.subject,
+      type: "support_ticket",
+      severity: parsed.data.priority === "urgent" || parsed.data.priority === "high" ? "high" : "medium",
+      source: parsed.data.companyId,
+      entityId: ticketId,
+    });
+  } catch (error) {
+    console.error("Failed to notify the support team:", error);
+  }
 
   await recordAuditEvent({
     companyId: parsed.data.companyId,

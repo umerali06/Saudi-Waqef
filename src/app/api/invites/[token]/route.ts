@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getInviteByToken, isInviteExpired } from "@/lib/data/invites";
+import { getUserByEmail } from "@/lib/data/users";
 
 export const runtime = "nodejs";
 
@@ -18,7 +19,9 @@ export async function GET(_: Request, context: RouteContext) {
     return NextResponse.json({ error: "Invite expired" }, { status: 410 });
   }
 
+  const existingUser = await getUserByEmail(invite.email);
   return NextResponse.json({
+    existingUser: Boolean(existingUser),
     email: invite.email,
     role: invite.role,
     companyId: invite.companyId,

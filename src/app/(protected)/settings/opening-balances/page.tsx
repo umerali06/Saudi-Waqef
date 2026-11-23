@@ -28,6 +28,7 @@ export default function OpeningBalancesPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [balances, setBalances] = useState<Record<string, BalanceRow>>({});
   const [asOfDate, setAsOfDate] = useState("");
+  const [needsPosting, setNeedsPosting] = useState(false);
   const [periodLockDate, setPeriodLockDate] = useState<string | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,7 +43,7 @@ export default function OpeningBalancesPage() {
       if (Number.isNaN(date.getTime())) {
         return value;
       }
-      return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US").format(date);
+      return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US").format(date);
     },
     [locale, t]
   );
@@ -71,6 +72,7 @@ export default function OpeningBalancesPage() {
           nextBalances[entry.accountId] = entry;
         });
         setBalances(nextBalances);
+        setNeedsPosting((balanceData.balances ?? []).length > 0 && !balanceData.posted);
         const inferredDate =
           balanceData.balances?.[0]?.asOfDate ??
           new Date().toISOString().slice(0, 10);
@@ -130,14 +132,13 @@ export default function OpeningBalancesPage() {
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        if (data?.error === "Posting period is locked") {
-          setErrorKey("opening.locked");
-        } else if (data?.error === "Accounting period is closed") {
+        if (data?.error === "PERIOD_CLOSED") {
           setErrorKey("opening.closed");
         } else {
           setErrorKey("opening.mustBalance");
         }
       } else {
+        setNeedsPosting(false);
         toast(t("common.saved"), "success");
       }
     });
@@ -149,6 +150,12 @@ export default function OpeningBalancesPage() {
         <h1 className="text-2xl font-semibold page-title">{t("opening.title")}</h1>
         <p className="text-sm text-muted page-subtitle">{t("opening.subtitle")}</p>
       </div>
+
+      {needsPosting ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          {t("opening.notPosted")}
+        </div>
+      ) : null}
 
       <div className="app-card p-6 card-modern">
         <div className="grid gap-4 md:grid-cols-2">

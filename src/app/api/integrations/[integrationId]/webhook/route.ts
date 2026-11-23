@@ -4,9 +4,10 @@ import { getIntegrationById } from "@/lib/data/integrations";
 import { createIntegrationLog } from "@/lib/data/integration-logs";
 import {
   getZatcaArtifactByUuid,
-  updateZatcaArtifactStatus,
+  applyExternalZatcaStatus,
 } from "@/lib/data/zatca-artifacts";
 import {
+  getWebhookEventById,
   registerWebhookEvent,
   updateWebhookEventResult,
 } from "@/lib/data/integration-webhook-events";
@@ -120,23 +121,34 @@ export async function POST(request: Request, context: RouteContext) {
     payload: body && typeof body === "object" ? (body as Record<string, unknown>) : null,
   });
   if (!registered.created) {
-    return NextResponse.json({ error: "Duplicate webhook event" }, { status: 409 });
+    const previous = await getWebhookEventById(registered.id);
+    if (previous?.processedAt) {
+      // Senders retry until they see success, so a repeat is acknowledged.
+      return NextResponse.json({ ok: true, duplicate: true });
+    }
   }
 
   const results = normalizeZatcaResults(body);
   if (results.length === 0) {
+    await updateWebhookEventResult(registered.id, {
+      lastResult: { ok: false, error: "No recognisable results in payload" },
+    });
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
   let updated = 0;
   let missing = 0;
   for (const result of results) {
-    const artifact = await getZatcaArtifactByUuid(integration.companyId, result.uuid);
+    const artifact = await getZatcaArtifactByUuid(
+      integration.companyId,
+      result.uuid,
+      integration.environment
+    );
     if (!artifact) {
       missing += 1;
       continue;
     }
-    await updateZatcaArtifactStatus(artifact.id, {
+    const applied = await applyExternalZatcaStatus(artifact, {
       status: result.status,
       providerReference: result.providerReference ?? null,
       lastSubmittedAt: new Date(),
@@ -145,7 +157,7 @@ export async function POST(request: Request, context: RouteContext) {
         raw: result.raw ?? null,
       },
     });
-    updated += 1;
+    if (applied) updated += 1;
   }
 
   await createIntegrationLog({
@@ -160,7 +172,7 @@ export async function POST(request: Request, context: RouteContext) {
     },
   });
 
-  await updateWebhookEventResult(eventId, {
+  await updateWebhookEventResult(registered.id, {
     processedAt: new Date(),
     lastResult: {
       ok: true,

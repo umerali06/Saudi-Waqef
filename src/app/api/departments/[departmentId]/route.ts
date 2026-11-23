@@ -97,7 +97,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Duplicate department" }, { status: 409 });
   }
 
-  await updateDepartment(departmentId, parsed.data);
+  const updates = { ...parsed.data };
+  delete updates.companyId;
+  await updateDepartment(departmentId, updates);
 
   await recordAuditEvent({
     companyId: current.companyId,
@@ -106,7 +108,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     action: "department.update",
     entity: "department",
     entityId: departmentId,
-    metadata: { fields: Object.keys(parsed.data) },
+    metadata: { fields: Object.keys(updates) },
   });
 
   return NextResponse.json({ ok: true });

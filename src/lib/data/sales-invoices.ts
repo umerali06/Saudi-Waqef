@@ -1,8 +1,10 @@
-import { Timestamp } from "firebase-admin/firestore";
+import { Timestamp, type DocumentSnapshot, type Transaction } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase/admin";
 import { normalizeSearch } from "@/lib/utils/search";
-import { buildSequenceNumber } from "@/lib/utils/numbering";
+import { nextDocumentNumber } from "@/lib/data/numbering";
+import { readDoc, writeDoc } from "@/lib/firebase/documents";
+import { deriveAmountDebited } from "@/lib/utils/settlement";
 
 export type InvoiceStatus =
   | "draft"
@@ -50,71 +52,22 @@ export type SalesInvoice = {
   total: number;
   amountPaid: number;
   amountCredited: number;
+  /** Total of issued credit notes, including the part that became a credit. */
+  creditNotesTotal: number;
+  /** Total of issued debit notes. */
+  amountDebited: number;
   balance: number;
   lines: InvoiceLine[];
   openItemId?: string | null;
   journalEntryId?: string | null;
   sentAt?: string | null;
   sentTo?: string | null;
+  lastReminderAt?: string | null;
   approvedAt?: string | null;
   createdAt: Date;
 };
 
-const DEFAULT_CONFIG = {
-  invoicePrefix: "INV-",
-  invoiceSuffix: "",
-  invoiceNextNumber: 1,
-  invoicePadding: 0,
-  invoiceResetYearly: false,
-  invoiceLastResetYear: null as number | null,
-};
-
-export async function listSalesInvoices(companyId: string) {
-  const snapshot = await db
-    .collection("sales_invoices")
-    .where("companyId", "==", companyId)
-    .get();
-
-  return snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      companyId: data.companyId,
-      customerId: data.customerId,
-      customerName: data.customerName,
-      customerVatNumber: data.customerVatNumber ?? undefined,
-      billingAddress: data.billingAddress ?? undefined,
-      invoiceNumber: data.invoiceNumber,
-      status: data.status,
-      invoiceDate: data.invoiceDate,
-      dueDate: data.dueDate,
-      currency: data.currency ?? "SAR",
-      paymentTermId: data.paymentTermId ?? null,
-      notes: data.notes ?? null,
-      terms: data.terms ?? null,
-      subtotal: data.subtotal ?? 0,
-      discountTotal: data.discountTotal ?? 0,
-      taxTotal: data.taxTotal ?? 0,
-      total: data.total ?? 0,
-      amountPaid: data.amountPaid ?? 0,
-      amountCredited: data.amountCredited ?? 0,
-      balance: data.balance ?? 0,
-      lines: data.lines ?? [],
-      openItemId: data.openItemId ?? null,
-      journalEntryId: data.journalEntryId ?? null,
-      sentAt: data.sentAt ?? null,
-      sentTo: data.sentTo ?? null,
-      approvedAt: data.approvedAt ?? null,
-      createdAt: data.createdAt.toDate(),
-    } as SalesInvoice;
-  });
-}
-
-export async function getSalesInvoiceById(invoiceId: string) {
-  const doc = await db.collection("sales_invoices").doc(invoiceId).get();
-  if (!doc.exists) {
-    return null;
-  }
+function mapSalesInvoice(doc: DocumentSnapshot) {
   const data = doc.data()!;
   return {
     id: doc.id,
@@ -137,18 +90,43 @@ export async function getSalesInvoiceById(invoiceId: string) {
     total: data.total ?? 0,
     amountPaid: data.amountPaid ?? 0,
     amountCredited: data.amountCredited ?? 0,
+    creditNotesTotal: data.creditNotesTotal ?? data.amountCredited ?? 0,
+    amountDebited: deriveAmountDebited({
+      stored: data.amountDebited,
+      status: data.status,
+      total: data.total ?? 0,
+      amountPaid: data.amountPaid ?? 0,
+      amountCredited: data.amountCredited ?? 0,
+      balance: data.balance ?? 0,
+    }),
     balance: data.balance ?? 0,
     lines: data.lines ?? [],
     openItemId: data.openItemId ?? null,
     journalEntryId: data.journalEntryId ?? null,
     sentAt: data.sentAt ?? null,
     sentTo: data.sentTo ?? null,
+    lastReminderAt: data.lastReminderAt ?? null,
     approvedAt: data.approvedAt ?? null,
     createdAt: data.createdAt.toDate(),
   } as SalesInvoice;
 }
 
+export async function listSalesInvoices(companyId: string) {
+  const snapshot = await db
+    .collection("sales_invoices")
+    .where("companyId", "==", companyId)
+    .get();
+
+  return snapshot.docs.map(mapSalesInvoice);
+}
+
+export async function getSalesInvoiceById(invoiceId: string, tx?: Transaction) {
+  const doc = await readDoc(db.collection("sales_invoices").doc(invoiceId), tx);
+  return doc.exists ? mapSalesInvoice(doc) : null;
+}
+
 export async function createSalesInvoice(params: {
+  id?: string;
   companyId: string;
   customerId: string;
   customerName: string;
@@ -169,46 +147,22 @@ export async function createSalesInvoice(params: {
   balance?: number;
   status?: InvoiceStatus;
   lines: InvoiceLine[];
-}) {
-  const id = uuidv4();
-  const configRef = db.collection("company_configs").doc(params.companyId);
+}, tx?: Transaction) {
+  const id = params.id ?? uuidv4();
   const invoiceRef = db.collection("sales_invoices").doc(id);
 
-  let invoiceNumber = "";
-
-  await db.runTransaction(async (tx) => {
-    const configSnap = await tx.get(configRef);
-    const config = configSnap.data() ?? {};
-    const sequence = buildSequenceNumber({
-      prefix:
-        typeof config.invoicePrefix === "string"
-          ? config.invoicePrefix
-          : DEFAULT_CONFIG.invoicePrefix,
-      suffix:
-        typeof config.invoiceSuffix === "string"
-          ? config.invoiceSuffix
-          : DEFAULT_CONFIG.invoiceSuffix,
-      nextNumber:
-        typeof config.invoiceNextNumber === "number"
-          ? config.invoiceNextNumber
-          : DEFAULT_CONFIG.invoiceNextNumber,
-      padding:
-        typeof config.invoicePadding === "number"
-          ? config.invoicePadding
-          : DEFAULT_CONFIG.invoicePadding,
-      resetYearly:
-        typeof config.invoiceResetYearly === "boolean"
-          ? config.invoiceResetYearly
-          : DEFAULT_CONFIG.invoiceResetYearly,
-      lastResetYear:
-        typeof config.invoiceLastResetYear === "number"
-          ? config.invoiceLastResetYear
-          : DEFAULT_CONFIG.invoiceLastResetYear,
+  const create = async (transaction: Transaction) => {
+    const sequence = await nextDocumentNumber(transaction, {
+      companyId: params.companyId,
+      key: "invoice",
+      defaultPrefix: "INV-",
+      collection: "sales_invoices",
+      field: "invoiceNumber",
       date: params.invoiceDate,
     });
-    invoiceNumber = sequence.number;
+    const invoiceNumber = sequence.number;
 
-    tx.set(invoiceRef, {
+    transaction.set(invoiceRef, {
       companyId: params.companyId,
       customerId: params.customerId,
       customerName: params.customerName,
@@ -230,22 +184,18 @@ export async function createSalesInvoice(params: {
       total: params.total,
       amountPaid: params.amountPaid ?? 0,
       amountCredited: params.amountCredited ?? 0,
+      creditNotesTotal: 0,
+      amountDebited: 0,
       balance: params.balance ?? params.total,
       lines: params.lines,
       createdAt: Timestamp.now(),
     });
 
-    tx.set(
-      configRef,
-      {
-        invoiceNextNumber: sequence.nextNumber,
-        invoiceLastResetYear: sequence.resetYear ?? null,
-        updatedAt: Timestamp.now(),
-      },
-      { merge: true }
-    );
-  });
+    sequence.save();
+    return invoiceNumber;
+  };
 
+  const invoiceNumber = tx ? await create(tx) : await db.runTransaction(create);
   return { id, invoiceNumber };
 }
 
@@ -269,14 +219,19 @@ export async function updateSalesInvoice(
     total: number;
     amountPaid: number;
     amountCredited: number;
+    creditNotesTotal: number;
+    amountDebited: number;
     balance: number;
     lines: InvoiceLine[];
     openItemId: string | null;
     journalEntryId: string | null;
+    cancelJournalEntryId: string | null;
     sentAt: string | null;
     sentTo: string | null;
+    lastReminderAt: string | null;
     approvedAt: string | null;
-  }>
+  }>,
+  tx?: Transaction
 ) {
   const payload: Record<string, unknown> = {
     ...updates,
@@ -285,5 +240,5 @@ export async function updateSalesInvoice(
   if (updates.customerName) {
     payload.customerNameNormalized = normalizeSearch(updates.customerName);
   }
-  await db.collection("sales_invoices").doc(invoiceId).set(payload, { merge: true });
+  await writeDoc(db.collection("sales_invoices").doc(invoiceId), payload, { merge: true, tx });
 }

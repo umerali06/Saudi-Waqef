@@ -20,9 +20,9 @@ export async function POST(request: Request) {
     }
 
     const integration = await getZatcaIntegrationForCompany({ integrationId, companyId });
-    if (integration.environment !== "sandbox") {
+    if (integration.environment === "production") {
       return NextResponse.json(
-        { error: "Compliance checks must be completed in sandbox before production." },
+        { error: "Production onboarding is done from the ZATCA settings page." },
         { status: 400 }
       );
     }

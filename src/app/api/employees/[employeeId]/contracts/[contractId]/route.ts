@@ -58,7 +58,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  await updateEmployeeContract(contractId, parsed.data);
+  const updates = { ...parsed.data };
+  delete updates.companyId;
+  await updateEmployeeContract(contractId, updates);
 
   if (merged.status === "active") {
     await endOtherActiveContracts(employeeId, contractId);
@@ -71,7 +73,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     action: "employee.contract.update",
     entity: "employee_contract",
     entityId: contractId,
-    metadata: { fields: Object.keys(parsed.data) },
+    metadata: { fields: Object.keys(updates) },
   });
 
   return NextResponse.json({ ok: true });
