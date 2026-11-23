@@ -580,6 +580,18 @@ html[dir="rtl"] .vignette-sheet-back { rotate: 4deg; translate: 10px 8px; }
 .vignette-check { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 0.35s 2.5s forwards; }
 @keyframes stamp { from { opacity: 0; transform: scale(1.35); } }
 
+/* Short laptop screens: the whole invoice still fits beside the form. */
+@media (max-height: 760px) {
+  .auth-aside { padding: 2rem 3rem !important; }
+  .auth-aside h2 { font-size: 1.6rem; }
+  .vignette { zoom: 0.78; margin-block: 1rem; }
+}
+
+@media (max-height: 560px) {
+  .auth-aside .vignette { zoom: 0.62; }
+  .auth-aside ul.relative { display: none; }
+}
+
 @media print {
   html,
   body {

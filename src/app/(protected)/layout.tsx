@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { listCompaniesForUser } from "@/lib/data/companies";
 import { listMembershipsByUser } from "@/lib/data/memberships";
+import { isSystemAdminUser } from "@/lib/data/system-admins";
 import { ProtectedShell } from "@/components/protected-shell";
 import { getSessionUser } from "@/lib/auth-helpers";
 
@@ -17,7 +18,7 @@ export default async function ProtectedLayout({
 
   const memberships = await listMembershipsByUser(user.id);
   if (memberships.length === 0) {
-    redirect("/no-access");
+    redirect((await isSystemAdminUser(user.id, user.email)) ? "/admin" : "/no-access");
   }
 
   const companies = await listCompaniesForUser(user.id);

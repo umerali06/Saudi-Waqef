@@ -36,7 +36,7 @@ export default function ResetPasswordPage() {
         body: JSON.stringify({ token, password }),
       });
       if (!response.ok) {
-        setErrorKey("auth.reset.failed");
+        setErrorKey(response.status === 410 ? "auth.reset.invalid" : "auth.reset.failed");
         return;
       }
       setSuccess(true);

@@ -4,9 +4,9 @@ import { acceptInviteSchema } from "@/lib/validators/auth";
 import { clearAllLoginAttempts } from "@/lib/security/login-guard";
 import { getUserById, updateUserPassword } from "@/lib/data/users";
 import {
+  closePasswordResets,
   getPasswordResetByToken,
   isResetExpired,
-  markPasswordResetUsed,
 } from "@/lib/data/password-resets";
 
 export const runtime = "nodejs";
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   }
 
   await updateUserPassword(user.id, parsed.data.password);
-  await markPasswordResetUsed(reset.id);
+  await closePasswordResets(user.id);
   await clearAllLoginAttempts(user.email);
 
   return NextResponse.json({ ok: true });

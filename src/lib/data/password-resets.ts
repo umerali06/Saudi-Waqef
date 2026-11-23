@@ -64,10 +64,14 @@ export async function getPasswordResetByToken(token: string) {
   } as PasswordResetRecord;
 }
 
-export async function markPasswordResetUsed(id: string) {
-  await db.collection("password_resets").doc(id).update({
-    usedAt: Timestamp.now(),
-  });
+/** Uses up every open link of the user, so an older mail cannot change the password again. */
+export async function closePasswordResets(userId: string) {
+  const snapshot = await db.collection("password_resets").where("userId", "==", userId).get();
+  const batch = db.batch();
+  snapshot.docs
+    .filter((doc) => !doc.data().usedAt)
+    .forEach((doc) => batch.update(doc.ref, { usedAt: Timestamp.now() }));
+  await batch.commit();
 }
 
 export function isResetExpired(reset: PasswordResetRecord) {
