@@ -57,6 +57,9 @@ export async function POST(request: Request) {
     const baseUrl = (process.env.NEXTAUTH_URL?.trim() || new URL(request.url).origin).replace(/\/+$/, "");
     const user = (await getUserByEmail(email)) ?? (await createConfiguredAdmin(email));
 
+    if (user?.loginOnly) {
+      return NextResponse.json({ ok: true });
+    }
     if (!user || user.status !== "active") {
       // Someone still waiting for approval would otherwise wait for a mail that never comes.
       const { pending } = await listRecentRequests({ emailLower: email });
